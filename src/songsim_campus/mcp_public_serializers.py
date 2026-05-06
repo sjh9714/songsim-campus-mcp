@@ -23,6 +23,7 @@ from .schemas import (
     McpRestaurantSearchResult,
     McpToolError,
     NearbyRestaurant,
+    NewsroomPost,
     Notice,
     PCSoftwareEntry,
     Place,
@@ -290,6 +291,12 @@ def serialize_public_service_policy_guide(
 ) -> dict[str, object]:
     payload = guide.model_dump()
     payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
+    return payload
+
+
+def serialize_public_newsroom_post(post: NewsroomPost) -> dict[str, object]:
+    payload = post.model_dump()
+    payload["post_summary"] = post.summary
     return payload
 
 

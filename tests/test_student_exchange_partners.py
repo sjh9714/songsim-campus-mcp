@@ -237,11 +237,13 @@ def test_student_exchange_partner_snapshot_sync_in_public_readonly_mode(app_env,
         "refresh_class_guides_from_source": "class_guides",
         "refresh_seasonal_semester_guides_from_source": "seasonal_semester_guides",
         "refresh_academic_milestone_guides_from_source": "academic_milestone_guides",
+        "refresh_student_activity_guides_from_source": "student_activity_guides",
         "refresh_campus_life_support_guides_from_source": "campus_life_support_guides",
         "refresh_pc_software_entries_from_source": "pc_software_entries",
         "refresh_student_exchange_guides_from_source": "student_exchange_guides",
         "refresh_about_resource_guides_from_source": "about_resource_guides",
         "refresh_service_policy_guides_from_source": "service_policy_guides",
+        "refresh_newsroom_posts_from_source": "newsroom_posts",
         "refresh_dormitory_guides_from_source": "dormitory_guides",
         "refresh_phone_book_entries_from_source": "phone_book_entries",
         "refresh_student_exchange_partners_from_source": "student_exchange_partners",
@@ -262,6 +264,8 @@ def test_student_exchange_partner_snapshot_sync_in_public_readonly_mode(app_env,
     assert "about_resource_guides" in call_order
     assert "service_policy_guides" in summary
     assert "service_policy_guides" in call_order
+    assert "newsroom_posts" in summary
+    assert "newsroom_posts" in call_order
     assert "campus_life_support_guides" in summary
     assert "campus_life_support_guides" in call_order
     assert "pc_software_entries" in summary

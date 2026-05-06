@@ -743,10 +743,12 @@ def test_sync_official_snapshot_includes_campus_life_support_and_pc_software(app
         "refresh_class_guides_from_source": "class_guides",
         "refresh_seasonal_semester_guides_from_source": "seasonal_semester_guides",
         "refresh_academic_milestone_guides_from_source": "academic_milestone_guides",
+        "refresh_student_activity_guides_from_source": "student_activity_guides",
         "refresh_student_exchange_guides_from_source": "student_exchange_guides",
         "refresh_student_exchange_partners_from_source": "student_exchange_partners",
         "refresh_about_resource_guides_from_source": "about_resource_guides",
         "refresh_service_policy_guides_from_source": "service_policy_guides",
+        "refresh_newsroom_posts_from_source": "newsroom_posts",
         "refresh_dormitory_guides_from_source": "dormitory_guides",
         "refresh_phone_book_entries_from_source": "phone_book_entries",
         "refresh_campus_life_support_guides_from_source": "campus_life_support_guides",
@@ -765,8 +767,10 @@ def test_sync_official_snapshot_includes_campus_life_support_and_pc_software(app
     assert "campus_life_support_guides" in summary
     assert "about_resource_guides" in summary
     assert "service_policy_guides" in summary
+    assert "newsroom_posts" in summary
     assert "pc_software_entries" in summary
     assert "campus_life_support_guides" in call_order
     assert "about_resource_guides" in call_order
     assert "service_policy_guides" in call_order
+    assert "newsroom_posts" in call_order
     assert "pc_software_entries" in call_order

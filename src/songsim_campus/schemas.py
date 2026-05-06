@@ -276,6 +276,20 @@ class ServicePolicyGuide(BaseModel):
     last_synced_at: str
 
 
+class NewsroomPost(BaseModel):
+    id: int
+    topic: str
+    article_no: str | None = None
+    title: str
+    published_at: str | None = None
+    summary: str = ""
+    thumbnail_url: str | None = None
+    external_url: str | None = None
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
 class StudentExchangePartner(BaseModel):
     id: int
     partner_code: str

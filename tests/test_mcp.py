@@ -1055,6 +1055,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
         "tool_list_student_activity_guides",
         "tool_list_about_resource_guides",
         "tool_list_service_policy_guides",
+        "tool_list_newsroom_posts",
         "tool_list_student_exchange_guides",
         "tool_search_student_exchange_partners",
         "tool_search_phone_book",
@@ -1089,6 +1090,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     assert "songsim://student-activity-guide" in resource_uris
     assert "songsim://about-resource-guide" in resource_uris
     assert "songsim://service-policy-guide" in resource_uris
+    assert "songsim://newsroom-posts" in resource_uris
     assert "songsim://student-exchange-guide" in resource_uris
     assert "songsim://student-exchange-partners" in resource_uris
     assert "songsim://phone-book" in resource_uris
@@ -1144,6 +1146,7 @@ def test_mcp_public_readonly_mode_registers_prompts_and_extended_resources(app_e
         "songsim://academic-milestone-guide",
         "songsim://student-activity-guide",
         "songsim://about-resource-guide",
+        "songsim://newsroom-posts",
         "songsim://student-exchange-guide",
         "songsim://student-exchange-partners",
         "songsim://phone-book",
@@ -1274,6 +1277,18 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     )
     assert "anti_graft" in (
         tools["tool_list_service_policy_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "포토뉴스" in tools["tool_list_newsroom_posts"]["description"]
+    assert "보도자료" in tools["tool_list_newsroom_posts"]["description"]
+    assert "photo_news" in (
+        tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "press" in (
+        tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )
@@ -1624,6 +1639,7 @@ def test_mcp_public_usage_and_class_period_resources_are_readable(app_env, monke
     assert "tool_list_student_activity_guides" in usage_content
     assert "tool_list_about_resource_guides" in usage_content
     assert "tool_list_service_policy_guides" in usage_content
+    assert "tool_list_newsroom_posts" in usage_content
     assert "tool_list_student_exchange_guides" in usage_content
     assert "tool_search_student_exchange_partners" in usage_content
     assert "tool_search_phone_book" in usage_content

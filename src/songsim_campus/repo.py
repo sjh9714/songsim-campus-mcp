@@ -1190,6 +1190,37 @@ def replace_service_policy_guides(
     )
 
 
+def replace_newsroom_posts(
+    conn: psycopg.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    conn.execute("TRUNCATE TABLE newsroom_posts RESTART IDENTITY CASCADE")
+    _executemany(
+        conn,
+        """
+        INSERT INTO newsroom_posts (
+            topic, article_no, title, published_at, summary, thumbnail_url,
+            external_url, source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        [
+            (
+                row["topic"],
+                row.get("article_no"),
+                row["title"],
+                row.get("published_at"),
+                row.get("summary", ""),
+                row.get("thumbnail_url"),
+                row.get("external_url"),
+                row.get("source_url"),
+                row.get("source_tag", "demo"),
+                row["last_synced_at"],
+            )
+            for row in rows
+        ],
+    )
+
+
 def replace_student_exchange_partners(
     conn: psycopg.Connection,
     rows: list[dict[str, Any]],
@@ -1777,6 +1808,34 @@ def list_service_policy_guides(
     return [_row_to_dict("service_policy_guides", row) for row in rows]
 
 
+def list_newsroom_posts(
+    conn: psycopg.Connection,
+    *,
+    topic: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT *
+        FROM newsroom_posts
+    """
+    clauses: list[str] = []
+    params: list[Any] = []
+    if topic:
+        clauses.append("topic = %s")
+        params.append(topic)
+    if query:
+        clauses.append("(title ILIKE %s OR summary ILIKE %s)")
+        pattern = f"%{query}%"
+        params.extend([pattern, pattern])
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += " ORDER BY published_at DESC NULLS LAST, id LIMIT %s"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_dict("newsroom_posts", row) for row in rows]
+
+
 def list_student_exchange_partners(
     conn: psycopg.Connection,
     *,
@@ -2019,6 +2078,7 @@ def get_dataset_sync_state(conn: psycopg.Connection, table: str) -> dict[str, An
         "student_activity_guides",
         "about_resource_guides",
         "service_policy_guides",
+        "newsroom_posts",
         "pc_software_entries",
         "student_exchange_guides",
         "student_exchange_partners",

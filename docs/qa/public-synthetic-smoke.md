@@ -11,6 +11,7 @@
 - `phone_book_entries`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `campus_life_support_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `campus_life_notices`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
+- `newsroom_posts`의 `photo_news`와 `press`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `pc_software_entries`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `dormitory_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `affiliated_notices`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
@@ -187,6 +188,40 @@ curl -fsS "$PUBLIC_HTTP_URL/campus-life-notices?topic=events&limit=3"
 
 ```bash
 curl -fsS "$PUBLIC_HTTP_URL/campus-life-notices?query=%EC%99%B8%EB%B6%80%EA%B8%B0%EA%B4%80%EA%B3%B5%EC%A7%80&limit=3" \
+  | jq '.[0] | {topic, title, published_at, source_tag}'
+```
+
+## 5.7 Newsroom posts HTTP smoke
+
+CUK홍보 뉴스룸은 학교 공식 뉴스룸의 포토뉴스와 보도자료만 다룹니다. 보도자료가 외부 언론 보도 링크를 포함하더라도 외부 매체 본문은 스크랩하지 않습니다. Instagram 등 SNS/social 게시글은 여전히 out of scope/watch입니다.
+
+surface names:
+
+- `GET /newsroom-posts`
+- `songsim://newsroom-posts`
+- `tool_list_newsroom_posts`
+
+topics:
+
+- `photo_news`
+- `press`
+
+```bash
+curl -fsS "$PUBLIC_HTTP_URL/newsroom-posts?topic=photo_news&limit=3"
+curl -fsS "$PUBLIC_HTTP_URL/newsroom-posts?topic=press&limit=3"
+```
+
+기대값:
+
+- HTTP `200`
+- JSON array
+- 첫 결과 또는 상위 결과 안에 `"topic":"photo_news"` 또는 `"topic":"press"`가 보임
+- `"source_tag":"cuk_newsroom_posts"`가 보임
+
+`jq` 예시:
+
+```bash
+curl -fsS "$PUBLIC_HTTP_URL/newsroom-posts?topic=photo_news&limit=3" \
   | jq '.[0] | {topic, title, published_at, source_tag}'
 ```
 
@@ -611,6 +646,21 @@ with httpx.Client(timeout=20.0) as client:
     )
     print("tool_list_affiliated_notices", affiliated_notices_call.status_code)
 
+    newsroom_posts_call = client.post(
+        base,
+        headers=call_headers,
+        json={
+            "jsonrpc": "2.0",
+            "id": 41,
+            "method": "tools/call",
+            "params": {
+                "name": "tool_list_newsroom_posts",
+                "arguments": {"topic": "photo_news", "limit": 3},
+            },
+        },
+    )
+    print("tool_list_newsroom_posts", newsroom_posts_call.status_code)
+
     nearby_call = client.post(
         base,
         headers=call_headers,
@@ -818,12 +868,24 @@ with httpx.Client(timeout=20.0) as client:
     )
     print("affiliated notices resource", affiliated_notices_resource_read.status_code)
 
+    newsroom_posts_resource_read = client.post(
+        base,
+        headers=call_headers,
+        json={
+            "jsonrpc": "2.0",
+            "id": 42,
+            "method": "resources/read",
+            "params": {"uri": "songsim://newsroom-posts"},
+        },
+    )
+    print("newsroom posts resource", newsroom_posts_resource_read.status_code)
+
     dormitory_tool_call = client.post(
         base,
         headers=call_headers,
         json={
             "jsonrpc": "2.0",
-            "id": 39,
+            "id": 43,
             "method": "tools/call",
             "params": {
                 "name": "tool_list_dormitory_guides",
@@ -838,7 +900,7 @@ with httpx.Client(timeout=20.0) as client:
         headers=call_headers,
         json={
             "jsonrpc": "2.0",
-            "id": 40,
+            "id": 44,
             "method": "resources/read",
             "params": {"uri": "songsim://dormitory-guide"},
         },
@@ -861,6 +923,7 @@ PY
 - `tool_list_service_policy_guides 200`
 - `tool_search_phone_book 200`
 - `tool_list_campus_life_notices 200`
+- `tool_list_newsroom_posts 200`
 - `tool_list_affiliated_notices 200`
 - `tool_list_latest_notices 200`
 - `tool_find_nearby_restaurants 200`
@@ -875,6 +938,7 @@ PY
 - `service policy resource 200`
 - `phone book resource 200`
 - `campus life notices resource 200`
+- `newsroom posts resource 200`
 - `affiliated notices resource 200`
 - `tool_list_dormitory_guides 200`
 - `dormitory resource 200`
@@ -890,6 +954,7 @@ PY
 - `tool_list_service_policy_guides` payload가 빈 결과가 아니고 `privacy_policy`, `cctv_policy`, 또는 `anti_graft` 항목을 포함함
 - `tool_search_phone_book` payload가 빈 결과가 아니고 `보건실` 항목을 포함함
 - `tool_list_campus_life_notices` payload가 빈 결과가 아니고 `outside_agencies` 또는 `events` 항목을 포함함
+- `tool_list_newsroom_posts` payload가 빈 결과가 아니고 `photo_news` 또는 `press` 항목을 포함함
 - `tool_list_affiliated_notices` payload가 빈 결과가 아니고 `international_studies` 또는 dorm topic 항목을 포함함
 - `tool_list_dormitory_guides` payload가 빈 결과가 아니고 `latest_notices`, `hall_info`, 또는 `fees` 항목을 포함함
 - `tool_list_latest_notices` payload가 빈 결과가 아니고 academic 항목을 포함함
@@ -904,6 +969,7 @@ PY
 - `student exchange partners` resource 결과의 첫 항목에 `source_tag=cuk_student_exchange_partners`가 포함됨
 - `phone book` resource 결과의 첫 항목에 `source_tag=cuk_phone_book`가 포함됨
 - `campus life notices` resource 결과의 첫 항목에 `source_tag=cuk_campus_life_notices`가 포함됨
+- `newsroom posts` resource 결과의 첫 항목에 `source_tag=cuk_newsroom_posts`가 포함됨
 - `affiliated notices` resource 결과의 첫 항목에 `source_tag=cuk_affiliated_notice_boards`가 포함됨
 - `dormitory resource` 결과의 첫 항목에 `source_tag=cuk_dormitory_guides`가 포함됨
 
@@ -922,11 +988,12 @@ PY
 - `/service-policy-guides`가 `bidding`, `job_posting`, `privacy_policy`, `cctv_policy`, 또는 `anti_graft` topic과 `cuk_service_policy_guides` source tag를 반환
 - `/phone-book`가 `보건실` 또는 질의한 부서의 `cuk_phone_book` source tag를 반환
 - `/affiliated-notices`가 `international_studies` 또는 질의한 dorm/topic의 `cuk_affiliated_notice_boards` source tag를 반환
+- `/newsroom-posts`가 `photo_news` 또는 `press` topic과 `cuk_newsroom_posts` source tag를 반환
 - `/notices?category=academic&limit=3`가 `academic` notice와 `cuk_campus_notices` source tag를 반환
 - `/restaurants/nearby?origin=중도`가 `central-library` origin으로 nearby 결과를 반환
 - `/restaurants/nearby?origin=학생식당&open_now=true&category=cafe&limit=3`가 `200`으로 안정 응답하고, 빈 배열이어도 `open_now` strict contract와 일치
 - `/courses?query=CSE301...`가 빈 배열이어도 좋으니 `200`으로 안정 응답
-- MCP initialize가 성공하고 `tool_list_registration_guides`, `tool_list_class_guides`, `tool_list_seasonal_semester_guides`, `tool_list_academic_milestone_guides`, `tool_list_campus_life_support_guides`, `tool_list_campus_life_notices`, `tool_search_pc_software`, `tool_list_student_exchange_guides`, `tool_search_student_exchange_partners`, `tool_list_about_resource_guides`, `tool_list_service_policy_guides`, `tool_search_phone_book`, `tool_list_affiliated_notices`, `tool_list_dormitory_guides`, `tool_list_latest_notices`, `tool_find_nearby_restaurants`, `songsim://registration-guide`, `songsim://class-guide`, `songsim://seasonal-semester-guide`, `songsim://academic-milestone-guide`, `songsim://campus-life-support-guide`, `songsim://campus-life-notices`, `songsim://pc-software`, `songsim://student-exchange-guide`, `songsim://student-exchange-partners`, `songsim://about-resource-guide`, `songsim://service-policy-guide`, `songsim://phone-book`, `songsim://affiliated-notices`, `songsim://dormitory-guide`가 모두 노출
+- MCP initialize가 성공하고 `tool_list_registration_guides`, `tool_list_class_guides`, `tool_list_seasonal_semester_guides`, `tool_list_academic_milestone_guides`, `tool_list_campus_life_support_guides`, `tool_list_campus_life_notices`, `tool_list_newsroom_posts`, `tool_search_pc_software`, `tool_list_student_exchange_guides`, `tool_search_student_exchange_partners`, `tool_list_about_resource_guides`, `tool_list_service_policy_guides`, `tool_search_phone_book`, `tool_list_affiliated_notices`, `tool_list_dormitory_guides`, `tool_list_latest_notices`, `tool_find_nearby_restaurants`, `songsim://registration-guide`, `songsim://class-guide`, `songsim://seasonal-semester-guide`, `songsim://academic-milestone-guide`, `songsim://campus-life-support-guide`, `songsim://campus-life-notices`, `songsim://newsroom-posts`, `songsim://pc-software`, `songsim://student-exchange-guide`, `songsim://student-exchange-partners`, `songsim://about-resource-guide`, `songsim://service-policy-guide`, `songsim://phone-book`, `songsim://affiliated-notices`, `songsim://dormitory-guide`가 모두 노출
 - MCP registration/exchange-partner/affiliated/nearby tool call이 에러 없이 응답
 
-이 기준이 통과하면 class-guides + registration-guides + seasonal-semester-guides + academic-milestone-guides + 생활지원 core guides + campus life notices + PC software + student-exchange + exchange partner search + about/service policy resources + phone-book + affiliated notices + dormitory + nearby restaurant 공개 smoke는 충분합니다.
+이 기준이 통과하면 class-guides + registration-guides + seasonal-semester-guides + academic-milestone-guides + 생활지원 core guides + campus life notices + newsroom posts + PC software + student-exchange + exchange partner search + about/service policy resources + phone-book + affiliated notices + dormitory + nearby restaurant 공개 smoke는 충분합니다.

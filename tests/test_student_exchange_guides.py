@@ -189,8 +189,10 @@ def test_student_exchange_guides_are_in_sync_snapshot_and_readiness(app_env, mon
         "refresh_class_guides_from_source": ["class_guides"],
         "refresh_seasonal_semester_guides_from_source": ["seasonal_semester_guides"],
         "refresh_academic_milestone_guides_from_source": ["academic_milestone_guides"],
+        "refresh_student_activity_guides_from_source": ["student_activity_guides"],
         "refresh_about_resource_guides_from_source": ["about_resource_guides"],
         "refresh_service_policy_guides_from_source": ["service_policy_guides"],
+        "refresh_newsroom_posts_from_source": ["newsroom_posts"],
         "refresh_campus_life_support_guides_from_source": ["campus_life_support_guides"],
         "refresh_pc_software_entries_from_source": ["pc_software_entries"],
         "refresh_student_exchange_guides_from_source": sentinel_rows,
@@ -211,6 +213,7 @@ def test_student_exchange_guides_are_in_sync_snapshot_and_readiness(app_env, mon
     assert summary["academic_milestone_guides"] == 1
     assert summary["about_resource_guides"] == 1
     assert summary["service_policy_guides"] == 1
+    assert summary["newsroom_posts"] == 1
     assert summary["campus_life_support_guides"] == 1
     assert summary["pc_software_entries"] == 1
     assert summary["transport_guides"] == 1

@@ -19,6 +19,7 @@ from .mcp_public_serializers import (
     serialize_public_error,
     serialize_public_leave_of_absence_guide,
     serialize_public_nearby_restaurant,
+    serialize_public_newsroom_post,
     serialize_public_notice,
     serialize_public_pc_software_entry,
     serialize_public_place,
@@ -63,6 +64,7 @@ from .services import (
     list_estimated_empty_classrooms,
     list_latest_notices,
     list_leave_of_absence_guides,
+    list_newsroom_posts,
     list_profile_notices,
     list_registration_guides,
     list_scholarship_guides,
@@ -600,6 +602,40 @@ def register_shared_tools(
                 if public_readonly:
                     return [serialize_public_service_policy_guide(item) for item in guides]
                 return [item.model_dump() for item in guides]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "공식 뉴스룸 게시물을 읽을 때 사용합니다. 포토뉴스와 보도자료의 "
+                "공식 제목, 날짜, 요약, 썸네일, 외부 언론 링크를 current snapshot으로 "
+                "돌려줍니다. 외부 언론 본문은 수집하지 않습니다."
+            )
+            if public_readonly
+            else "학교 뉴스룸 게시물 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_newsroom_posts(
+        topic: Annotated[
+            str | None,
+            Field(description="뉴스룸 유형 필터. photo_news, press 중 하나를 사용합니다."),
+        ] = None,
+        query: Annotated[
+            str | None,
+            Field(description="제목 또는 요약 검색어. 예: 총장, 연구, 보도자료"),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                posts = list_newsroom_posts(conn, topic=topic, query=query, limit=limit)
+                if public_readonly:
+                    return [serialize_public_newsroom_post(item) for item in posts]
+                return [item.model_dump() for item in posts]
             except InvalidRequestError as exc:
                 if public_readonly:
                     return serialize_public_error(exc)

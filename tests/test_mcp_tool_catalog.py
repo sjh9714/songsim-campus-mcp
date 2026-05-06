@@ -38,6 +38,7 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
         "tool_list_student_activity_guides",
         "tool_list_about_resource_guides",
         "tool_list_service_policy_guides",
+        "tool_list_newsroom_posts",
         "tool_list_student_exchange_guides",
         "tool_search_student_exchange_partners",
         "tool_search_phone_book",
@@ -83,6 +84,9 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "캠퍼스투어" in payloads["tool_list_about_resource_guides"]["description"]
     assert "개인정보처리방침" in payloads["tool_list_service_policy_guides"]["description"]
     assert "청탁금지법" in payloads["tool_list_service_policy_guides"]["description"]
+    assert "포토뉴스" in payloads["tool_list_newsroom_posts"]["description"]
+    assert "보도자료" in payloads["tool_list_newsroom_posts"]["description"]
+    assert "외부 언론 본문" in payloads["tool_list_newsroom_posts"]["description"]
     assert "해외협정대학" in payloads["tool_search_student_exchange_partners"]["description"]
     assert "네덜란드" in payloads["tool_search_student_exchange_partners"]["description"]
     assert "Utrecht" in payloads["tool_search_student_exchange_partners"]["description"]
@@ -176,6 +180,16 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     )
     assert "anti_graft" in (
         payloads["tool_list_service_policy_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "photo_news" in (
+        payloads["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "press" in (
+        payloads["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )

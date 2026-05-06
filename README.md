@@ -9,6 +9,7 @@
 ## 주요 사용 질문
 
 - 최신 학사 공지와 소속기관 공지
+- 포토뉴스와 보도자료
 - 월별 학사일정과 등록·휴학·복학·증명·장학 안내
 - 건물, 시설, 편의시설, 전화번호, 운영시간
 - 과목 검색, 교시 정보, 도서관 좌석, 예상 빈 강의실
@@ -28,6 +29,7 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `songsim://student-exchange-guide`
 - `songsim://student-activity-guide`
 - `songsim://service-policy-guide`
+- `songsim://newsroom-posts`
 - `songsim://phone-book`
 - `songsim://dormitory-guide`
 - `tool_search_places`
@@ -36,6 +38,7 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `tool_list_latest_notices`
 - `tool_list_affiliated_notices`
 - `tool_list_service_policy_guides`
+- `tool_list_newsroom_posts`
 - `tool_search_dining_menus`
 - `tool_find_nearby_restaurants`
 - `tool_get_library_seat_status`
@@ -57,6 +60,7 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `/notices`
 - `/affiliated-notices`
 - `/campus-life-notices`
+- `/newsroom-posts`
 - `/dormitory-guides`
 - `/pc-software`
 - `/dining-menus`

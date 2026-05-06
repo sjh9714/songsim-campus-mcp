@@ -20,6 +20,7 @@ from .services import (
     list_class_guides,
     list_dormitory_guides,
     list_leave_of_absence_guides,
+    list_newsroom_posts,
     list_registration_guides,
     list_scholarship_guides,
     list_seasonal_semester_guides,
@@ -81,13 +82,15 @@ def public_usage_guide_text() -> str:
             "1. 오늘 할 일",
             (
                 "Use tool_list_latest_notices, tool_list_affiliated_notices, "
-                "tool_list_campus_life_notices, and tool_list_academic_calendar for "
+                "tool_list_campus_life_notices, tool_list_newsroom_posts, "
+                "and tool_list_academic_calendar for "
                 "latest notices, department/dormitory boards, campus-life notices, and "
                 "academic calendar deadlines."
             ),
             (
                 "Example: 최신 학사 공지 2개 보여줘 / 국제학부 최신 공지 알려줘 / "
-                "행사안내 보여줘 / 교내 행사 공지 있어? / 3월 학사일정 알려줘"
+                "행사안내 보여줘 / 교내 행사 공지 있어? / 포토뉴스 최신 글 보여줘 / "
+                "보도자료 알려줘 / 3월 학사일정 알려줘"
             ),
             "",
             "2. 어디 / 연락처",
@@ -188,6 +191,7 @@ def public_usage_guide_text() -> str:
             "- songsim://class-periods",
             "- songsim://about-resource-guide",
             "- songsim://service-policy-guide",
+            "- songsim://newsroom-posts",
             "- songsim://source-registry",
         ]
     )
@@ -345,6 +349,16 @@ def register_shared_resources(mcp: Any, connection_factory: Any, docs_dir: Path)
         with connection_factory() as conn:
             return json.dumps(
                 [item.model_dump() for item in list_service_policy_guides(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://newsroom-posts")
+    def newsroom_posts_resource() -> str:
+        """Return the latest official newsroom posts as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_newsroom_posts(conn, limit=50)],
                 ensure_ascii=False,
                 indent=2,
             )

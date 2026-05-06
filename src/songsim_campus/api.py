@@ -52,6 +52,7 @@ from .schemas import (
     McpCoordinates,
     MealRecommendationResponse,
     NearbyRestaurant,
+    NewsroomPost,
     Notice,
     NoticeCategoryInfo,
     PCSoftwareEntry,
@@ -107,6 +108,7 @@ from .services import (
     list_estimated_empty_classrooms,
     list_latest_notices,
     list_leave_of_absence_guides,
+    list_newsroom_posts,
     list_profile_notices,
     list_registration_guides,
     list_restaurants,
@@ -548,6 +550,18 @@ def create_app() -> FastAPI:
         with connection() as conn:
             try:
                 return list_service_policy_guides(conn, topic=topic, limit=limit)
+            except InvalidRequestError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/newsroom-posts", response_model=list[NewsroomPost])
+    def newsroom_posts(
+        topic: str | None = Query(default=None, description="뉴스룸 유형 필터"),
+        query: str | None = Query(default=None, description="제목/요약 검색어"),
+        limit: int = Query(default=20, ge=1, le=50),
+    ) -> list[NewsroomPost]:
+        with connection() as conn:
+            try:
+                return list_newsroom_posts(conn, topic=topic, query=query, limit=limit)
             except InvalidRequestError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
 

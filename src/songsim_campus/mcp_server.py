@@ -56,8 +56,8 @@ def build_mcp():
             "about places, courses, academic calendar, academic support, academic status, "
             "registration, class, seasonal semester, academic milestone, phone book, "
             "dormitory, notices, affiliated notices, certificate, leave-of-absence, "
-            "scholarship guides, about resource guides, and service policy guides, "
-            "wifi guides, "
+            "scholarship guides, about resource guides, service policy guides, "
+            "newsroom posts, wifi guides, "
             "dining, nearby restaurants, library seats, empty classrooms, and transport."
         ),
         website_url=settings.public_http_url or None,

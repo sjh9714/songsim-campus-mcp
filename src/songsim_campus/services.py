@@ -50,6 +50,10 @@ from .ingest.kakao_places import (
     KakaoPlace,
     KakaoPlaceDetailClient,
 )
+from .ingest.newsroom_posts import (
+    PhotoNewsSource,
+    PressSource,
+)
 from .ingest.official_sources import (
     AcademicCalendarSource,
     AcademicSupportGuideSource,
@@ -147,6 +151,7 @@ from .schemas import (
     MatchedNotice,
     MealRecommendationResponse,
     NearbyRestaurant,
+    NewsroomPost,
     Notice,
     NoticeCategoryInfo,
     ObservabilitySnapshot,
@@ -242,6 +247,10 @@ SERVICE_POLICY_GUIDE_SOURCE_URLS = {
     "privacy_policy": "https://www.catholic.ac.kr/ko/service/privacy.do",
     "cctv_policy": "https://www.catholic.ac.kr/ko/service/notice_cctv_regulation.do",
     "anti_graft": "https://www.catholic.ac.kr/ko/service/anti_graft_law1.do",
+}
+NEWSROOM_POST_SOURCE_URLS = {
+    "photo_news": "https://www.catholic.ac.kr/ko/newsroom/photonews.do",
+    "press": "https://www.catholic.ac.kr/ko/newsroom/press.do",
 }
 RETURN_FROM_LEAVE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/return_from_leave_of_absence.do"
 DROPOUT_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/dropout.do"
@@ -342,6 +351,7 @@ SYNC_DATASET_TABLES = (
     "student_activity_guides",
     "about_resource_guides",
     "service_policy_guides",
+    "newsroom_posts",
     "student_exchange_guides",
     "student_exchange_partners",
     "dormitory_guides",
@@ -381,7 +391,13 @@ PUBLIC_READY_CORE_DATASETS = frozenset(
     }
 )
 PUBLIC_READY_BEST_EFFORT_DATASETS = frozenset(
-    {"campus_facilities", "campus_dining_menus", "affiliated_notices", "campus_life_notices"}
+    {
+        "campus_facilities",
+        "campus_dining_menus",
+        "affiliated_notices",
+        "campus_life_notices",
+        "newsroom_posts",
+    }
 )
 PUBLIC_READY_OPTIONAL_DATASETS = frozenset({"courses"})
 PUBLIC_READY_REQUIRED_DATASETS = PUBLIC_READY_CORE_DATASETS
@@ -417,6 +433,7 @@ ADMIN_SYNC_TARGETS = {
     "student_activity_guides",
     "about_resource_guides",
     "service_policy_guides",
+    "newsroom_posts",
     "student_exchange_guides",
     "student_exchange_partners",
     "dormitory_guides",
@@ -540,6 +557,7 @@ SERVICE_POLICY_GUIDE_TOPICS = {
     "cctv_policy",
     "anti_graft",
 }
+NEWSROOM_POST_TOPICS = {"photo_news", "press"}
 DORMITORY_GUIDE_TOPICS = {"hall_info", "quick_links", "latest_notices", "fees"}
 AFFILIATED_NOTICE_TOPICS = {
     "international_studies",
@@ -3141,6 +3159,65 @@ def refresh_service_policy_guides_from_source(
     ]
 
 
+def list_newsroom_posts(
+    conn: DBConnection,
+    *,
+    topic: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+) -> list[NewsroomPost]:
+    normalized_limit = max(1, min(limit, 50))
+    normalized_topic = topic.strip() if topic else None
+    normalized_query = query.strip() if query else None
+    if normalized_topic and normalized_topic not in NEWSROOM_POST_TOPICS:
+        raise InvalidRequestError("topic must be one of photo_news, press.")
+    return [
+        NewsroomPost.model_validate(item)
+        for item in repo.list_newsroom_posts(
+            conn,
+            topic=normalized_topic,
+            query=normalized_query,
+            limit=normalized_limit,
+        )
+    ]
+
+
+def refresh_newsroom_posts_from_source(
+    conn: DBConnection,
+    *,
+    sources: list[Any] | None = None,
+    fetched_at: str | None = None,
+    limit_per_source: int = 16,
+) -> list[NewsroomPost]:
+    if sources is None:
+        sources = [
+            PhotoNewsSource(NEWSROOM_POST_SOURCE_URLS["photo_news"]),
+            PressSource(NEWSROOM_POST_SOURCE_URLS["press"]),
+        ]
+    synced_at = fetched_at or _now_iso()
+    rows: list[dict[str, Any]] = []
+    for source in sources:
+        list_rows = source.parse_list(source.fetch_list(limit=limit_per_source))
+        for item in list_rows[:limit_per_source]:
+            merged = dict(item)
+            article_no = item.get("article_no")
+            if article_no:
+                detail = source.parse_detail(
+                    source.fetch_detail(str(article_no), limit=limit_per_source),
+                    default_title=str(item.get("title") or ""),
+                    default_summary=str(item.get("summary") or ""),
+                    default_published_at=item.get("published_at"),
+                )
+                merged.update({key: value for key, value in detail.items() if value})
+            merged["last_synced_at"] = synced_at
+            rows.append(merged)
+    repo.replace_newsroom_posts(conn, rows)
+    return [
+        NewsroomPost.model_validate(item)
+        for item in repo.list_newsroom_posts(conn, limit=max(len(rows), 1))
+    ]
+
+
 def list_student_exchange_guides(
     conn: DBConnection,
     *,
@@ -3563,6 +3640,8 @@ def _run_admin_sync_target(
         return {"about_resource_guides": len(refresh_about_resource_guides_from_source(conn))}
     if target == "service_policy_guides":
         return {"service_policy_guides": len(refresh_service_policy_guides_from_source(conn))}
+    if target == "newsroom_posts":
+        return {"newsroom_posts": len(refresh_newsroom_posts_from_source(conn))}
     if target == "student_exchange_guides":
         return {"student_exchange_guides": len(refresh_student_exchange_guides_from_source(conn))}
     if target == "student_exchange_partners":
@@ -5476,6 +5555,7 @@ def sync_official_snapshot(
     student_activity_guides = refresh_student_activity_guides_from_source(conn)
     about_resource_guides = refresh_about_resource_guides_from_source(conn)
     service_policy_guides = refresh_service_policy_guides_from_source(conn)
+    newsroom_posts = refresh_newsroom_posts_from_source(conn)
     student_exchange_guides = refresh_student_exchange_guides_from_source(conn)
     dormitory_guides = refresh_dormitory_guides_from_source(conn)
     phone_book_entries = refresh_phone_book_entries_from_source(conn)
@@ -5505,6 +5585,7 @@ def sync_official_snapshot(
         "student_activity_guides": len(student_activity_guides),
         "about_resource_guides": len(about_resource_guides),
         "service_policy_guides": len(service_policy_guides),
+        "newsroom_posts": len(newsroom_posts),
         "student_exchange_guides": len(student_exchange_guides),
         "student_exchange_partners": len(student_exchange_partners),
         "dormitory_guides": len(dormitory_guides),
