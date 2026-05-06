@@ -63,6 +63,13 @@ from .ingest.pc_software import (
 from .ingest.pc_software import (
     search_pc_software_entries as rank_pc_software_rows,
 )
+from .ingest.service_policy_guides import (
+    AntiGraftGuideSource,
+    BiddingGuideSource,
+    CctvPolicyGuideSource,
+    JobPostingGuideSource,
+    PrivacyPolicyGuideSource,
+)
 from .ingest.student_activity_guides import (
     CampusMediaGuideSource,
     RotcGuideSource,
@@ -140,6 +147,7 @@ EvalDomain = Literal[
     "academic_milestone_guides",
     "student_exchange_guides",
     "student_activity_guides",
+    "service_policy_guides",
     "student_exchange_partners",
     "campus_life_support_guides",
     "pc_software_entries",
@@ -436,6 +444,16 @@ def _summarize_payload(payload: Any, *, summary_kind: str) -> Any:
             for item in rows[:5]
         ]
     if summary_kind == "student_activity_guides_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "summary": item.get("summary"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "service_policy_guides_top5":
         rows = payload if isinstance(payload, list) else []
         return [
             {
@@ -950,6 +968,13 @@ def _payload_from_db(conn: psycopg.Connection, row: EvalCorpusRow) -> Any:
         return [item.model_dump() for item in items]
     if path == "/campus-life-support-guides":
         items = services.list_campus_life_support_guides(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/service-policy-guides":
+        items = services.list_service_policy_guides(
             conn,
             topic=row.api_request.params.get("topic"),
             limit=_limit_from_row(row, 20),
@@ -1525,6 +1550,25 @@ def _payload_from_sources(
                 LostFoundGuideSource(services.LOST_FOUND_GUIDE_SOURCE_URL),
                 ParkingGuideSource(services.CAMPUS_PARKING_GUIDE_SOURCE_URL),
                 CareerCounselingGuideSource(services.CAREER_COUNSELING_GUIDE_SOURCE_URL),
+            ):
+                rows.extend(source.parse(source.fetch(), fetched_at=captured_at))
+            source_cache[cache_key] = rows
+        rows = list(source_cache[cache_key])
+        if topic := row.api_request.params.get("topic"):
+            rows = [item for item in rows if item.get("topic") == topic]
+        return rows[:limit]
+    if path == "/service-policy-guides":
+        cache_key = "service_policy_guides"
+        if cache_key not in source_cache:
+            rows: list[dict[str, Any]] = []
+            for source in (
+                BiddingGuideSource(services.SERVICE_POLICY_GUIDE_SOURCE_URLS["bidding"]),
+                JobPostingGuideSource(services.SERVICE_POLICY_GUIDE_SOURCE_URLS["job_posting"]),
+                PrivacyPolicyGuideSource(
+                    services.SERVICE_POLICY_GUIDE_SOURCE_URLS["privacy_policy"]
+                ),
+                CctvPolicyGuideSource(services.SERVICE_POLICY_GUIDE_SOURCE_URLS["cctv_policy"]),
+                AntiGraftGuideSource(services.SERVICE_POLICY_GUIDE_SOURCE_URLS["anti_graft"]),
             ):
                 rows.extend(source.parse(source.fetch(), fetched_at=captured_at))
             source_cache[cache_key] = rows
@@ -2121,6 +2165,7 @@ def render_validation_report(
         "certificate_guides",
         "dormitory_guides",
         "campus_life_support_guides",
+        "service_policy_guides",
         "pc_software_entries",
         "registration_guides",
         "class_guides",

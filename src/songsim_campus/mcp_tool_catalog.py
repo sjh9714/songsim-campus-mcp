@@ -26,6 +26,7 @@ from .mcp_public_serializers import (
     serialize_public_restaurant_search,
     serialize_public_scholarship_guide,
     serialize_public_seasonal_semester_guide,
+    serialize_public_service_policy_guide,
     serialize_public_student_activity_guide,
     serialize_public_student_exchange_guide,
     serialize_public_transport_guide,
@@ -66,6 +67,7 @@ from .services import (
     list_registration_guides,
     list_scholarship_guides,
     list_seasonal_semester_guides,
+    list_service_policy_guides,
     list_student_activity_guides,
     list_student_exchange_guides,
     list_transport_guides,
@@ -561,6 +563,42 @@ def register_shared_tools(
                 guides = list_about_resource_guides(conn, topic=topic, limit=limit)
                 if public_readonly:
                     return [serialize_public_about_resource_guide(item) for item in guides]
+                return [item.model_dump() for item in guides]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "서비스/정책 안내를 읽을 때 사용합니다. 입찰공고, 채용공고, "
+                "개인정보처리방침, 영상정보처리기기 방침, 청탁금지법 안내처럼 "
+                "공식 1차 서비스 페이지의 링크와 접근 안내를 current snapshot으로 "
+                "돌려줍니다."
+            )
+            if public_readonly
+            else "학교 서비스/정책 안내 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_service_policy_guides(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "서비스/정책 안내 유형 필터. bidding, job_posting, privacy_policy, "
+                    "cctv_policy, anti_graft 중 하나를 사용합니다."
+                )
+            ),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                guides = list_service_policy_guides(conn, topic=topic, limit=limit)
+                if public_readonly:
+                    return [serialize_public_service_policy_guide(item) for item in guides]
                 return [item.model_dump() for item in guides]
             except InvalidRequestError as exc:
                 if public_readonly:

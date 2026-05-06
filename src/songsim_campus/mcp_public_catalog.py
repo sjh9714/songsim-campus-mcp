@@ -23,6 +23,7 @@ from .services import (
     list_registration_guides,
     list_scholarship_guides,
     list_seasonal_semester_guides,
+    list_service_policy_guides,
     list_student_activity_guides,
     list_student_exchange_guides,
     list_transport_guides,
@@ -109,6 +110,7 @@ def public_usage_guide_text() -> str:
                 "tool_list_class_guides, tool_list_seasonal_semester_guides, "
                 "tool_list_student_activity_guides, "
                 "tool_list_about_resource_guides, "
+                "tool_list_service_policy_guides, "
                 "tool_list_academic_milestone_guides, tool_list_student_exchange_guides, "
                 "tool_search_student_exchange_partners, and tool_list_scholarship_guides "
                 "for academic procedures and institutional rules."
@@ -126,6 +128,7 @@ def public_usage_guide_text() -> str:
                 "캠퍼스투어 신청 어디서 해? / "
                 "학생군사교육단 안내해줘 / 학생활동 공지 알려줘 / "
                 "학교 규정 어디서 봐? / 요람 링크 알려줘 / 학사제도안내책자 보여줘 / "
+                "개인정보처리방침 어디서 봐? / 채용공고 알려줘 / 청탁금지법 문의 어디야 / "
                 "국내 학점교류 신청대상 알려줘 / 학점교류 신청시기 알려줘 / "
                 "교류대학 현황 알려줘 / 교환학생 프로그램 알려줘 / "
                 "해외 교류프로그램 알려줘 / 해외협정대학 알려줘 / "
@@ -184,6 +187,7 @@ def public_usage_guide_text() -> str:
             "- songsim://notice-categories",
             "- songsim://class-periods",
             "- songsim://about-resource-guide",
+            "- songsim://service-policy-guide",
             "- songsim://source-registry",
         ]
     )
@@ -331,6 +335,16 @@ def register_shared_resources(mcp: Any, connection_factory: Any, docs_dir: Path)
         with connection_factory() as conn:
             return json.dumps(
                 [item.model_dump() for item in list_about_resource_guides(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://service-policy-guide")
+    def service_policy_guide_resource() -> str:
+        """Return the latest service/policy guides as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_service_policy_guides(conn, limit=50)],
                 ensure_ascii=False,
                 indent=2,
             )

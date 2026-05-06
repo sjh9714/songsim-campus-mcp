@@ -17,6 +17,7 @@
 - `student_exchange_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `student_exchange_partners`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `about_resource_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
+- `service_policy_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `notices`의 `academic` 최신 3건이 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - nearby restaurants의 대표 alias origin과 strict `open_now` 경로가 공개 HTTP/MCP에서 유지되는지 확인
 - 대표 `courses` watchlist query가 500/timeout 없이 처리되는지 확인
@@ -430,6 +431,45 @@ curl -fsS "$PUBLIC_HTTP_URL/about-resource-guides?topic=rules&limit=2" \
 - `topic=budget_account` 결과는 `예결산공고` 관련 공식 링크를 포함
 - `"source_tag":"cuk_about_resource_guides"`가 보임
 
+## 14.6 Service policy guide family smoke
+
+서비스/정책 자료는 v1에서 원문 해석이 아니라 공식 링크, 제목, 짧은 요약, 접근 안내를 제공합니다.
+
+- `개인정보처리방침 어디서 봐?`
+- `채용공고 알려줘`
+- `입찰공고 어디서 확인해?`
+- `청탁금지법 문의 어디야?`
+
+surface names:
+
+- `GET /service-policy-guides`
+- `songsim://service-policy-guide`
+- `tool_list_service_policy_guides`
+
+topics:
+
+- `bidding`
+- `job_posting`
+- `privacy_policy`
+- `cctv_policy`
+- `anti_graft`
+
+`jq` 예시:
+
+```bash
+curl -fsS "$PUBLIC_HTTP_URL/service-policy-guides?topic=privacy_policy&limit=2" \
+  | jq '.[0] | {topic, title, source_tag}'
+```
+
+기대값:
+
+- HTTP `200`
+- JSON array
+- `topic=privacy_policy` 결과는 `개인정보처리방침`과 공식 링크를 포함
+- `topic=cctv_policy` 결과는 영상정보처리기기 방침 공식 링크를 포함
+- `topic=anti_graft` 결과는 청탁금지법 주요내용/문의처 링크를 포함
+- `"source_tag":"cuk_service_policy_guides"`가 보임
+
 ## 15. MCP initialize + guide checks
 
 아래 Python smoke는 live에서 검증한 payload 형태를 그대로 사용합니다.
@@ -818,6 +858,7 @@ PY
 - `tool_search_pc_software 200`
 - `tool_list_student_exchange_guides 200`
 - `tool_search_student_exchange_partners 200`
+- `tool_list_service_policy_guides 200`
 - `tool_search_phone_book 200`
 - `tool_list_campus_life_notices 200`
 - `tool_list_affiliated_notices 200`
@@ -831,6 +872,7 @@ PY
 - `pc software resource 200`
 - `student exchange resource 200`
 - `student exchange partners resource 200`
+- `service policy resource 200`
 - `phone book resource 200`
 - `campus life notices resource 200`
 - `affiliated notices resource 200`
@@ -845,6 +887,7 @@ PY
 - `tool_search_pc_software` payload가 빈 결과가 아니고 `SPSS` 또는 `Photoshop` 항목을 포함함
 - `tool_list_student_exchange_guides` payload가 빈 결과가 아니고 `exchange_student` 또는 `domestic_partner_universities` 항목을 포함함
 - `tool_search_student_exchange_partners` payload가 빈 결과가 아니고 `네덜란드` 또는 `Utrecht University` 항목을 포함함
+- `tool_list_service_policy_guides` payload가 빈 결과가 아니고 `privacy_policy`, `cctv_policy`, 또는 `anti_graft` 항목을 포함함
 - `tool_search_phone_book` payload가 빈 결과가 아니고 `보건실` 항목을 포함함
 - `tool_list_campus_life_notices` payload가 빈 결과가 아니고 `outside_agencies` 또는 `events` 항목을 포함함
 - `tool_list_affiliated_notices` payload가 빈 결과가 아니고 `international_studies` 또는 dorm topic 항목을 포함함
@@ -876,13 +919,14 @@ PY
 - `/student-exchange-guides`가 `exchange_student` 또는 `domestic_partner_universities` topic과 `cuk_student_exchange_guides` source tag를 반환
 - `/student-exchange-partners`가 `네덜란드` 같은 query에 대해 `country_ko`, `university_name`, `homepage_url`, `cuk_student_exchange_partners`를 반환
 - `/about-resource-guides`가 `rules`, `university_bulletin`, `academic_handbook`, `campus_tour`, `history`, `church_literature`, 또는 `budget_account` topic과 `cuk_about_resource_guides` source tag를 반환
+- `/service-policy-guides`가 `bidding`, `job_posting`, `privacy_policy`, `cctv_policy`, 또는 `anti_graft` topic과 `cuk_service_policy_guides` source tag를 반환
 - `/phone-book`가 `보건실` 또는 질의한 부서의 `cuk_phone_book` source tag를 반환
 - `/affiliated-notices`가 `international_studies` 또는 질의한 dorm/topic의 `cuk_affiliated_notice_boards` source tag를 반환
 - `/notices?category=academic&limit=3`가 `academic` notice와 `cuk_campus_notices` source tag를 반환
 - `/restaurants/nearby?origin=중도`가 `central-library` origin으로 nearby 결과를 반환
 - `/restaurants/nearby?origin=학생식당&open_now=true&category=cafe&limit=3`가 `200`으로 안정 응답하고, 빈 배열이어도 `open_now` strict contract와 일치
 - `/courses?query=CSE301...`가 빈 배열이어도 좋으니 `200`으로 안정 응답
-- MCP initialize가 성공하고 `tool_list_registration_guides`, `tool_list_class_guides`, `tool_list_seasonal_semester_guides`, `tool_list_academic_milestone_guides`, `tool_list_campus_life_support_guides`, `tool_list_campus_life_notices`, `tool_search_pc_software`, `tool_list_student_exchange_guides`, `tool_search_student_exchange_partners`, `tool_list_about_resource_guides`, `tool_search_phone_book`, `tool_list_affiliated_notices`, `tool_list_dormitory_guides`, `tool_list_latest_notices`, `tool_find_nearby_restaurants`, `songsim://registration-guide`, `songsim://class-guide`, `songsim://seasonal-semester-guide`, `songsim://academic-milestone-guide`, `songsim://campus-life-support-guide`, `songsim://campus-life-notices`, `songsim://pc-software`, `songsim://student-exchange-guide`, `songsim://student-exchange-partners`, `songsim://about-resource-guide`, `songsim://phone-book`, `songsim://affiliated-notices`, `songsim://dormitory-guide`가 모두 노출
+- MCP initialize가 성공하고 `tool_list_registration_guides`, `tool_list_class_guides`, `tool_list_seasonal_semester_guides`, `tool_list_academic_milestone_guides`, `tool_list_campus_life_support_guides`, `tool_list_campus_life_notices`, `tool_search_pc_software`, `tool_list_student_exchange_guides`, `tool_search_student_exchange_partners`, `tool_list_about_resource_guides`, `tool_list_service_policy_guides`, `tool_search_phone_book`, `tool_list_affiliated_notices`, `tool_list_dormitory_guides`, `tool_list_latest_notices`, `tool_find_nearby_restaurants`, `songsim://registration-guide`, `songsim://class-guide`, `songsim://seasonal-semester-guide`, `songsim://academic-milestone-guide`, `songsim://campus-life-support-guide`, `songsim://campus-life-notices`, `songsim://pc-software`, `songsim://student-exchange-guide`, `songsim://student-exchange-partners`, `songsim://about-resource-guide`, `songsim://service-policy-guide`, `songsim://phone-book`, `songsim://affiliated-notices`, `songsim://dormitory-guide`가 모두 노출
 - MCP registration/exchange-partner/affiliated/nearby tool call이 에러 없이 응답
 
-이 기준이 통과하면 class-guides + registration-guides + seasonal-semester-guides + academic-milestone-guides + 생활지원 core guides + campus life notices + PC software + student-exchange + exchange partner search + phone-book + affiliated notices + dormitory + nearby restaurant 공개 smoke는 충분합니다.
+이 기준이 통과하면 class-guides + registration-guides + seasonal-semester-guides + academic-milestone-guides + 생활지원 core guides + campus life notices + PC software + student-exchange + exchange partner search + about/service policy resources + phone-book + affiliated notices + dormitory + nearby restaurant 공개 smoke는 충분합니다.

@@ -2394,6 +2394,24 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "rotc",
     }
 
+    service_policy_rows = [row for row in rows if row.domain == "service_policy_guides"]
+
+    assert len(service_policy_rows) == DOMAIN_QUOTAS["service_policy_guides"]
+    assert {row.api_request.path for row in service_policy_rows} == {"/service-policy-guides"}
+    assert {row.expected_mcp_flow for row in service_policy_rows} == {
+        "tool_list_service_policy_guides"
+    }
+    assert {row.pass_rule["summary_kind"] for row in service_policy_rows} == {
+        "service_policy_guides_top5"
+    }
+    assert {row.api_request.params["topic"] for row in service_policy_rows} == {
+        "bidding",
+        "job_posting",
+        "privacy_policy",
+        "cctv_policy",
+        "anti_graft",
+    }
+
     partner_rows = [row for row in rows if row.domain == "student_exchange_partners"]
 
     assert len(partner_rows) == DOMAIN_QUOTAS["student_exchange_partners"]

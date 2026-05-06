@@ -31,6 +31,7 @@ EvalDomain = Literal[
     "academic_milestone_guides",
     "student_exchange_guides",
     "student_activity_guides",
+    "service_policy_guides",
     "student_exchange_partners",
     "campus_life_support_guides",
     "pc_software_entries",
@@ -70,6 +71,7 @@ DOMAIN_ORDER: tuple[EvalDomain, ...] = (
     "student_exchange_guides",
     "student_exchange_partners",
     "student_activity_guides",
+    "service_policy_guides",
     "out_of_scope",
 )
 STYLE_ORDER: tuple[EvalStyle, ...] = (
@@ -107,7 +109,8 @@ DOMAIN_QUOTAS: dict[EvalDomain, int] = {
     "pc_software_entries": 20,
     "student_exchange_guides": 25,
     "student_exchange_partners": 32,
-    "student_activity_guides": 25,
+    "student_activity_guides": 20,
+    "service_policy_guides": 5,
     "out_of_scope": 20,
 }
 
@@ -151,7 +154,8 @@ DOMAIN_TRUTH_COUNTS: dict[EvalDomain, dict[TruthMode, int]] = {
     "pc_software_entries": {"invariant_only": 20},
     "student_exchange_guides": {"set_contains": 23, "invariant_only": 2},
     "student_exchange_partners": {"set_contains": 32},
-    "student_activity_guides": {"invariant_only": 25},
+    "student_activity_guides": {"invariant_only": 20},
+    "service_policy_guides": {"invariant_only": 5},
     "out_of_scope": {"invariant_only": 20},
 }
 
@@ -181,6 +185,7 @@ ID_PREFIXES: dict[EvalDomain, str] = {
     "student_exchange_guides": "SEX-",
     "student_exchange_partners": "SEP-",
     "student_activity_guides": "SAV-",
+    "service_policy_guides": "SPG-",
     "out_of_scope": "OOS-",
 }
 
@@ -655,6 +660,17 @@ def _partner_seed(query: str, utterance: str, *, notes: str) -> RequestSeed:
     )
 
 
+def _service_policy_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "service_policy_guides",
+        utterance,
+        {"path": "/service-policy-guides", "params": {"topic": topic, "limit": 5}},
+        "tool_list_service_policy_guides",
+        {"summary_kind": "service_policy_guides_top5"},
+        notes,
+    )
+
+
 def _manual_extra_seeds() -> list[RequestSeed]:
     return [
         _place_seed("남문", "남문 어디야?", notes="south-gate"),
@@ -854,6 +870,19 @@ def _manual_extra_seeds() -> list[RequestSeed]:
         _partner_seed(
             "National Taiwan University", "National Taiwan University 있어?", notes="university-ntu"
         ),
+        _service_policy_seed("bidding", "입찰공고 어디서 확인해?", notes="bidding"),
+        _service_policy_seed("job_posting", "채용공고 알려줘", notes="job-posting"),
+        _service_policy_seed(
+            "privacy_policy",
+            "개인정보처리방침 어디서 봐?",
+            notes="privacy-policy",
+        ),
+        _service_policy_seed(
+            "cctv_policy",
+            "영상정보처리기기 방침 어디서 봐?",
+            notes="cctv-policy",
+        ),
+        _service_policy_seed("anti_graft", "청탁금지법 문의 어디야?", notes="anti-graft"),
     ]
 
 

@@ -30,6 +30,7 @@ from .schemas import (
     RestaurantSearchResult,
     ScholarshipGuide,
     SeasonalSemesterGuide,
+    ServicePolicyGuide,
     StudentActivityGuide,
     StudentExchangeGuide,
     TransportGuide,
@@ -278,6 +279,14 @@ def serialize_public_student_activity_guide(
 
 def serialize_public_about_resource_guide(
     guide: AboutResourceGuide,
+) -> dict[str, object]:
+    payload = guide.model_dump()
+    payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
+    return payload
+
+
+def serialize_public_service_policy_guide(
+    guide: ServicePolicyGuide,
 ) -> dict[str, object]:
     payload = guide.model_dump()
     payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")

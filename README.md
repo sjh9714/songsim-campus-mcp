@@ -27,6 +27,7 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `songsim://class-guide`
 - `songsim://student-exchange-guide`
 - `songsim://student-activity-guide`
+- `songsim://service-policy-guide`
 - `songsim://phone-book`
 - `songsim://dormitory-guide`
 - `tool_search_places`
@@ -34,6 +35,7 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `tool_search_phone_book`
 - `tool_list_latest_notices`
 - `tool_list_affiliated_notices`
+- `tool_list_service_policy_guides`
 - `tool_search_dining_menus`
 - `tool_find_nearby_restaurants`
 - `tool_get_library_seat_status`
@@ -50,6 +52,7 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `/student-exchange-guides`
 - `/student-activity-guides`
 - `/about-resource-guides`
+- `/service-policy-guides`
 - `/scholarship-guides`
 - `/notices`
 - `/affiliated-notices`

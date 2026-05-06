@@ -358,6 +358,10 @@ def test_sync_official_snapshot_includes_seasonal_semester_guides(app_env, monke
         _record(call_order, "about_resource_guides"),
     )
     monkeypatch.setattr(
+        "songsim_campus.services.refresh_service_policy_guides_from_source",
+        _record(call_order, "service_policy_guides"),
+    )
+    monkeypatch.setattr(
         "songsim_campus.services.refresh_student_exchange_partners_from_source",
         _record(call_order, "student_exchange_partners"),
     )
@@ -390,3 +394,5 @@ def test_sync_official_snapshot_includes_seasonal_semester_guides(app_env, monke
     assert "dormitory_guides" in call_order
     assert "about_resource_guides" in summary
     assert "about_resource_guides" in call_order
+    assert "service_policy_guides" in summary
+    assert "service_policy_guides" in call_order

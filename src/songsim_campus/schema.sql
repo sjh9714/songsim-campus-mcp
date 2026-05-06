@@ -309,6 +309,18 @@ CREATE TABLE IF NOT EXISTS about_resource_guides (
     last_synced_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS service_policy_guides (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    steps_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    links_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS student_exchange_partners (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     partner_code TEXT NOT NULL,
@@ -499,6 +511,10 @@ CREATE INDEX IF NOT EXISTS idx_about_resource_guides_topic
 ON about_resource_guides(topic);
 CREATE INDEX IF NOT EXISTS idx_about_resource_guides_title
 ON about_resource_guides(title);
+CREATE INDEX IF NOT EXISTS idx_service_policy_guides_topic
+ON service_policy_guides(topic);
+CREATE INDEX IF NOT EXISTS idx_service_policy_guides_title
+ON service_policy_guides(title);
 CREATE INDEX IF NOT EXISTS idx_campus_life_support_guides_topic
 ON campus_life_support_guides(topic);
 CREATE INDEX IF NOT EXISTS idx_campus_life_support_guides_title

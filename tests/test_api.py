@@ -349,6 +349,25 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
                 "last_synced_at": "2026-03-20T10:00:00+09:00",
             }
         ]
+    def stub_service_policy_guides(conn, topic=None, limit=20):
+        return [
+            {
+                "id": 1,
+                "topic": "privacy_policy",
+                "title": "개인정보처리방침",
+                "summary": "개인정보처리방침 안내",
+                "steps": ["공식 개인정보처리방침에서 원문을 확인합니다."],
+                "links": [
+                    {
+                        "label": "개인정보처리방침",
+                        "url": "https://www.catholic.ac.kr/ko/service/privacy.do",
+                    }
+                ],
+                "source_url": "https://www.catholic.ac.kr/ko/service/privacy.do",
+                "source_tag": "cuk_service_policy_guides",
+                "last_synced_at": "2026-03-20T10:00:00+09:00",
+            }
+        ]
     def stub_student_exchange_partners(conn, query=None, limit=20):
         return [
             {
@@ -521,6 +540,12 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     )
     monkeypatch.setattr(
         services,
+        "list_service_policy_guides",
+        stub_service_policy_guides,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        services,
         "search_student_exchange_partners",
         stub_student_exchange_partners,
         raising=False,
@@ -549,6 +574,10 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     monkeypatch.setattr(
         "songsim_campus.api.list_about_resource_guides",
         stub_about_resource_guides,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.api.list_service_policy_guides",
+        stub_service_policy_guides,
     )
     monkeypatch.setattr(
         "songsim_campus.api.search_student_exchange_partners",
@@ -593,6 +622,10 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
         about_resource_guides = public_client.get(
             "/about-resource-guides",
             params={"topic": "rules"},
+        )
+        service_policy_guides = public_client.get(
+            "/service-policy-guides",
+            params={"topic": "privacy_policy"},
         )
         student_exchange_partners = public_client.get(
             "/student-exchange-partners",
@@ -659,6 +692,7 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "/academic-milestone-guides" in landing.text
     assert "/student-activity-guides" in landing.text
     assert "/about-resource-guides" in landing.text
+    assert "/service-policy-guides" in landing.text
     assert "/student-exchange-guides" in landing.text
     assert "/student-exchange-partners" in landing.text
     assert "/phone-book" in landing.text
@@ -691,6 +725,8 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert student_activity_guides.json()[0]["topic"] == "student_government"
     assert about_resource_guides.status_code == 200
     assert about_resource_guides.json()[0]["topic"] == "rules"
+    assert service_policy_guides.status_code == 200
+    assert service_policy_guides.json()[0]["topic"] == "privacy_policy"
     assert student_exchange_partners.status_code == 200
     assert student_exchange_partners.json()[0]["partner_code"] == "00122"
     assert campus_life_support.status_code == 200
@@ -725,6 +761,7 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "/academic-milestone-guides" in openapi.text
     assert "/student-activity-guides" in openapi.text
     assert "/about-resource-guides" in openapi.text
+    assert "/service-policy-guides" in openapi.text
     assert "/student-exchange-guides" in openapi.text
     assert "/student-exchange-partners" in openapi.text
     assert "/phone-book" in openapi.text
@@ -923,6 +960,7 @@ def test_api_page_helpers_render_expected_strings():
     assert "/seasonal-semester-guides" in landing_html
     assert "/academic-milestone-guides" in landing_html
     assert "/student-exchange-guides" in landing_html
+    assert "/service-policy-guides" in landing_html
     assert "/student-exchange-partners" in landing_html
     assert "/phone-book" in landing_html
     assert "/campus-life-support-guides" in landing_html
@@ -957,6 +995,7 @@ def test_api_page_helpers_render_expected_strings():
     assert "affiliated_notices" in sync_html
     assert "student_exchange_guides" in sync_html
     assert "student_activity_guides" in sync_html
+    assert "service_policy_guides" in sync_html
 
     observability_html = render_admin_observability_page(
         state={

@@ -1054,6 +1054,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
         "tool_list_academic_milestone_guides",
         "tool_list_student_activity_guides",
         "tool_list_about_resource_guides",
+        "tool_list_service_policy_guides",
         "tool_list_student_exchange_guides",
         "tool_search_student_exchange_partners",
         "tool_search_phone_book",
@@ -1087,6 +1088,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     assert "songsim://academic-milestone-guide" in resource_uris
     assert "songsim://student-activity-guide" in resource_uris
     assert "songsim://about-resource-guide" in resource_uris
+    assert "songsim://service-policy-guide" in resource_uris
     assert "songsim://student-exchange-guide" in resource_uris
     assert "songsim://student-exchange-partners" in resource_uris
     assert "songsim://phone-book" in resource_uris
@@ -1260,6 +1262,18 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     )
     assert "budget_account" in (
         tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "개인정보처리방침" in tools["tool_list_service_policy_guides"]["description"]
+    assert "청탁금지법" in tools["tool_list_service_policy_guides"]["description"]
+    assert "privacy_policy" in (
+        tools["tool_list_service_policy_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "anti_graft" in (
+        tools["tool_list_service_policy_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )
@@ -1609,6 +1623,7 @@ def test_mcp_public_usage_and_class_period_resources_are_readable(app_env, monke
     assert "tool_list_academic_milestone_guides" in usage_content
     assert "tool_list_student_activity_guides" in usage_content
     assert "tool_list_about_resource_guides" in usage_content
+    assert "tool_list_service_policy_guides" in usage_content
     assert "tool_list_student_exchange_guides" in usage_content
     assert "tool_search_student_exchange_partners" in usage_content
     assert "tool_search_phone_book" in usage_content
@@ -1640,6 +1655,8 @@ def test_mcp_public_usage_and_class_period_resources_are_readable(app_env, monke
     assert "재입학 지원자격" in usage_content
     assert "학교 규정 어디서 봐?" in usage_content
     assert "학사제도안내책자 보여줘" in usage_content
+    assert "개인정보처리방침 어디서 봐?" in usage_content
+    assert "청탁금지법 문의 어디야" in usage_content
     assert "등록금 납부 방법" in usage_content
     assert "수업평가 기간" in usage_content
     assert "계절학기 신청 시기" in usage_content

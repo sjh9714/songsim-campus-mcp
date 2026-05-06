@@ -88,6 +88,7 @@ def render_admin_sync_page(
         {"title": "academic_milestone_guides", "fields": []},
         {"title": "student_activity_guides", "fields": []},
         {"title": "about_resource_guides", "fields": []},
+        {"title": "service_policy_guides", "fields": []},
         {"title": "student_exchange_guides", "fields": []},
         {"title": "student_exchange_partners", "fields": []},
         {"title": "phone_book_entries", "fields": []},
@@ -513,6 +514,10 @@ def render_landing_page(
             <li>
               <code>/about-resource-guides</code> official rules, university bulletin,
               academic handbook, and campus tour resource links
+            </li>
+            <li>
+              <code>/service-policy-guides</code> official bidding, job posting,
+              privacy, CCTV, and anti-graft policy links
             </li>
             <li>
               <code>/student-exchange-guides</code> domestic credit exchange, partner

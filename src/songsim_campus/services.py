@@ -106,6 +106,13 @@ from .ingest.pc_software import (
 from .ingest.pc_software import (
     search_pc_software_entries as rank_pc_software_entries,
 )
+from .ingest.service_policy_guides import (
+    AntiGraftGuideSource,
+    BiddingGuideSource,
+    CctvPolicyGuideSource,
+    JobPostingGuideSource,
+    PrivacyPolicyGuideSource,
+)
 from .ingest.student_activity_guides import (
     CampusMediaGuideSource,
     CentralClubGuideSource,
@@ -157,6 +164,7 @@ from .schemas import (
     RestaurantSearchResult,
     ScholarshipGuide,
     SeasonalSemesterGuide,
+    ServicePolicyGuide,
     StudentActivityGuide,
     StudentExchangeGuide,
     StudentExchangePartner,
@@ -227,6 +235,13 @@ ABOUT_RESOURCE_GUIDE_SOURCE_URLS = {
     "history": "https://www.catholic.ac.kr/ko/about/history.do",
     "church_literature": "https://www.catholic.ac.kr/ko/about/church_literature2.do",
     "budget_account": "https://www.catholic.ac.kr/ko/about/budgetaccount.do",
+}
+SERVICE_POLICY_GUIDE_SOURCE_URLS = {
+    "bidding": "https://www.catholic.ac.kr/ko/service/Bidding.do",
+    "job_posting": "https://www.catholic.ac.kr/ko/service/Job-posting.do",
+    "privacy_policy": "https://www.catholic.ac.kr/ko/service/privacy.do",
+    "cctv_policy": "https://www.catholic.ac.kr/ko/service/notice_cctv_regulation.do",
+    "anti_graft": "https://www.catholic.ac.kr/ko/service/anti_graft_law1.do",
 }
 RETURN_FROM_LEAVE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/return_from_leave_of_absence.do"
 DROPOUT_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/dropout.do"
@@ -326,6 +341,7 @@ SYNC_DATASET_TABLES = (
     "academic_milestone_guides",
     "student_activity_guides",
     "about_resource_guides",
+    "service_policy_guides",
     "student_exchange_guides",
     "student_exchange_partners",
     "dormitory_guides",
@@ -351,6 +367,7 @@ PUBLIC_READY_CORE_DATASETS = frozenset(
         "academic_milestone_guides",
         "student_activity_guides",
         "about_resource_guides",
+        "service_policy_guides",
         "student_exchange_guides",
         "student_exchange_partners",
         "dormitory_guides",
@@ -399,6 +416,7 @@ ADMIN_SYNC_TARGETS = {
     "academic_milestone_guides",
     "student_activity_guides",
     "about_resource_guides",
+    "service_policy_guides",
     "student_exchange_guides",
     "student_exchange_partners",
     "dormitory_guides",
@@ -514,6 +532,13 @@ ABOUT_RESOURCE_GUIDE_TOPICS = {
     "history",
     "church_literature",
     "budget_account",
+}
+SERVICE_POLICY_GUIDE_TOPICS = {
+    "bidding",
+    "job_posting",
+    "privacy_policy",
+    "cctv_policy",
+    "anti_graft",
 }
 DORMITORY_GUIDE_TOPICS = {"hall_info", "quick_links", "latest_notices", "fees"}
 AFFILIATED_NOTICE_TOPICS = {
@@ -3068,6 +3093,54 @@ def refresh_about_resource_guides_from_source(
     ]
 
 
+def list_service_policy_guides(
+    conn: DBConnection,
+    *,
+    topic: str | None = None,
+    limit: int = 20,
+) -> list[ServicePolicyGuide]:
+    normalized_limit = max(1, min(limit, 50))
+    normalized_topic = topic.strip() if topic else None
+    if normalized_topic and normalized_topic not in SERVICE_POLICY_GUIDE_TOPICS:
+        raise InvalidRequestError(
+            "topic must be one of bidding, job_posting, privacy_policy, "
+            "cctv_policy, anti_graft."
+        )
+    return [
+        ServicePolicyGuide.model_validate(item)
+        for item in repo.list_service_policy_guides(
+            conn,
+            topic=normalized_topic,
+            limit=normalized_limit,
+        )
+    ]
+
+
+def refresh_service_policy_guides_from_source(
+    conn: DBConnection,
+    *,
+    sources: list[Any] | None = None,
+    fetched_at: str | None = None,
+) -> list[ServicePolicyGuide]:
+    if sources is None:
+        sources = [
+            BiddingGuideSource(SERVICE_POLICY_GUIDE_SOURCE_URLS["bidding"]),
+            JobPostingGuideSource(SERVICE_POLICY_GUIDE_SOURCE_URLS["job_posting"]),
+            PrivacyPolicyGuideSource(SERVICE_POLICY_GUIDE_SOURCE_URLS["privacy_policy"]),
+            CctvPolicyGuideSource(SERVICE_POLICY_GUIDE_SOURCE_URLS["cctv_policy"]),
+            AntiGraftGuideSource(SERVICE_POLICY_GUIDE_SOURCE_URLS["anti_graft"]),
+        ]
+    synced_at = fetched_at or _now_iso()
+    rows: list[dict[str, Any]] = []
+    for source in sources:
+        rows.extend(source.parse(source.fetch(), fetched_at=synced_at))
+    repo.replace_service_policy_guides(conn, rows)
+    return [
+        ServicePolicyGuide.model_validate(item)
+        for item in repo.list_service_policy_guides(conn, limit=max(len(rows), 1))
+    ]
+
+
 def list_student_exchange_guides(
     conn: DBConnection,
     *,
@@ -3488,6 +3561,8 @@ def _run_admin_sync_target(
         return {"student_activity_guides": len(refresh_student_activity_guides_from_source(conn))}
     if target == "about_resource_guides":
         return {"about_resource_guides": len(refresh_about_resource_guides_from_source(conn))}
+    if target == "service_policy_guides":
+        return {"service_policy_guides": len(refresh_service_policy_guides_from_source(conn))}
     if target == "student_exchange_guides":
         return {"student_exchange_guides": len(refresh_student_exchange_guides_from_source(conn))}
     if target == "student_exchange_partners":
@@ -5400,6 +5475,7 @@ def sync_official_snapshot(
     academic_milestone_guides = refresh_academic_milestone_guides_from_source(conn)
     student_activity_guides = refresh_student_activity_guides_from_source(conn)
     about_resource_guides = refresh_about_resource_guides_from_source(conn)
+    service_policy_guides = refresh_service_policy_guides_from_source(conn)
     student_exchange_guides = refresh_student_exchange_guides_from_source(conn)
     dormitory_guides = refresh_dormitory_guides_from_source(conn)
     phone_book_entries = refresh_phone_book_entries_from_source(conn)
@@ -5428,6 +5504,7 @@ def sync_official_snapshot(
         "academic_milestone_guides": len(academic_milestone_guides),
         "student_activity_guides": len(student_activity_guides),
         "about_resource_guides": len(about_resource_guides),
+        "service_policy_guides": len(service_policy_guides),
         "student_exchange_guides": len(student_exchange_guides),
         "student_exchange_partners": len(student_exchange_partners),
         "dormitory_guides": len(dormitory_guides),
