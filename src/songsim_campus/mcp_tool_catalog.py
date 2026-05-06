@@ -534,8 +534,9 @@ def register_shared_tools(
         description=(
             (
                 "가대소개 주요 정적 안내 자료를 읽을 때 사용합니다. 규정, 요람, "
-                "학사제도안내책자, 캠퍼스투어처럼 공식 링크와 접근 안내가 필요한 "
-                "about resource를 current snapshot으로 돌려줍니다."
+                "학사제도안내책자, 캠퍼스투어, 연혁, 교회문헌, 예결산공고처럼 "
+                "공식 링크와 접근 안내가 필요한 about resource를 current snapshot으로 "
+                "돌려줍니다."
             )
             if public_readonly
             else "학교 가대소개 주요 정적 안내 자료 current snapshot을 가져옵니다."
@@ -548,7 +549,8 @@ def register_shared_tools(
             Field(
                 description=(
                     "가대소개 정적 안내 유형 필터. rules, university_bulletin, "
-                    "academic_handbook, campus_tour 중 하나를 사용합니다."
+                    "academic_handbook, campus_tour, history, church_literature, "
+                    "budget_account 중 하나를 사용합니다."
                 )
             ),
         ] = None,

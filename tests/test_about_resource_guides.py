@@ -12,7 +12,10 @@ from songsim_campus.api import create_app
 from songsim_campus.db import connection, init_db
 from songsim_campus.ingest.about_resource_guides import (
     AcademicHandbookGuideSource,
+    BudgetAccountGuideSource,
     CampusTourGuideSource,
+    ChurchLiteratureGuideSource,
+    HistoryGuideSource,
     RuleGuideSource,
     UniversityBulletinGuideSource,
 )
@@ -40,19 +43,31 @@ def test_about_resource_source_defaults() -> None:
     bulletin = UniversityBulletinGuideSource()
     handbook = AcademicHandbookGuideSource()
     campus_tour = CampusTourGuideSource()
+    history = HistoryGuideSource()
+    church_literature = ChurchLiteratureGuideSource()
+    budget_account = BudgetAccountGuideSource()
 
     assert rules.topic == "rules"
     assert bulletin.topic == "university_bulletin"
     assert handbook.topic == "academic_handbook"
     assert campus_tour.topic == "campus_tour"
+    assert history.topic == "history"
+    assert church_literature.topic == "church_literature"
+    assert budget_account.topic == "budget_account"
     assert rules.source_tag == "cuk_about_resource_guides"
     assert bulletin.source_tag == "cuk_about_resource_guides"
     assert handbook.source_tag == "cuk_about_resource_guides"
     assert campus_tour.source_tag == "cuk_about_resource_guides"
+    assert history.source_tag == "cuk_about_resource_guides"
+    assert church_literature.source_tag == "cuk_about_resource_guides"
+    assert budget_account.source_tag == "cuk_about_resource_guides"
     assert rules.url.endswith("/about/rule.do")
     assert bulletin.url.endswith("/about/univ_bulletin.do")
     assert handbook.url.endswith("/about/brochure_rule.do")
     assert campus_tour.url.endswith("/about/campus_tour.do")
+    assert history.url.endswith("/about/history.do")
+    assert church_literature.url.endswith("/about/church_literature2.do")
+    assert budget_account.url.endswith("/about/budgetaccount.do")
 
 
 def test_about_resource_parsers_extract_expected_rows() -> None:
@@ -70,6 +85,18 @@ def test_about_resource_parsers_extract_expected_rows() -> None:
     )
     campus_tour = CampusTourGuideSource().parse(
         _fixture("campus_tour.do.html"),
+        fetched_at="2026-03-22T00:00:00+09:00",
+    )
+    history = HistoryGuideSource().parse(
+        _fixture("history.do.html"),
+        fetched_at="2026-03-22T00:00:00+09:00",
+    )
+    church_literature = ChurchLiteratureGuideSource().parse(
+        _fixture("church_literature2.do.html"),
+        fetched_at="2026-03-22T00:00:00+09:00",
+    )
+    budget_account = BudgetAccountGuideSource().parse(
+        _fixture("budgetaccount.do.html"),
         fetched_at="2026-03-22T00:00:00+09:00",
     )
 
@@ -103,6 +130,26 @@ def test_about_resource_parsers_extract_expected_rows() -> None:
             "url": "https://www.catholic.ac.kr/ko/about/campus_tour_step1.do",
         }
     ]
+    assert history[0]["topic"] == "history"
+    assert history[0]["title"] == "연혁"
+    assert history[0]["summary"].startswith("가톨릭대학교 연혁")
+    assert {item["label"] for item in history[0]["links"]} == {"1900년 이전", "1900~1990년"}
+    assert history[0]["links"][0]["url"] == "https://www.catholic.ac.kr/ko/about/history1.do"
+    assert church_literature[0]["topic"] == "church_literature"
+    assert church_literature[0]["title"] == "가톨릭대학교회문헌"
+    assert "교회문헌" in church_literature[0]["summary"]
+    assert [item["label"] for item in church_literature[0]["links"]] == [
+        "교황령 '교회의 심장부'",
+        "한국 가톨릭 대학교 규정",
+        "한국 가톨릭학교 교육헌장",
+    ]
+    assert budget_account[0]["topic"] == "budget_account"
+    assert budget_account[0]["title"] == "예결산공고"
+    assert budget_account[0]["summary"].startswith("예산/결산 공고 게시판")
+    assert {item["label"] for item in budget_account[0]["links"]} == {
+        "2026학년도 가톨릭대학교 자금예산서",
+        "2024학년도 결산 공고",
+    }
 
 
 def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
@@ -124,6 +171,18 @@ def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
         def fetch(self) -> str:
             return _fixture("campus_tour.do.html")
 
+    class HistoryFixtureSource(HistoryGuideSource):
+        def fetch(self) -> str:
+            return _fixture("history.do.html")
+
+    class ChurchLiteratureFixtureSource(ChurchLiteratureGuideSource):
+        def fetch(self) -> str:
+            return _fixture("church_literature2.do.html")
+
+    class BudgetAccountFixtureSource(BudgetAccountGuideSource):
+        def fetch(self) -> str:
+            return _fixture("budgetaccount.do.html")
+
     with connection() as conn:
         refresh_about_resource_guides_from_source(
             conn,
@@ -132,6 +191,9 @@ def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
                 BulletinFixtureSource(),
                 HandbookFixtureSource(),
                 CampusTourFixtureSource(),
+                HistoryFixtureSource(),
+                ChurchLiteratureFixtureSource(),
+                BudgetAccountFixtureSource(),
             ],
             fetched_at="2026-03-22T00:00:00+09:00",
         )
@@ -147,7 +209,10 @@ def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
 
     assert [guide.topic for guide in all_guides] == [
         "academic_handbook",
+        "budget_account",
         "campus_tour",
+        "church_literature",
+        "history",
         "rules",
         "university_bulletin",
     ]
@@ -213,7 +278,7 @@ def test_about_resource_guides_http_route_filters_and_rejects_invalid_topic(app_
             "/about-resource-guides",
             params={"topic": "rules", "limit": 5},
         )
-        invalid = client.get("/about-resource-guides", params={"topic": "history"})
+        invalid = client.get("/about-resource-guides", params={"topic": "not-a-topic"})
 
     assert response.status_code == 200
     assert [item["topic"] for item in response.json()] == ["rules"]

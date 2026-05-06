@@ -175,3 +175,75 @@ class CampusTourGuideSource(AboutResourceGuideSourceBase):
             "캠퍼스투어 신청대상, 프로그램, 루트, 문의처를 공식 페이지에서 확인할 수 있습니다."
         )
         return rows
+
+
+class HistoryGuideSource(AboutResourceGuideSourceBase):
+    topic = "history"
+    default_title = "연혁"
+
+    def __init__(self, url: str = "https://www.catholic.ac.kr/ko/about/history.do"):
+        super().__init__(url)
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        rows = super().parse(html, fetched_at=fetched_at)
+        rows[0]["summary"] = (
+            "가톨릭대학교 연혁(History of CUK) 타임라인을 공식 페이지에서 확인할 수 있습니다."
+        )
+        return rows
+
+
+class ChurchLiteratureGuideSource(AboutResourceGuideSourceBase):
+    topic = "church_literature"
+    default_title = "가톨릭대학교회문헌"
+
+    def __init__(
+        self,
+        url: str = "https://www.catholic.ac.kr/ko/about/church_literature2.do",
+    ):
+        super().__init__(url)
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        rows = super().parse(html, fetched_at=fetched_at)
+        rows[0]["title"] = "가톨릭대학교회문헌"
+        rows[0]["summary"] = (
+            "가톨릭대학교회문헌 관련 공식 페이지(교황령/규정/교육헌장)를 모아 안내합니다."
+        )
+        rows[0]["steps"] = [
+            "원문은 공식 페이지에서 확인합니다.",
+            (
+                "대외 공개된 문헌 링크만 제공합니다. 인증이 필요한 내부 시스템은 포함하지 않습니다."
+            ),
+        ]
+        rows[0]["links"] = [
+            {
+                "label": "교황령 '교회의 심장부'",
+                "url": "https://www.catholic.ac.kr/ko/about/church_literature1.do",
+            },
+            {
+                "label": "한국 가톨릭 대학교 규정",
+                "url": "https://www.catholic.ac.kr/ko/about/church_literature2.do",
+            },
+            {
+                "label": "한국 가톨릭학교 교육헌장",
+                "url": "https://www.catholic.ac.kr/ko/about/church_literature3.do",
+            },
+        ]
+        return rows
+
+
+class BudgetAccountGuideSource(AboutResourceGuideSourceBase):
+    topic = "budget_account"
+    default_title = "예결산공고"
+
+    def __init__(
+        self,
+        url: str = "https://www.catholic.ac.kr/ko/about/budgetaccount.do",
+    ):
+        super().__init__(url)
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        rows = super().parse(html, fetched_at=fetched_at)
+        rows[0]["summary"] = (
+            "예산/결산 공고 게시판에서 공개 예산서와 결산 자료를 확인할 수 있습니다."
+        )
+        return rows

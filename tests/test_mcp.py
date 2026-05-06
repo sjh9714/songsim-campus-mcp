@@ -1248,6 +1248,21 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
             "description"
         ]
     )
+    assert "history" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "church_literature" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "budget_account" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
     assert "학생교류" in tools["tool_list_student_exchange_guides"]["description"]
     assert "국내 학점교류" in tools["tool_list_student_exchange_guides"]["description"]
     assert "교환학생 프로그램" in tools["tool_list_student_exchange_guides"]["description"]

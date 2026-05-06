@@ -31,7 +31,10 @@ from .db import DBConnection, connection, get_connection
 from .ingest import campus_life_support_guides as campus_life_support_guides_ingest
 from .ingest.about_resource_guides import (
     AcademicHandbookGuideSource,
+    BudgetAccountGuideSource,
     CampusTourGuideSource,
+    ChurchLiteratureGuideSource,
+    HistoryGuideSource,
     RuleGuideSource,
     UniversityBulletinGuideSource,
 )
@@ -221,6 +224,9 @@ ABOUT_RESOURCE_GUIDE_SOURCE_URLS = {
     "university_bulletin": "https://www.catholic.ac.kr/ko/about/univ_bulletin.do",
     "academic_handbook": "https://www.catholic.ac.kr/ko/about/brochure_rule.do",
     "campus_tour": "https://www.catholic.ac.kr/ko/about/campus_tour.do",
+    "history": "https://www.catholic.ac.kr/ko/about/history.do",
+    "church_literature": "https://www.catholic.ac.kr/ko/about/church_literature2.do",
+    "budget_account": "https://www.catholic.ac.kr/ko/about/budgetaccount.do",
 }
 RETURN_FROM_LEAVE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/return_from_leave_of_absence.do"
 DROPOUT_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/dropout.do"
@@ -505,6 +511,9 @@ ABOUT_RESOURCE_GUIDE_TOPICS = {
     "university_bulletin",
     "academic_handbook",
     "campus_tour",
+    "history",
+    "church_literature",
+    "budget_account",
 }
 DORMITORY_GUIDE_TOPICS = {"hall_info", "quick_links", "latest_notices", "fees"}
 AFFILIATED_NOTICE_TOPICS = {
@@ -3018,7 +3027,7 @@ def list_about_resource_guides(
     if normalized_topic and normalized_topic not in ABOUT_RESOURCE_GUIDE_TOPICS:
         raise InvalidRequestError(
             "topic must be one of rules, university_bulletin, academic_handbook, "
-            "campus_tour."
+            "campus_tour, history, church_literature, budget_account."
         )
     return [
         AboutResourceGuide.model_validate(item)
@@ -3044,6 +3053,9 @@ def refresh_about_resource_guides_from_source(
             ),
             AcademicHandbookGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["academic_handbook"]),
             CampusTourGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["campus_tour"]),
+            HistoryGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["history"]),
+            ChurchLiteratureGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["church_literature"]),
+            BudgetAccountGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["budget_account"]),
         ]
     synced_at = fetched_at or _now_iso()
     rows: list[dict[str, Any]] = []

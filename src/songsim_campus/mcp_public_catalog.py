@@ -48,6 +48,11 @@ def public_usage_guide_text() -> str:
             "",
             "This server is read-only.",
             "",
+            "Out of scope (unsupported):",
+            "- Authentication / 로그인 기반 시스템 (Trinity/uPortal, e-Cyber/LMS 등)",
+            "- 개인정보/개별 고지 (등록금 고지서 개인 화면, 개인별 공지/메시지 등)",
+            "- 성적/과제/수강내역 등 개인 학사 데이터",
+            "",
             (
                 "Use this public MCP first for source-backed student questions about deadlines, "
                 "places, procedures, study resources, dormitory, campus-life support, and "

@@ -406,6 +406,9 @@ topics:
 - `university_bulletin`
 - `academic_handbook`
 - `campus_tour`
+- `history`
+- `church_literature`
+- `budget_account`
 
 `jq` 예시:
 
@@ -422,6 +425,9 @@ curl -fsS "$PUBLIC_HTTP_URL/about-resource-guides?topic=rules&limit=2" \
 - `topic=university_bulletin` 결과는 `요람` 관련 공식 링크를 포함
 - `topic=academic_handbook` 결과는 `학사제도안내책자` 관련 공식 링크를 포함
 - `topic=campus_tour` 결과는 `캠퍼스투어`와 신청 링크를 포함
+- `topic=history` 결과는 `연혁` 관련 안내를 포함
+- `topic=church_literature` 결과는 `교회문헌` 관련 공식 링크를 포함
+- `topic=budget_account` 결과는 `예결산공고` 관련 공식 링크를 포함
 - `"source_tag":"cuk_about_resource_guides"`가 보임
 
 ## 15. MCP initialize + guide checks
@@ -869,7 +875,7 @@ PY
 - `/pc-software`가 `SPSS` 또는 `Photoshop` query에 대해 `cuk_pc_software` source tag를 반환
 - `/student-exchange-guides`가 `exchange_student` 또는 `domestic_partner_universities` topic과 `cuk_student_exchange_guides` source tag를 반환
 - `/student-exchange-partners`가 `네덜란드` 같은 query에 대해 `country_ko`, `university_name`, `homepage_url`, `cuk_student_exchange_partners`를 반환
-- `/about-resource-guides`가 `rules`, `university_bulletin`, `academic_handbook`, 또는 `campus_tour` topic과 `cuk_about_resource_guides` source tag를 반환
+- `/about-resource-guides`가 `rules`, `university_bulletin`, `academic_handbook`, `campus_tour`, `history`, `church_literature`, 또는 `budget_account` topic과 `cuk_about_resource_guides` source tag를 반환
 - `/phone-book`가 `보건실` 또는 질의한 부서의 `cuk_phone_book` source tag를 반환
 - `/affiliated-notices`가 `international_studies` 또는 질의한 dorm/topic의 `cuk_affiliated_notice_boards` source tag를 반환
 - `/notices?category=academic&limit=3`가 `academic` notice와 `cuk_campus_notices` source tag를 반환
