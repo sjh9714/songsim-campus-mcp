@@ -2474,6 +2474,7 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "disability_support",
         "student_reservist",
         "hospital_use",
+        "career_counseling",
     }
 
 

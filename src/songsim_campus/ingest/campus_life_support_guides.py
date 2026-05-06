@@ -201,6 +201,68 @@ class StudentCounselingGuideSource(CampusLifeSupportGuideSourceBase):
         return rows
 
 
+class CareerCounselingGuideSource(CampusLifeSupportGuideSourceBase):
+    topic = "career_counseling"
+
+    def __init__(
+        self,
+        url: str = "https://career.catholic.ac.kr/career/job/job_counseling.do",
+    ):
+        super().__init__(url)
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        soup = BeautifulSoup(html, "html.parser")
+        root = soup.select_one("#cms-content") or soup.select_one(".content-box") or soup
+        title_node = root.select_one("h3") or soup.select_one("title")
+        title = _clean_text(title_node.get_text(" ", strip=True) if title_node else "") or (
+            "진로/취업 상담"
+        )
+        if "|" in title:
+            title = _clean_text(title.split("|", 1)[0])
+
+        steps: list[str] = []
+        for section in root.find_all("div", class_="con-box", recursive=False) or [root]:
+            section_title_node = (
+                section.select_one(".h4-tit02")
+                or section.select_one(".h4-tit01")
+                or section.select_one(".box-tit")
+            )
+            section_title = _clean_text(
+                section_title_node.get_text(" ", strip=True) if section_title_node else ""
+            )
+            if section_title:
+                steps.append(section_title)
+            if section_title == "상담 신청 방법":
+                application_step = _clean_text(section.get_text(" ", strip=True))
+                application_step = application_step.removeprefix(section_title).strip()
+                application_step = application_step.replace("( ", "(").replace(" )", ")")
+                if application_step:
+                    steps.append(application_step)
+                continue
+            steps.extend(_extract_section_steps(section, title=section_title or None))
+
+        steps = _unique(steps)
+        summary = next(
+            (step for step in steps if "가톨릭대학교 학부생 및 졸업생" in step),
+            next(
+                (step for step in steps if "1:1 개인별 맞춤 상담" in step),
+                steps[0] if steps else title,
+            ),
+        )
+        return [
+            {
+                "topic": self.topic,
+                "title": title,
+                "summary": summary,
+                "steps": steps,
+                "links": _extract_links(root, base_url=self.url),
+                "source_url": self.url,
+                "source_tag": self.source_tag,
+                "last_synced_at": fetched_at,
+            }
+        ]
+
+
 class DisabilitySupportGuideSource(CampusLifeSupportGuideSourceBase):
     topic = "disability_support"
 

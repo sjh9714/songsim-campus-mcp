@@ -118,6 +118,7 @@ def public_usage_guide_text() -> str:
                 "졸업요건 알려줘 / 재입학 지원자격 알려줘 / "
                 "총학생회 안내해줘 / 교내미디어 뭐 있어? / 사회봉사 활동 알려줘 / "
                 "중앙동아리 뭐 있어? / 기관동아리 CUK프렌즈 알려줘 / "
+                "캠퍼스투어 신청 어디서 해? / "
                 "학생군사교육단 안내해줘 / 학생활동 공지 알려줘 / "
                 "학교 규정 어디서 봐? / 요람 링크 알려줘 / 학사제도안내책자 보여줘 / "
                 "국내 학점교류 신청대상 알려줘 / 학점교류 신청시기 알려줘 / "
@@ -161,14 +162,16 @@ def public_usage_guide_text() -> str:
                 "Use tool_list_dormitory_guides for dormitory guidance and "
                 "tool_list_campus_life_support_guides for health center, lost and found, "
                 "parking, counseling, disability support, reservist guidance, hospital use, "
-                "facility rental, and personal mobility safety guidance."
+                "facility rental, personal mobility safety guidance, and career counseling."
             ),
             (
                 "Example: 성심교정 기숙사 안내해줘 / 기숙사 입사안내 어디서 봐? / "
-                "기숙사 최신 공지 알려줘 / 학생상담 어디서 받아? / "
+                "기숙사비 알려줘 / 기숙사 환불 기준 알려줘 / 기숙사 최신 공지 알려줘 / "
+                "학생상담 어디서 받아? / "
                 "장애학생지원센터 뭐 해줘? / 예비군 신고 시기 알려줘 / "
                 "부속병원 이용 안내해줘 / 성심교정 대관안내 알려줘 / "
-                "개인형 이동장치 안전교육 알려줘 / 헬스장 어디야 / 편의점 어디야"
+                "개인형 이동장치 안전교육 알려줘 / 진로/취업 상담 어디서 신청해? / "
+                "헬스장 어디야 / 편의점 어디야"
             ),
             "",
             "Helper resources:",

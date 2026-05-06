@@ -291,8 +291,8 @@ def register_shared_tools(
             (
                 "생활지원 안내를 읽을 때 사용합니다. 보건실, 유실물, 성심교정 주차요금, "
                 "학생상담, 장애학생지원센터, 예비군, 부속병원, 대관안내, "
-                "개인형 이동장치 안전교육처럼 학생이 바로 행동에 옮길 수 있는 정적 "
-                "안내를 current snapshot으로 돌려줍니다."
+                "개인형 이동장치 안전교육, 진로/취업 상담처럼 학생이 바로 행동에 "
+                "옮길 수 있는 정적 안내를 current snapshot으로 돌려줍니다."
             )
             if public_readonly
             else "학교 생활지원 안내 current snapshot을 가져옵니다."
@@ -306,8 +306,8 @@ def register_shared_tools(
                 description=(
                     "생활지원 안내 유형 필터. health_center, lost_found, parking, "
                     "mobility_safety, facility_rental, student_counseling, "
-                    "disability_support, student_reservist, hospital_use 중 하나를 "
-                    "사용합니다."
+                    "disability_support, student_reservist, hospital_use, "
+                    "career_counseling 중 하나를 사용합니다."
                 )
             ),
         ] = None,
@@ -357,7 +357,8 @@ def register_shared_tools(
             (
                 "학교 기숙사 안내를 읽을 때 사용합니다. 스테파노관, 안드레아관, "
                 "프란치스코관 정보와 기숙사운영팀 연락처, 입사·퇴사 안내, 생활안내, "
-                "그리고 홈에 노출된 최신 공지 카드를 current snapshot으로 돌려줍니다."
+                "기숙사비, 그리고 홈에 노출된 최신 공지 카드를 current snapshot으로 "
+                "돌려줍니다."
             )
             if public_readonly
             else "학교 기숙사 안내 current snapshot을 가져옵니다."
@@ -369,7 +370,7 @@ def register_shared_tools(
             str | None,
             Field(
                 description=(
-                    "기숙사 안내 유형 필터. hall_info, quick_links, latest_notices "
+                    "기숙사 안내 유형 필터. hall_info, quick_links, latest_notices, fees "
                     "중 하나를 사용합니다."
                 )
             ),
@@ -533,8 +534,8 @@ def register_shared_tools(
         description=(
             (
                 "가대소개 주요 정적 안내 자료를 읽을 때 사용합니다. 규정, 요람, "
-                "학사제도안내책자처럼 공식 링크와 접근 안내가 필요한 about resource를 "
-                "current snapshot으로 돌려줍니다."
+                "학사제도안내책자, 캠퍼스투어처럼 공식 링크와 접근 안내가 필요한 "
+                "about resource를 current snapshot으로 돌려줍니다."
             )
             if public_readonly
             else "학교 가대소개 주요 정적 안내 자료 current snapshot을 가져옵니다."
@@ -547,7 +548,7 @@ def register_shared_tools(
             Field(
                 description=(
                     "가대소개 정적 안내 유형 필터. rules, university_bulletin, "
-                    "academic_handbook 중 하나를 사용합니다."
+                    "academic_handbook, campus_tour 중 하나를 사용합니다."
                 )
             ),
         ] = None,

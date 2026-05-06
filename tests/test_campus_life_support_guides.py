@@ -8,6 +8,7 @@ import pytest
 
 from songsim_campus import services
 from songsim_campus.db import connection, init_db
+from songsim_campus.ingest import campus_life_support_guides as campus_life_support_guides_ingest
 from songsim_campus.ingest.campus_life_support_guides import (
     DisabilitySupportGuideSource,
     FacilityRentalGuideSource,
@@ -65,7 +66,14 @@ def test_campus_life_support_source_defaults() -> None:
     disability_support = DisabilitySupportGuideSource()
     student_reservist = StudentReservistGuideSource()
     hospital_use = HospitalUseGuideSource()
+    career_counseling_source = getattr(
+        campus_life_support_guides_ingest,
+        "CareerCounselingGuideSource",
+        None,
+    )
 
+    assert career_counseling_source is not None
+    career_counseling = career_counseling_source()
     assert health.topic == "health_center"
     assert lost_found.topic == "lost_found"
     assert parking.topic == "parking"
@@ -75,6 +83,7 @@ def test_campus_life_support_source_defaults() -> None:
     assert disability_support.topic == "disability_support"
     assert student_reservist.topic == "student_reservist"
     assert hospital_use.topic == "hospital_use"
+    assert career_counseling.topic == "career_counseling"
     assert health.source_tag == "cuk_campus_life_support_guides"
     assert lost_found.source_tag == "cuk_campus_life_support_guides"
     assert parking.source_tag == "cuk_campus_life_support_guides"
@@ -84,6 +93,7 @@ def test_campus_life_support_source_defaults() -> None:
     assert disability_support.source_tag == "cuk_campus_life_support_guides"
     assert student_reservist.source_tag == "cuk_campus_life_support_guides"
     assert hospital_use.source_tag == "cuk_campus_life_support_guides"
+    assert career_counseling.source_tag == "cuk_campus_life_support_guides"
     assert health.url.endswith("/campuslife/health.do")
     assert lost_found.url.endswith("/campuslife/find.do")
     assert parking.url.endswith("/about/location_songsim.do")
@@ -93,6 +103,9 @@ def test_campus_life_support_source_defaults() -> None:
     assert disability_support.url.endswith("/campuslife/disability_service.do")
     assert student_reservist.url.endswith("/campuslife/student_reservist.do")
     assert hospital_use.url.endswith("/campuslife/hospital1.do")
+    assert career_counseling.url == (
+        "https://career.catholic.ac.kr/career/job/job_counseling.do"
+    )
 
 
 def test_mobility_safety_guide_parser_extracts_expected_core_details() -> None:
@@ -331,6 +344,37 @@ def test_student_counseling_guide_parser_extracts_expected_core_details() -> Non
     ]
 
 
+def test_career_counseling_guide_parser_extracts_expected_core_details() -> None:
+    source_cls = getattr(campus_life_support_guides_ingest, "CareerCounselingGuideSource", None)
+    assert source_cls is not None
+
+    rows = source_cls().parse(
+        _fixture("job_counseling.do.html"),
+        fetched_at="2026-05-07T00:00:00+09:00",
+    )
+
+    assert [row["title"] for row in rows] == ["진로/취업 상담"]
+    row = rows[0]
+    assert row["topic"] == "career_counseling"
+    assert row["source_tag"] == "cuk_campus_life_support_guides"
+    assert row["summary"] == "가톨릭대학교 학부생 및 졸업생"
+    assert any(step == "상담대상" for step in row["steps"])
+    assert any(step == "가톨릭대학교 학부생 및 졸업생" for step in row["steps"])
+    assert any("전공선택, 복수전공 선택" in step for step in row["steps"])
+    assert any("전문 취업진로상담사와의 1:1 개인별 맞춤 상담" in step for step in row["steps"])
+    assert any(
+        "트리니티 → AI코디(aicodi.catholic.ac.kr) → 통합상담 → 진로취업상담 → 상담신청"
+        in step
+        for step in row["steps"]
+    )
+    assert row["links"] == [
+        {
+            "label": "aicodi.catholic.ac.kr",
+            "url": "https://aicodi.catholic.ac.kr/",
+        }
+    ]
+
+
 def test_disability_support_guide_parser_extracts_expected_core_details() -> None:
     rows = DisabilitySupportGuideSource().parse(
         _fixture("disability_service.do.html"),
@@ -543,13 +587,23 @@ def test_campus_life_support_dataset_is_wired_into_sync_and_readiness(app_env, m
     assert run.summary == {"campus_life_support_guides": 0}
 
 
-def test_campus_life_support_guides_accepts_mobility_safety_topic(app_env) -> None:
+def test_campus_life_support_guides_accepts_newer_topics(app_env) -> None:
     init_db()
 
     with connection() as conn:
-        guides = list_campus_life_support_guides(conn, topic="mobility_safety", limit=5)
+        mobility_guides = list_campus_life_support_guides(
+            conn,
+            topic="mobility_safety",
+            limit=5,
+        )
+        career_guides = list_campus_life_support_guides(
+            conn,
+            topic="career_counseling",
+            limit=5,
+        )
 
-    assert guides == []
+    assert mobility_guides == []
+    assert career_guides == []
 
 
 def test_campus_life_support_http_and_mcp_surfaces(client, app_env, monkeypatch):
@@ -587,14 +641,34 @@ def test_campus_life_support_http_and_mcp_surfaces(client, app_env, monkeypatch)
                         steps=["일반차량: 10분당 500원"],
                     )
                 ),
+                FakeGuideSource(
+                    _guide_row(
+                        topic="career_counseling",
+                        title="진로/취업 상담",
+                        summary="가톨릭대학교 학부생 및 졸업생",
+                        steps=[
+                            "가톨릭대학교 학부생 및 졸업생",
+                            (
+                                "트리니티 → AI코디(aicodi.catholic.ac.kr) → 통합상담 "
+                                "→ 진로취업상담 → 상담신청"
+                            ),
+                        ],
+                    )
+                ),
             ],
         )
 
     response = client.get("/campus-life-support-guides", params={"topic": "parking", "limit": 5})
+    career_response = client.get(
+        "/campus-life-support-guides",
+        params={"topic": "career_counseling", "limit": 5},
+    )
     assert response.status_code == 200
     http_payload = response.json()
     assert http_payload[0]["topic"] == "parking"
     assert http_payload[0]["source_tag"] == "cuk_campus_life_support_guides"
+    assert career_response.status_code == 200
+    assert career_response.json()[0]["topic"] == "career_counseling"
 
     monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
     clear_settings_cache()
@@ -621,14 +695,24 @@ def test_campus_life_support_http_and_mcp_surfaces(client, app_env, monkeypatch)
     assert "tool_list_campus_life_support_guides" in tool_payloads
     assert "songsim://campus-life-support-guide" in resource_uris
     assert "보건실" in tool_payloads["tool_list_campus_life_support_guides"]["description"]
+    assert "진로/취업 상담" in tool_payloads["tool_list_campus_life_support_guides"]["description"]
     assert "parking" in (
+        tool_payloads["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "career_counseling" in (
         tool_payloads["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )
     assert tool_payload["topic"] == "health_center"
     assert tool_payload["guide_summary"].startswith("보건실은 학생과 교직원의 건강")
-    assert {item["topic"] for item in resource_payload} == {"health_center", "parking"}
+    assert {item["topic"] for item in resource_payload} == {
+        "career_counseling",
+        "health_center",
+        "parking",
+    }
 
 
 def test_sync_official_snapshot_includes_campus_life_support_and_pc_software(app_env, monkeypatch):

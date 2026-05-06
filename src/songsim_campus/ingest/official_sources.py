@@ -1711,6 +1711,31 @@ class DormitoryHomepageGuideSource:
         )
 
 
+class DormitoryFeeGuideSource:
+    """Parser for the K/A hall dormitory fee and refund guide."""
+
+    source_tag = "cuk_dormitory_guides"
+
+    def __init__(
+        self,
+        url: str = "https://dorm.catholic.ac.kr/dormitory/life-guide/stefano-andrea.do",
+    ):
+        self.url = url
+
+    def fetch(self) -> str:
+        response = httpx.get(self.url, timeout=20, follow_redirects=True)
+        response.raise_for_status()
+        return response.text
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        return _parse_dormitory_fee_guides(
+            html,
+            base_url=self.url,
+            source_tag=self.source_tag,
+            fetched_at=fetched_at,
+        )
+
+
 def _parse_dormitory_songsim_guides(
     html: str,
     *,
@@ -1869,6 +1894,69 @@ def _parse_dormitory_home_guides(
         )
 
     return rows
+
+
+def _parse_dormitory_fee_guides(
+    html: str,
+    *,
+    base_url: str,
+    source_tag: str,
+    fetched_at: str,
+) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+    root = soup.select_one("#cms-content") or soup
+    steps: list[str] = []
+
+    for table in root.select("table"):
+        caption_node = table.select_one("caption")
+        caption = _clean_text(
+            caption_node.get_text(" ", strip=True) if caption_node else ""
+        )
+        for step in _dormitory_fee_table_steps(table):
+            steps.append(f"{caption}: {step}" if caption else step)
+
+    for item in root.select(".refund_step_box li"):
+        text = _clean_text(item.get_text(" ", strip=True))
+        if text:
+            steps.append(f"환불절차: {text}")
+
+    for note in root.select(".mark-p"):
+        text = _normalize_note_text(note.get_text(" ", strip=True))
+        if text:
+            steps.append(text)
+
+    steps = _unique(steps)
+    return [
+        {
+            "topic": "fees",
+            "title": "스테파노관 / 안드레아관 기숙사비",
+            "summary": (
+                "정규학기와 방학 기숙사비, 추가 선발 납부금액, 환불절차와 "
+                "환불기준을 공식 페이지에서 확인할 수 있습니다."
+            ),
+            "steps": steps,
+            "links": _extract_link_items(root, base_url=base_url),
+            "source_url": base_url,
+            "source_tag": source_tag,
+            "last_synced_at": fetched_at,
+        }
+    ]
+
+
+def _dormitory_fee_table_steps(table) -> list[str]:
+    steps = _extract_table_steps(table)
+    if steps:
+        return steps
+
+    rows = _extract_table_grid(table)
+    fallback_steps: list[str] = []
+    for row in rows:
+        nonempty = _unique([_clean_text(cell) for cell in row if _clean_text(cell)])
+        if len(nonempty) >= 2:
+            fallback_steps.append(f"{nonempty[0]}: {' / '.join(nonempty[1:])}")
+        elif nonempty:
+            fallback_steps.append(_normalize_note_text(nonempty[0]))
+    return _unique(fallback_steps)
 
 
 def _dormitory_links_by_labels(

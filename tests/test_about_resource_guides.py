@@ -12,6 +12,7 @@ from songsim_campus.api import create_app
 from songsim_campus.db import connection, init_db
 from songsim_campus.ingest.about_resource_guides import (
     AcademicHandbookGuideSource,
+    CampusTourGuideSource,
     RuleGuideSource,
     UniversityBulletinGuideSource,
 )
@@ -38,16 +39,20 @@ def test_about_resource_source_defaults() -> None:
     rules = RuleGuideSource()
     bulletin = UniversityBulletinGuideSource()
     handbook = AcademicHandbookGuideSource()
+    campus_tour = CampusTourGuideSource()
 
     assert rules.topic == "rules"
     assert bulletin.topic == "university_bulletin"
     assert handbook.topic == "academic_handbook"
+    assert campus_tour.topic == "campus_tour"
     assert rules.source_tag == "cuk_about_resource_guides"
     assert bulletin.source_tag == "cuk_about_resource_guides"
     assert handbook.source_tag == "cuk_about_resource_guides"
+    assert campus_tour.source_tag == "cuk_about_resource_guides"
     assert rules.url.endswith("/about/rule.do")
     assert bulletin.url.endswith("/about/univ_bulletin.do")
     assert handbook.url.endswith("/about/brochure_rule.do")
+    assert campus_tour.url.endswith("/about/campus_tour.do")
 
 
 def test_about_resource_parsers_extract_expected_rows() -> None:
@@ -61,6 +66,10 @@ def test_about_resource_parsers_extract_expected_rows() -> None:
     )
     handbook = AcademicHandbookGuideSource().parse(
         _fixture("brochure_rule.do.html"),
+        fetched_at="2026-03-22T00:00:00+09:00",
+    )
+    campus_tour = CampusTourGuideSource().parse(
+        _fixture("campus_tour.do.html"),
         fetched_at="2026-03-22T00:00:00+09:00",
     )
 
@@ -83,6 +92,17 @@ def test_about_resource_parsers_extract_expected_rows() -> None:
     assert handbook[0]["topic"] == "academic_handbook"
     assert "최신 책자는 공식 PDF 링크를 기준으로 확인합니다." in handbook[0]["steps"]
     assert handbook[0]["links"][0]["label"] == "학사제도안내책자 PDF"
+    assert campus_tour[0]["topic"] == "campus_tour"
+    assert campus_tour[0]["title"] == "캠퍼스투어"
+    assert campus_tour[0]["summary"].startswith("캠퍼스투어 신청대상")
+    assert "10인 이상 ~ 100인 이하의 고등학교" in campus_tour[0]["steps"]
+    assert "대외협력팀 / 02-2164-4169" in campus_tour[0]["steps"]
+    assert campus_tour[0]["links"] == [
+        {
+            "label": "캠퍼스투어 신청하기",
+            "url": "https://www.catholic.ac.kr/ko/about/campus_tour_step1.do",
+        }
+    ]
 
 
 def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
@@ -100,14 +120,23 @@ def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
         def fetch(self) -> str:
             return _fixture("brochure_rule.do.html")
 
+    class CampusTourFixtureSource(CampusTourGuideSource):
+        def fetch(self) -> str:
+            return _fixture("campus_tour.do.html")
+
     with connection() as conn:
         refresh_about_resource_guides_from_source(
             conn,
-            sources=[RulesFixtureSource(), BulletinFixtureSource(), HandbookFixtureSource()],
+            sources=[
+                RulesFixtureSource(),
+                BulletinFixtureSource(),
+                HandbookFixtureSource(),
+                CampusTourFixtureSource(),
+            ],
             fetched_at="2026-03-22T00:00:00+09:00",
         )
         all_guides = list_about_resource_guides(conn, limit=20)
-        filtered = list_about_resource_guides(conn, topic="academic_handbook", limit=20)
+        filtered = list_about_resource_guides(conn, topic="campus_tour", limit=20)
 
         refresh_about_resource_guides_from_source(
             conn,
@@ -118,10 +147,11 @@ def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
 
     assert [guide.topic for guide in all_guides] == [
         "academic_handbook",
+        "campus_tour",
         "rules",
         "university_bulletin",
     ]
-    assert [guide.title for guide in filtered] == ["학사제도안내책자"]
+    assert [guide.title for guide in filtered] == ["캠퍼스투어"]
     assert [guide.title for guide in replaced] == ["규정"]
 
 

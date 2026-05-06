@@ -5299,6 +5299,7 @@ def test_list_campus_life_support_guides_accepts_new_topics_and_rejects_unknown_
         assert list_campus_life_support_guides(conn, topic="student_reservist", limit=1) == []
         assert list_campus_life_support_guides(conn, topic="hospital_use", limit=1) == []
         assert list_campus_life_support_guides(conn, topic="facility_rental", limit=1) == []
+        assert list_campus_life_support_guides(conn, topic="career_counseling", limit=1) == []
 
         with pytest.raises(InvalidRequestError, match="mobility_safety"):
             list_campus_life_support_guides(conn, topic="invalid", limit=1)
@@ -5310,6 +5311,7 @@ def test_list_campus_life_support_guides_accepts_new_topics_and_rejects_unknown_
         "student_reservist",
         "hospital_use",
         "facility_rental",
+        "career_counseling",
     ]
 
 
@@ -5544,11 +5546,17 @@ def test_refresh_campus_life_support_guides_uses_all_default_sources(app_env, mo
         lambda url: FakeGuideSource("hospital_use", url),
         raising=False,
     )
+    monkeypatch.setattr(
+        services_module,
+        "CareerCounselingGuideSource",
+        lambda url: FakeGuideSource("career_counseling", url),
+        raising=False,
+    )
 
     with connection() as conn:
         guides = refresh_campus_life_support_guides_from_source(conn)
 
-    assert len(guides) == 9
+    assert len(guides) == 10
     assert {item.topic for item in guides} == {
         "health_center",
         "lost_found",
@@ -5559,6 +5567,7 @@ def test_refresh_campus_life_support_guides_uses_all_default_sources(app_env, mo
         "disability_support",
         "student_reservist",
         "hospital_use",
+        "career_counseling",
     }
     assert {item.title for item in guides} == {
         "health_center title",
@@ -5570,6 +5579,7 @@ def test_refresh_campus_life_support_guides_uses_all_default_sources(app_env, mo
         "disability_support title",
         "student_reservist title",
         "hospital_use title",
+        "career_counseling title",
     }
     assert services_module.PUBLIC_READY_DATASET_POLICIES["campus_life_support_guides"] == "core"
 

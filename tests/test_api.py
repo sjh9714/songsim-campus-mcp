@@ -459,6 +459,32 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
                     "last_synced_at": "2026-03-20T10:00:00+09:00",
                 }
             ],
+            "career_counseling": [
+                {
+                    "id": 8,
+                    "topic": "career_counseling",
+                    "title": "진로/취업 상담",
+                    "summary": "가톨릭대학교 학부생 및 졸업생",
+                    "steps": [
+                        "가톨릭대학교 학부생 및 졸업생",
+                        (
+                            "트리니티 → AI코디(aicodi.catholic.ac.kr) → 통합상담 "
+                            "→ 진로취업상담 → 상담신청"
+                        ),
+                    ],
+                    "links": [
+                        {
+                            "label": "aicodi.catholic.ac.kr",
+                            "url": "https://aicodi.catholic.ac.kr/",
+                        }
+                    ],
+                    "source_url": (
+                        "https://career.catholic.ac.kr/career/job/job_counseling.do"
+                    ),
+                    "source_tag": "cuk_campus_life_support_guides",
+                    "last_synced_at": "2026-03-20T10:00:00+09:00",
+                }
+            ],
         }
         return topics.get(topic, topics["health_center"])
     def stub_pc_software_entries(conn, query=None, limit=20):
@@ -600,6 +626,10 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
             "/campus-life-support-guides",
             params={"topic": "mobility_safety"},
         )
+        campus_life_support_career = public_client.get(
+            "/campus-life-support-guides",
+            params={"topic": "career_counseling"},
+        )
         campus_life_notices = public_client.get(
             "/campus-life-notices",
             params={"query": "외부기관공지"},
@@ -641,6 +671,7 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "부속병원 이용 안내해줘" in landing.text
     assert "성심교정 대관안내 알려줘" in landing.text
     assert "개인형 이동장치 안전교육 알려줘" in landing.text
+    assert "진로/취업 상담 어디서 신청해?" in landing.text
     assert "/pc-software" in landing.text
     assert "/affiliated-notices" in landing.text
     assert "/dormitory-guides" in landing.text
@@ -676,6 +707,8 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert campus_life_support_rental.json()[0]["topic"] == "facility_rental"
     assert campus_life_support_safety.status_code == 200
     assert campus_life_support_safety.json()[0]["topic"] == "mobility_safety"
+    assert campus_life_support_career.status_code == 200
+    assert campus_life_support_career.json()[0]["topic"] == "career_counseling"
     assert campus_life_notices.status_code == 200
     assert campus_life_notices.json()[0]["topic"] == "outside_agencies"
     assert campus_life_events.status_code == 200

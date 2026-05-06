@@ -328,6 +328,7 @@ def render_landing_page(
         "부속병원 이용 안내해줘",
         "성심교정 대관안내 알려줘",
         "개인형 이동장치 안전교육 알려줘",
+        "진로/취업 상담 어디서 신청해?",
         "보건실 위치와 운영시간 알려줘",
         "유실물 찾는 방법 알려줘",
         "성심교정 주차요금 알려줘",
@@ -511,7 +512,7 @@ def render_landing_page(
             </li>
             <li>
               <code>/about-resource-guides</code> official rules, university bulletin,
-              and academic handbook resource links
+              academic handbook, and campus tour resource links
             </li>
             <li>
               <code>/student-exchange-guides</code> domestic credit exchange, partner
@@ -525,7 +526,7 @@ def render_landing_page(
             <li>
               <code>/campus-life-support-guides</code> health center, counseling,
               disability, reservist, hospital use, facility rental, mobility
-              safety, lost-found, and Songsim parking guides
+              safety, career counseling, lost-found, and Songsim parking guides
             </li>
             <li>
               <code>/campus-life-notices</code> outside-agency and event campus-life
@@ -535,8 +536,8 @@ def render_landing_page(
               <code>/pc-software</code> lab rooms and installed software search
             </li>
             <li>
-              <code>/dormitory-guides</code> dormitory hall info, quick links, and latest
-              notice cards
+              <code>/dormitory-guides</code> dormitory hall info, quick links, fees,
+              and latest notice cards
             </li>
             <li>
               <code>/affiliated-notices</code> affiliated department and dormitory board

@@ -1232,12 +1232,18 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "규정" in tools["tool_list_about_resource_guides"]["description"]
     assert "요람" in tools["tool_list_about_resource_guides"]["description"]
     assert "학사제도안내책자" in tools["tool_list_about_resource_guides"]["description"]
+    assert "캠퍼스투어" in tools["tool_list_about_resource_guides"]["description"]
     assert "rules" in (
         tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )
     assert "academic_handbook" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "campus_tour" in (
         tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
@@ -1257,6 +1263,7 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "예비군" in tools["tool_list_campus_life_support_guides"]["description"]
     assert "부속병원" in tools["tool_list_campus_life_support_guides"]["description"]
     assert "대관안내" in tools["tool_list_campus_life_support_guides"]["description"]
+    assert "진로/취업 상담" in tools["tool_list_campus_life_support_guides"]["description"]
     assert "개인형 이동장치 안전교육" in (
         tools["tool_list_campus_life_support_guides"]["description"]
     )
@@ -1264,6 +1271,7 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "Visual Studio" in tools["tool_search_pc_software"]["description"]
     assert "기숙사" in tools["tool_list_dormitory_guides"]["description"]
     assert "스테파노관" in tools["tool_list_dormitory_guides"]["description"]
+    assert "기숙사비" in tools["tool_list_dormitory_guides"]["description"]
     assert "장학제도" in tools["tool_list_scholarship_guides"]["description"]
     assert "공식 문서" in tools["tool_list_scholarship_guides"]["description"]
     assert "무선랜" in tools["tool_list_wifi_guides"]["description"]
@@ -1360,6 +1368,9 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "latest_notices" in (
         tools["tool_list_dormitory_guides"]["inputSchema"]["properties"]["topic"]["description"]
     )
+    assert "fees" in (
+        tools["tool_list_dormitory_guides"]["inputSchema"]["properties"]["topic"]["description"]
+    )
     assert "유실물" in (
         tools["tool_search_phone_book"]["inputSchema"]["properties"]["query"]["description"]
     )
@@ -1389,6 +1400,11 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
         ]
     )
     assert "hospital_use" in (
+        tools["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "career_counseling" in (
         tools["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]

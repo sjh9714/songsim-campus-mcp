@@ -160,3 +160,18 @@ class AcademicHandbookGuideSource(AboutResourceGuideSourceBase):
 
     def __init__(self, url: str = "https://www.catholic.ac.kr/ko/about/brochure_rule.do"):
         super().__init__(url)
+
+
+class CampusTourGuideSource(AboutResourceGuideSourceBase):
+    topic = "campus_tour"
+    default_title = "캠퍼스투어"
+
+    def __init__(self, url: str = "https://www.catholic.ac.kr/ko/about/campus_tour.do"):
+        super().__init__(url)
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        rows = super().parse(html, fetched_at=fetched_at)
+        rows[0]["summary"] = (
+            "캠퍼스투어 신청대상, 프로그램, 루트, 문의처를 공식 페이지에서 확인할 수 있습니다."
+        )
+        return rows

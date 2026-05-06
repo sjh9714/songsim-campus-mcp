@@ -79,6 +79,7 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "규정" in payloads["tool_list_about_resource_guides"]["description"]
     assert "요람" in payloads["tool_list_about_resource_guides"]["description"]
     assert "학사제도안내책자" in payloads["tool_list_about_resource_guides"]["description"]
+    assert "캠퍼스투어" in payloads["tool_list_about_resource_guides"]["description"]
     assert "해외협정대학" in payloads["tool_search_student_exchange_partners"]["description"]
     assert "네덜란드" in payloads["tool_search_student_exchange_partners"]["description"]
     assert "Utrecht" in payloads["tool_search_student_exchange_partners"]["description"]
@@ -91,6 +92,7 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "예비군" in payloads["tool_list_campus_life_support_guides"]["description"]
     assert "부속병원" in payloads["tool_list_campus_life_support_guides"]["description"]
     assert "대관안내" in payloads["tool_list_campus_life_support_guides"]["description"]
+    assert "진로/취업 상담" in payloads["tool_list_campus_life_support_guides"]["description"]
     assert "개인형 이동장치 안전교육" in (
         payloads["tool_list_campus_life_support_guides"]["description"]
     )
@@ -107,7 +109,13 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "행사안내" in payloads["tool_list_campus_life_notices"]["description"]
     assert "campus life notices" in payloads["tool_list_campus_life_notices"]["description"]
     assert "기숙사" in payloads["tool_list_dormitory_guides"]["description"]
+    assert "기숙사비" in payloads["tool_list_dormitory_guides"]["description"]
     assert "latest_notices" in (
+        payloads["tool_list_dormitory_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "fees" in (
         payloads["tool_list_dormitory_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
@@ -149,6 +157,11 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
         ]
     )
     assert "academic_handbook" in (
+        payloads["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "campus_tour" in (
         payloads["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
@@ -199,6 +212,11 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
         ]
     )
     assert "hospital_use" in (
+        payloads["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "career_counseling" in (
         payloads["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]

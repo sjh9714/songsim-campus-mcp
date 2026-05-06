@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from . import place_search_runtime, services
 from .ingest.campus_life_support_guides import (
+    CareerCounselingGuideSource,
     HealthCenterGuideSource,
     LostFoundGuideSource,
     ParkingGuideSource,
@@ -1497,6 +1498,7 @@ def _payload_from_sources(
             rows: list[dict[str, Any]] = []
             try:
                 from .ingest.official_sources import (
+                    DormitoryFeeGuideSource,
                     DormitoryHomepageGuideSource,
                     DormitorySongsimGuideSource,
                 )
@@ -1504,6 +1506,7 @@ def _payload_from_sources(
                 for source in (
                     DormitorySongsimGuideSource(services.DORMITORY_SONGSIM_SOURCE_URL),
                     DormitoryHomepageGuideSource(services.DORMITORY_HOME_SOURCE_URL),
+                    DormitoryFeeGuideSource(services.DORMITORY_FEE_SOURCE_URL),
                 ):
                     rows.extend(source.parse(source.fetch(), fetched_at=captured_at))
             except Exception:
@@ -1521,6 +1524,7 @@ def _payload_from_sources(
                 HealthCenterGuideSource(services.HEALTH_CENTER_GUIDE_SOURCE_URL),
                 LostFoundGuideSource(services.LOST_FOUND_GUIDE_SOURCE_URL),
                 ParkingGuideSource(services.CAMPUS_PARKING_GUIDE_SOURCE_URL),
+                CareerCounselingGuideSource(services.CAREER_COUNSELING_GUIDE_SOURCE_URL),
             ):
                 rows.extend(source.parse(source.fetch(), fetched_at=captured_at))
             source_cache[cache_key] = rows

@@ -260,13 +260,14 @@ curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=mobility_safety&lim
 curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=student_counseling&limit=2"
 curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=student_reservist&limit=2"
 curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=hospital_use&limit=2"
+curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=career_counseling&limit=2"
 ```
 
 기대값:
 
 - HTTP `200`
 - JSON array
-- 첫 결과 또는 상위 결과 안에 `"topic":"health_center"`, `"topic":"parking"`, `"topic":"facility_rental"`, 또는 `"topic":"mobility_safety"`
+- 첫 결과 또는 상위 결과 안에 `"topic":"health_center"`, `"topic":"parking"`, `"topic":"facility_rental"`, `"topic":"mobility_safety"`, 또는 `"topic":"career_counseling"`
 - `"source_tag":"cuk_campus_life_support_guides"`가 보임
 
 ## 10. PC software HTTP smoke
@@ -328,6 +329,7 @@ curl -fsS "$PUBLIC_HTTP_URL/student-exchange-partners?query=%EB%84%A4%EB%8D%9C%E
 
 ```bash
 curl -fsS "$PUBLIC_HTTP_URL/dormitory-guides?topic=hall_info&limit=2"
+curl -fsS "$PUBLIC_HTTP_URL/dormitory-guides?topic=fees&limit=2"
 curl -fsS "$PUBLIC_HTTP_URL/dormitory-guides?topic=latest_notices&limit=2"
 ```
 
@@ -336,6 +338,7 @@ curl -fsS "$PUBLIC_HTTP_URL/dormitory-guides?topic=latest_notices&limit=2"
 - HTTP `200`
 - JSON array
 - `topic=hall_info` 결과는 `스테파노관` 또는 `안드레아관` 같은 기숙사 동을 포함
+- `topic=fees` 결과는 기숙사비 또는 환불 기준 안내를 포함
 - `topic=latest_notices` 결과는 홈 최신 공지 카드를 반환
 - `"source_tag":"cuk_dormitory_guides"`가 보임
 
@@ -389,6 +392,7 @@ curl -fsS "$PUBLIC_HTTP_URL/student-activity-guides?topic=campus_media&limit=2" 
 - `학교 규정 어디서 봐?`
 - `요람 링크 알려줘`
 - `학사제도안내책자 보여줘`
+- `캠퍼스투어 신청 어디서 해?`
 
 surface names:
 
@@ -401,6 +405,7 @@ topics:
 - `rules`
 - `university_bulletin`
 - `academic_handbook`
+- `campus_tour`
 
 `jq` 예시:
 
@@ -416,6 +421,7 @@ curl -fsS "$PUBLIC_HTTP_URL/about-resource-guides?topic=rules&limit=2" \
 - `topic=rules` 결과는 `규정`과 공식 규정정보시스템 링크를 포함
 - `topic=university_bulletin` 결과는 `요람` 관련 공식 링크를 포함
 - `topic=academic_handbook` 결과는 `학사제도안내책자` 관련 공식 링크를 포함
+- `topic=campus_tour` 결과는 `캠퍼스투어`와 신청 링크를 포함
 - `"source_tag":"cuk_about_resource_guides"`가 보임
 
 ## 15. MCP initialize + guide checks
@@ -829,14 +835,14 @@ PY
 - `tool_list_class_guides` payload가 빈 결과가 아니고 `course_evaluation` 항목을 포함함
 - `tool_list_seasonal_semester_guides` payload가 빈 결과가 아니고 `seasonal_semester` 항목을 포함함
 - `tool_list_academic_milestone_guides` payload가 빈 결과가 아니고 `grade_evaluation` 항목을 포함함
-- `tool_list_campus_life_support_guides` payload가 빈 결과가 아니고 `health_center`, `parking`, `facility_rental`, `mobility_safety`, `student_counseling`, `student_reservist`, 또는 `hospital_use` 항목을 포함함
+- `tool_list_campus_life_support_guides` payload가 빈 결과가 아니고 `health_center`, `parking`, `facility_rental`, `mobility_safety`, `student_counseling`, `student_reservist`, `hospital_use`, 또는 `career_counseling` 항목을 포함함
 - `tool_search_pc_software` payload가 빈 결과가 아니고 `SPSS` 또는 `Photoshop` 항목을 포함함
 - `tool_list_student_exchange_guides` payload가 빈 결과가 아니고 `exchange_student` 또는 `domestic_partner_universities` 항목을 포함함
 - `tool_search_student_exchange_partners` payload가 빈 결과가 아니고 `네덜란드` 또는 `Utrecht University` 항목을 포함함
 - `tool_search_phone_book` payload가 빈 결과가 아니고 `보건실` 항목을 포함함
 - `tool_list_campus_life_notices` payload가 빈 결과가 아니고 `outside_agencies` 또는 `events` 항목을 포함함
 - `tool_list_affiliated_notices` payload가 빈 결과가 아니고 `international_studies` 또는 dorm topic 항목을 포함함
-- `tool_list_dormitory_guides` payload가 빈 결과가 아니고 `latest_notices` 또는 `hall_info` 항목을 포함함
+- `tool_list_dormitory_guides` payload가 빈 결과가 아니고 `latest_notices`, `hall_info`, 또는 `fees` 항목을 포함함
 - `tool_list_latest_notices` payload가 빈 결과가 아니고 academic 항목을 포함함
 - `tool_find_nearby_restaurants` payload가 빈 결과가 아니고 nearby 식당 요약 payload를 반환함
 - `resources/read` 결과의 첫 항목에 `source_tag=cuk_registration_guides`가 포함됨
@@ -859,11 +865,11 @@ PY
 - `/class-guides`가 `course_evaluation` topic과 `cuk_class_guides` source tag를 반환
 - `/seasonal-semester-guides`가 `seasonal_semester` topic과 `cuk_seasonal_semester_guides` source tag를 반환
 - `/academic-milestone-guides`가 `grade_evaluation` topic과 `cuk_academic_milestone_guides` source tag를 반환
-- `/campus-life-support-guides`가 `health_center`, `parking`, `facility_rental`, `mobility_safety`, `student_counseling`, `student_reservist`, 또는 `hospital_use` topic과 `cuk_campus_life_support_guides` source tag를 반환
+- `/campus-life-support-guides`가 `health_center`, `parking`, `facility_rental`, `mobility_safety`, `student_counseling`, `student_reservist`, `hospital_use`, 또는 `career_counseling` topic과 `cuk_campus_life_support_guides` source tag를 반환
 - `/pc-software`가 `SPSS` 또는 `Photoshop` query에 대해 `cuk_pc_software` source tag를 반환
 - `/student-exchange-guides`가 `exchange_student` 또는 `domestic_partner_universities` topic과 `cuk_student_exchange_guides` source tag를 반환
 - `/student-exchange-partners`가 `네덜란드` 같은 query에 대해 `country_ko`, `university_name`, `homepage_url`, `cuk_student_exchange_partners`를 반환
-- `/about-resource-guides`가 `rules`, `university_bulletin`, 또는 `academic_handbook` topic과 `cuk_about_resource_guides` source tag를 반환
+- `/about-resource-guides`가 `rules`, `university_bulletin`, `academic_handbook`, 또는 `campus_tour` topic과 `cuk_about_resource_guides` source tag를 반환
 - `/phone-book`가 `보건실` 또는 질의한 부서의 `cuk_phone_book` source tag를 반환
 - `/affiliated-notices`가 `international_studies` 또는 질의한 dorm/topic의 `cuk_affiliated_notice_boards` source tag를 반환
 - `/notices?category=academic&limit=3`가 `academic` notice와 `cuk_campus_notices` source tag를 반환

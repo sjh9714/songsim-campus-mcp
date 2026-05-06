@@ -278,14 +278,14 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
         "summary": "List campus life support guides",
         "description": (
             "List the current Songsim campus life support guidance for counseling, "
-            "disability support, reservist, and hospital use."
+            "career counseling, disability support, reservist, and hospital use."
         ),
     },
     "/dormitory-guides": {
         "operationId": "listDormitoryGuides",
         "summary": "List dormitory guides",
         "description": (
-            "List the current Songsim dormitory guidance and notice bundles."
+            "List the current Songsim dormitory guidance, fees, and notice bundles."
         ),
     },
     "/pc-software": {
@@ -323,7 +323,7 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
         "summary": "List about resource guides",
         "description": (
             "List the current Songsim official about-resource guide links for rules, "
-            "the university bulletin, and the academic handbook."
+            "the university bulletin, the academic handbook, and campus tours."
         ),
     },
 }

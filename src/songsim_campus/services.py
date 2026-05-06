@@ -31,6 +31,7 @@ from .db import DBConnection, connection, get_connection
 from .ingest import campus_life_support_guides as campus_life_support_guides_ingest
 from .ingest.about_resource_guides import (
     AcademicHandbookGuideSource,
+    CampusTourGuideSource,
     RuleGuideSource,
     UniversityBulletinGuideSource,
 )
@@ -63,6 +64,7 @@ from .ingest.official_sources import (
     CourseCatalogSource,
     DormFrancisCheckinOutAffiliatedNoticeBoardSource,
     DormFrancisGeneralAffiliatedNoticeBoardSource,
+    DormitoryFeeGuideSource,
     DormitoryHomepageGuideSource,
     DormitorySongsimGuideSource,
     DormKACheckinOutAffiliatedNoticeBoardSource,
@@ -178,6 +180,7 @@ ACADEMIC_SUPPORT_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/acade
 PHONE_BOOK_SOURCE_URL = "https://www.catholic.ac.kr/ko/about/phone_book.do"
 DORMITORY_SONGSIM_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/dormitory_songsim.do"
 DORMITORY_HOME_SOURCE_URL = "https://dorm.catholic.ac.kr/"
+DORMITORY_FEE_SOURCE_URL = "https://dorm.catholic.ac.kr/dormitory/life-guide/stefano-andrea.do"
 HEALTH_CENTER_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/health.do"
 LOST_FOUND_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/find.do"
 CAMPUS_PARKING_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/about/location_songsim.do"
@@ -187,6 +190,9 @@ STUDENT_RESERVIST_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/s
 HOSPITAL_USE_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/hospital1.do"
 MOBILITY_SAFETY_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/service/safety.do"
 FACILITY_RENTAL_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/rent_songsim.do"
+CAREER_COUNSELING_GUIDE_SOURCE_URL = (
+    "https://career.catholic.ac.kr/career/job/job_counseling.do"
+)
 STUDENT_ACTIVITY_GUIDE_SOURCE_URLS = {
     "student_government": "https://www.catholic.ac.kr/ko/campuslife/student_government.do",
     "campus_media": "https://www.catholic.ac.kr/ko/campuslife/media.do",
@@ -214,6 +220,7 @@ ABOUT_RESOURCE_GUIDE_SOURCE_URLS = {
     "rules": "https://www.catholic.ac.kr/ko/about/rule.do",
     "university_bulletin": "https://www.catholic.ac.kr/ko/about/univ_bulletin.do",
     "academic_handbook": "https://www.catholic.ac.kr/ko/about/brochure_rule.do",
+    "campus_tour": "https://www.catholic.ac.kr/ko/about/campus_tour.do",
 }
 RETURN_FROM_LEAVE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/return_from_leave_of_absence.do"
 DROPOUT_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/dropout.do"
@@ -265,6 +272,7 @@ CAMPUS_LIFE_SUPPORT_GUIDE_TOPICS = {
     "disability_support",
     "student_reservist",
     "hospital_use",
+    "career_counseling",
 }
 StudentCounselingGuideSource = getattr(
     campus_life_support_guides_ingest,
@@ -284,6 +292,11 @@ StudentReservistGuideSource = getattr(
 HospitalUseGuideSource = getattr(
     campus_life_support_guides_ingest,
     "HospitalUseGuideSource",
+    None,
+)
+CareerCounselingGuideSource = getattr(
+    campus_life_support_guides_ingest,
+    "CareerCounselingGuideSource",
     None,
 )
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
@@ -487,8 +500,13 @@ STUDENT_ACTIVITY_GUIDE_TOPICS = {
     "central_clubs",
     "institutional_clubs",
 }
-ABOUT_RESOURCE_GUIDE_TOPICS = {"rules", "university_bulletin", "academic_handbook"}
-DORMITORY_GUIDE_TOPICS = {"hall_info", "quick_links", "latest_notices"}
+ABOUT_RESOURCE_GUIDE_TOPICS = {
+    "rules",
+    "university_bulletin",
+    "academic_handbook",
+    "campus_tour",
+}
+DORMITORY_GUIDE_TOPICS = {"hall_info", "quick_links", "latest_notices", "fees"}
 AFFILIATED_NOTICE_TOPICS = {
     "international_studies",
     "dorm_k_a_general",
@@ -2999,7 +3017,8 @@ def list_about_resource_guides(
     normalized_topic = topic.strip() if topic else None
     if normalized_topic and normalized_topic not in ABOUT_RESOURCE_GUIDE_TOPICS:
         raise InvalidRequestError(
-            "topic must be one of rules, university_bulletin, academic_handbook."
+            "topic must be one of rules, university_bulletin, academic_handbook, "
+            "campus_tour."
         )
     return [
         AboutResourceGuide.model_validate(item)
@@ -3024,6 +3043,7 @@ def refresh_about_resource_guides_from_source(
                 ABOUT_RESOURCE_GUIDE_SOURCE_URLS["university_bulletin"]
             ),
             AcademicHandbookGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["academic_handbook"]),
+            CampusTourGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["campus_tour"]),
         ]
     synced_at = fetched_at or _now_iso()
     rows: list[dict[str, Any]] = []
@@ -3152,7 +3172,9 @@ def list_dormitory_guides(
     normalized_limit = max(1, min(limit, 50))
     normalized_topic = topic.strip() if topic else None
     if normalized_topic and normalized_topic not in DORMITORY_GUIDE_TOPICS:
-        raise InvalidRequestError("topic must be one of hall_info, quick_links, latest_notices.")
+        raise InvalidRequestError(
+            "topic must be one of hall_info, quick_links, latest_notices, fees."
+        )
     return [
         DormitoryGuide.model_validate(item)
         for item in repo.list_dormitory_guides(
@@ -3237,7 +3259,7 @@ def list_campus_life_support_guides(
         raise InvalidRequestError(
             "topic must be one of health_center, lost_found, parking, mobility_safety, "
             "facility_rental, student_counseling, disability_support, student_reservist, "
-            "hospital_use."
+            "hospital_use, career_counseling."
         )
     return [
         CampusLifeSupportGuide.model_validate(item)
@@ -5246,6 +5268,7 @@ def refresh_dormitory_guides_from_source(
     resolved_sources = sources or [
         DormitorySongsimGuideSource(DORMITORY_SONGSIM_SOURCE_URL),
         DormitoryHomepageGuideSource(DORMITORY_HOME_SOURCE_URL),
+        DormitoryFeeGuideSource(DORMITORY_FEE_SOURCE_URL),
     ]
     rows: list[dict[str, Any]] = []
     for source in resolved_sources:
@@ -5294,6 +5317,7 @@ def refresh_campus_life_support_guides_from_source(
                 (DisabilitySupportGuideSource, DISABILITY_SUPPORT_GUIDE_SOURCE_URL),
                 (StudentReservistGuideSource, STUDENT_RESERVIST_GUIDE_SOURCE_URL),
                 (HospitalUseGuideSource, HOSPITAL_USE_GUIDE_SOURCE_URL),
+                (CareerCounselingGuideSource, CAREER_COUNSELING_GUIDE_SOURCE_URL),
             ]
             if source_cls is not None
         ],

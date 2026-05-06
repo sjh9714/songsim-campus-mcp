@@ -54,6 +54,7 @@ def test_public_usage_guide_text_contains_current_anchor_phrases():
     assert "학사제도안내책자 보여줘" in content
     assert "성심교정 대관안내 알려줘" in content
     assert "개인형 이동장치 안전교육 알려줘" in content
+    assert "진로/취업 상담 어디서 신청해?" in content
     assert "기숙사 최신 공지" in content
     assert "행사안내" in content
     assert "교내 행사 공지" in content
