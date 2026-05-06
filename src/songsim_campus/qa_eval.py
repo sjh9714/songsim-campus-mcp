@@ -2081,6 +2081,17 @@ def _render_table(headers: list[str], rows: list[list[str]]) -> str:
     return "\n".join([header, divider, *body])
 
 
+def _render_report_cell(value: Any, *, max_length: int = 240) -> str:
+    if isinstance(value, str):
+        text = value
+    else:
+        text = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > max_length:
+        text = f"{text[: max_length - 3]}..."
+    return text.replace("|", "\\|")
+
+
 def render_validation_report(
     *,
     rows: list[EvalCorpusRow],
@@ -2161,9 +2172,12 @@ def render_validation_report(
     watch_rows = [
         [
             result.id,
-            row_by_id[result.id].user_utterance,
+            _render_report_cell(row_by_id[result.id].user_utterance),
             result.verdict,
+            row_by_id[result.id].watch_policy,
             result.comparison,
+            _render_report_cell(row_by_id[result.id].notes),
+            _render_report_cell(result.actual_summary),
         ]
         for result in normalized_results
         if result.verdict == "watch" and result.id in row_by_id
@@ -2182,7 +2196,7 @@ def render_validation_report(
     verdict_order = ["pass", "soft_pass", "soft_fail", "fail", "watch", "skip"]
     verdict_rows = [[key, str(verdict_counter.get(key, 0))] for key in verdict_order]
     watch_table = _render_table(
-        ["ID", "User utterance", "Verdict", "Comparison"],
+        ["ID", "User utterance", "Verdict", "Watch policy", "Comparison", "Notes", "Actual"],
         watch_rows,
     )
     issue_table = _render_table(

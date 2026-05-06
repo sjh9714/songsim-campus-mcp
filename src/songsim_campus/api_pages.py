@@ -87,6 +87,7 @@ def render_admin_sync_page(
         {"title": "seasonal_semester_guides", "fields": []},
         {"title": "academic_milestone_guides", "fields": []},
         {"title": "student_activity_guides", "fields": []},
+        {"title": "about_resource_guides", "fields": []},
         {"title": "student_exchange_guides", "fields": []},
         {"title": "student_exchange_partners", "fields": []},
         {"title": "phone_book_entries", "fields": []},
@@ -507,6 +508,10 @@ def render_landing_page(
             <li>
               <code>/student-activity-guides</code> student government, campus media,
               social volunteering, and ROTC guides
+            </li>
+            <li>
+              <code>/about-resource-guides</code> official rules, university bulletin,
+              and academic handbook resource links
             </li>
             <li>
               <code>/student-exchange-guides</code> domestic credit exchange, partner

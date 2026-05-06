@@ -231,7 +231,7 @@ def test_search_courses_from_source_normalizes_database_alias(
             "truth_mode": "watch_only",
             "pass_rule": {"summary_kind": "courses_top5"},
             "watch_policy": "course_source_gap",
-            "notes": "",
+            "notes": "source-backed direct hit 미확인",
         }
     )
     monkeypatch.setattr(
@@ -1331,7 +1331,15 @@ def test_run_row_evaluation_supports_exact_set_contains_invariant_and_watch() ->
     )
     watch_result = run_row_evaluation(
         watch_row,
-        actual_payload=[],
+        actual_payload=[
+            {
+                "code": "CSE300",
+                "title": "데이터베이스활용",
+                "professor": "김가톨",
+                "year": 2026,
+                "semester": 1,
+            }
+        ],
         truth=watch_truth,
         checked_at="2026-03-18T10:20:00+09:00",
     )
@@ -1340,6 +1348,16 @@ def test_run_row_evaluation_supports_exact_set_contains_invariant_and_watch() ->
     assert contains_result.verdict == "pass"
     assert invariant_result.verdict == "pass"
     assert watch_result.verdict == "watch"
+    assert watch_result.actual_summary == [
+        {
+            "code": "CSE300",
+            "title": "데이터베이스활용",
+            "professor": "김가톨",
+            "year": 2026,
+            "semester": 1,
+            "period_start": None,
+        }
+    ]
 
 
 def test_run_row_evaluation_supports_place_top1_facility_host_summary() -> None:
@@ -1438,7 +1456,7 @@ def test_render_validation_report_separates_watchlist() -> None:
                 "truth_mode": "watch_only",
                 "pass_rule": {"summary_kind": "courses_top5"},
                 "watch_policy": "course_source_gap",
-                "notes": "",
+                "notes": "source-backed direct hit 미확인",
             }
         ),
     ]
@@ -1456,7 +1474,7 @@ def test_render_validation_report_separates_watchlist() -> None:
             "id": "CW001",
             "status": "completed",
             "verdict": "watch",
-            "actual_summary": [],
+            "actual_summary": [{"code": "CSE300", "title": "데이터베이스활용"}],
             "comparison": "watch_only",
             "truth_source": "watchlist",
             "checked_at": "2026-03-18T10:20:00+09:00",
@@ -1475,6 +1493,9 @@ def test_render_validation_report_separates_watchlist() -> None:
     assert "executed: `2`" in report
     assert "Watchlist (hard fail 제외)" in report
     assert "CW001" in report
+    assert "course_source_gap" in report
+    assert "source-backed direct hit 미확인" in report
+    assert "데이터베이스활용" in report
 
 
 def test_render_validation_report_includes_registration_guides_coverage() -> None:
@@ -2248,6 +2269,9 @@ def test_default_eval_assets_match_distribution_plan() -> None:
 
     assert len(rows) == 1000
     assert len(watchlist_rows) == 5
+    assert {row.domain for row in watchlist_rows} == {"courses"}
+    assert {row.truth_mode for row in watchlist_rows} == {"watch_only"}
+    assert {row.watch_policy for row in watchlist_rows} == {"course_source_gap"}
     assert len({row.id for row in rows}) == 1000
     assert len({row.user_utterance for row in rows}) == 1000
     assert {row.truth_mode for row in rows}.issubset(

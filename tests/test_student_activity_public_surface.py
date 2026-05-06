@@ -29,9 +29,12 @@ def test_student_activity_docs_mark_static_v1_as_implemented_with_remaining_gaps
     assert "media.do" in registry
     assert "volunteer.do" in registry
     assert "rotc.do" in registry
+    assert "club.do" in registry
+    assert "institutional_club1.do" in registry
+    assert "institutional_club6.do" in registry
     assert "implemented" in registry
     assert "student_activity_guides" in registry
-    assert "중앙동아리/기관동아리" in registry
+    assert "중앙동아리, 기관동아리" in registry
 
     assert "/student-activity-guides" in audit
     assert "총학생회" in audit
@@ -40,6 +43,7 @@ def test_student_activity_docs_mark_static_v1_as_implemented_with_remaining_gaps
     assert "학생군사교육단" in audit
     assert "중앙동아리" in audit
     assert "기관동아리" in audit
+    assert "학생활동 board adapter" in audit
 
 
 def test_student_activity_smoke_doc_matches_live_contract() -> None:
@@ -47,11 +51,15 @@ def test_student_activity_smoke_doc_matches_live_contract() -> None:
 
     assert "Student activity guide family smoke" in smoke
     assert "총학생회 안내해줘" in smoke
+    assert "중앙동아리 뭐 있어?" in smoke
+    assert "기관동아리 CUK프렌즈 알려줘" in smoke
     assert "교내미디어 뭐 있어?" in smoke
     assert "사회봉사 활동 알려줘" in smoke
     assert "학생군사교육단 안내해줘" in smoke
     assert "tool_list_student_activity_guides" in smoke
     assert "GET /student-activity-guides" in smoke
+    assert "topic=central_clubs" in smoke
+    assert "topic=institutional_clubs" in smoke
     assert "topic=campus_media" in smoke
     assert "cuk_student_activity_guides" in smoke
 

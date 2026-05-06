@@ -3015,7 +3015,7 @@ class AffiliatedNoticeBoardSourceBase(NoticeSource):
         )
         body_root = soup.select_one(".b-content-box .b-con-box")
         body_text = _clean_text(body_root.get_text(" ", strip=True) if body_root else "")
-        return {
+        row = {
             "topic": self.topic,
             "title": title or default_title,
             "published_at": published_at or default_published_at,
@@ -3023,6 +3023,9 @@ class AffiliatedNoticeBoardSourceBase(NoticeSource):
             "source_url": default_source_url or self.url,
             "source_tag": self.source_tag,
         }
+        if self.source_tag == "cuk_affiliated_notice_boards":
+            row["body_text"] = body_text
+        return row
 
 
 class InternationalStudiesAffiliatedNoticeBoardSource(AffiliatedNoticeBoardSourceBase):

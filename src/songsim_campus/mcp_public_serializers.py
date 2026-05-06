@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from .schemas import (
+    AboutResourceGuide,
     AcademicMilestoneGuide,
     AcademicStatusGuide,
     AcademicSupportGuide,
@@ -269,6 +270,14 @@ def serialize_public_seasonal_semester_guide(
 
 def serialize_public_student_activity_guide(
     guide: StudentActivityGuide,
+) -> dict[str, object]:
+    payload = guide.model_dump()
+    payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
+    return payload
+
+
+def serialize_public_about_resource_guide(
+    guide: AboutResourceGuide,
 ) -> dict[str, object]:
     payload = guide.model_dump()
     payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")

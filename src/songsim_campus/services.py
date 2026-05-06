@@ -29,6 +29,11 @@ from . import (
 )
 from .db import DBConnection, connection, get_connection
 from .ingest import campus_life_support_guides as campus_life_support_guides_ingest
+from .ingest.about_resource_guides import (
+    AcademicHandbookGuideSource,
+    RuleGuideSource,
+    UniversityBulletinGuideSource,
+)
 from .ingest.campus_life_support_guides import (
     FacilityRentalGuideSource,
     HealthCenterGuideSource,
@@ -98,11 +103,14 @@ from .ingest.pc_software import (
 )
 from .ingest.student_activity_guides import (
     CampusMediaGuideSource,
+    CentralClubGuideSource,
+    InstitutionalClubGuideSource,
     RotcGuideSource,
     SocialVolunteeringGuideSource,
     StudentGovernmentGuideSource,
 )
 from .schemas import (
+    AboutResourceGuide,
     AcademicCalendarEvent,
     AcademicMilestoneGuide,
     AcademicStatusGuide,
@@ -184,6 +192,28 @@ STUDENT_ACTIVITY_GUIDE_SOURCE_URLS = {
     "campus_media": "https://www.catholic.ac.kr/ko/campuslife/media.do",
     "social_volunteering": "https://www.catholic.ac.kr/ko/campuslife/volunteer.do",
     "rotc": "https://www.catholic.ac.kr/ko/campuslife/rotc.do",
+    "central_clubs": "https://www.catholic.ac.kr/ko/campuslife/club.do",
+    "institutional_club_cuk_friends": (
+        "https://www.catholic.ac.kr/ko/campuslife/institutional_club1.do"
+    ),
+    "institutional_club_cahong": (
+        "https://www.catholic.ac.kr/ko/campuslife/institutional_club2.do"
+    ),
+    "institutional_club_nala": (
+        "https://www.catholic.ac.kr/ko/campuslife/institutional_club3.do"
+    ),
+    "institutional_club_cuk_love": (
+        "https://www.catholic.ac.kr/ko/campuslife/institutional_club4.do"
+    ),
+    "institutional_club_coz": "https://www.catholic.ac.kr/ko/campuslife/institutional_club5.do",
+    "institutional_club_startist": (
+        "https://www.catholic.ac.kr/ko/campuslife/institutional_club6.do"
+    ),
+}
+ABOUT_RESOURCE_GUIDE_SOURCE_URLS = {
+    "rules": "https://www.catholic.ac.kr/ko/about/rule.do",
+    "university_bulletin": "https://www.catholic.ac.kr/ko/about/univ_bulletin.do",
+    "academic_handbook": "https://www.catholic.ac.kr/ko/about/brochure_rule.do",
 }
 RETURN_FROM_LEAVE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/return_from_leave_of_absence.do"
 DROPOUT_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/dropout.do"
@@ -276,6 +306,7 @@ SYNC_DATASET_TABLES = (
     "seasonal_semester_guides",
     "academic_milestone_guides",
     "student_activity_guides",
+    "about_resource_guides",
     "student_exchange_guides",
     "student_exchange_partners",
     "dormitory_guides",
@@ -300,6 +331,7 @@ PUBLIC_READY_CORE_DATASETS = frozenset(
         "seasonal_semester_guides",
         "academic_milestone_guides",
         "student_activity_guides",
+        "about_resource_guides",
         "student_exchange_guides",
         "student_exchange_partners",
         "dormitory_guides",
@@ -347,6 +379,7 @@ ADMIN_SYNC_TARGETS = {
     "seasonal_semester_guides",
     "academic_milestone_guides",
     "student_activity_guides",
+    "about_resource_guides",
     "student_exchange_guides",
     "student_exchange_partners",
     "dormitory_guides",
@@ -451,7 +484,10 @@ STUDENT_ACTIVITY_GUIDE_TOPICS = {
     "campus_media",
     "social_volunteering",
     "rotc",
+    "central_clubs",
+    "institutional_clubs",
 }
+ABOUT_RESOURCE_GUIDE_TOPICS = {"rules", "university_bulletin", "academic_handbook"}
 DORMITORY_GUIDE_TOPICS = {"hall_info", "quick_links", "latest_notices"}
 AFFILIATED_NOTICE_TOPICS = {
     "international_studies",
@@ -2898,7 +2934,7 @@ def list_student_activity_guides(
     if normalized_topic and normalized_topic not in STUDENT_ACTIVITY_GUIDE_TOPICS:
         raise InvalidRequestError(
             "topic must be one of student_government, campus_media, "
-            "social_volunteering, rotc."
+            "social_volunteering, rotc, central_clubs, institutional_clubs."
         )
     return [
         StudentActivityGuide.model_validate(item)
@@ -2924,6 +2960,23 @@ def refresh_student_activity_guides_from_source(
                 STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["social_volunteering"]
             ),
             RotcGuideSource(STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["rotc"]),
+            CentralClubGuideSource(STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["central_clubs"]),
+            InstitutionalClubGuideSource(
+                STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["institutional_club_cuk_friends"]
+            ),
+            InstitutionalClubGuideSource(
+                STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["institutional_club_cahong"]
+            ),
+            InstitutionalClubGuideSource(
+                STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["institutional_club_nala"]
+            ),
+            InstitutionalClubGuideSource(
+                STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["institutional_club_cuk_love"]
+            ),
+            InstitutionalClubGuideSource(STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["institutional_club_coz"]),
+            InstitutionalClubGuideSource(
+                STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["institutional_club_startist"]
+            ),
         ]
     synced_at = fetched_at or _now_iso()
     rows: list[dict[str, Any]] = []
@@ -2933,6 +2986,53 @@ def refresh_student_activity_guides_from_source(
     return [
         StudentActivityGuide.model_validate(item)
         for item in repo.list_student_activity_guides(conn, limit=max(len(rows), 1))
+    ]
+
+
+def list_about_resource_guides(
+    conn: DBConnection,
+    *,
+    topic: str | None = None,
+    limit: int = 20,
+) -> list[AboutResourceGuide]:
+    normalized_limit = max(1, min(limit, 50))
+    normalized_topic = topic.strip() if topic else None
+    if normalized_topic and normalized_topic not in ABOUT_RESOURCE_GUIDE_TOPICS:
+        raise InvalidRequestError(
+            "topic must be one of rules, university_bulletin, academic_handbook."
+        )
+    return [
+        AboutResourceGuide.model_validate(item)
+        for item in repo.list_about_resource_guides(
+            conn,
+            topic=normalized_topic,
+            limit=normalized_limit,
+        )
+    ]
+
+
+def refresh_about_resource_guides_from_source(
+    conn: DBConnection,
+    *,
+    sources: list[Any] | None = None,
+    fetched_at: str | None = None,
+) -> list[AboutResourceGuide]:
+    if sources is None:
+        sources = [
+            RuleGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["rules"]),
+            UniversityBulletinGuideSource(
+                ABOUT_RESOURCE_GUIDE_SOURCE_URLS["university_bulletin"]
+            ),
+            AcademicHandbookGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["academic_handbook"]),
+        ]
+    synced_at = fetched_at or _now_iso()
+    rows: list[dict[str, Any]] = []
+    for source in sources:
+        rows.extend(source.parse(source.fetch(), fetched_at=synced_at))
+    repo.replace_about_resource_guides(conn, rows)
+    return [
+        AboutResourceGuide.model_validate(item)
+        for item in repo.list_about_resource_guides(conn, limit=max(len(rows), 1))
     ]
 
 
@@ -3352,6 +3452,8 @@ def _run_admin_sync_target(
         }
     if target == "student_activity_guides":
         return {"student_activity_guides": len(refresh_student_activity_guides_from_source(conn))}
+    if target == "about_resource_guides":
+        return {"about_resource_guides": len(refresh_about_resource_guides_from_source(conn))}
     if target == "student_exchange_guides":
         return {"student_exchange_guides": len(refresh_student_exchange_guides_from_source(conn))}
     if target == "student_exchange_partners":
@@ -4743,6 +4845,7 @@ def refresh_affiliated_notices_from_sources(
                         "title": title,
                         "published_at": published_at,
                         "summary": detail.get("summary") or item.get("summary") or "",
+                        "body_text": detail.get("body_text") or item.get("body_text") or "",
                         "source_url": source_url,
                         "source_tag": detail.get("source_tag")
                         or getattr(source, "source_tag", "cuk_affiliated_notice_boards"),
@@ -5260,6 +5363,7 @@ def sync_official_snapshot(
     seasonal_semester_guides = refresh_seasonal_semester_guides_from_source(conn)
     academic_milestone_guides = refresh_academic_milestone_guides_from_source(conn)
     student_activity_guides = refresh_student_activity_guides_from_source(conn)
+    about_resource_guides = refresh_about_resource_guides_from_source(conn)
     student_exchange_guides = refresh_student_exchange_guides_from_source(conn)
     dormitory_guides = refresh_dormitory_guides_from_source(conn)
     phone_book_entries = refresh_phone_book_entries_from_source(conn)
@@ -5287,6 +5391,7 @@ def sync_official_snapshot(
         "seasonal_semester_guides": len(seasonal_semester_guides),
         "academic_milestone_guides": len(academic_milestone_guides),
         "student_activity_guides": len(student_activity_guides),
+        "about_resource_guides": len(about_resource_guides),
         "student_exchange_guides": len(student_exchange_guides),
         "student_exchange_partners": len(student_exchange_partners),
         "dormitory_guides": len(dormitory_guides),

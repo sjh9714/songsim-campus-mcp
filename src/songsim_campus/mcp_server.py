@@ -56,7 +56,7 @@ def build_mcp():
             "about places, courses, academic calendar, academic support, academic status, "
             "registration, class, seasonal semester, academic milestone, phone book, "
             "dormitory, notices, affiliated notices, certificate, leave-of-absence, "
-            "and scholarship guides, "
+            "scholarship guides, and about resource guides, "
             "wifi guides, "
             "dining, nearby restaurants, library seats, empty classrooms, and transport."
         ),

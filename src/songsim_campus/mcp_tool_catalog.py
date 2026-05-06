@@ -5,6 +5,7 @@ from typing import Annotated, Any
 from pydantic import Field
 
 from .mcp_public_serializers import (
+    serialize_public_about_resource_guide,
     serialize_public_academic_milestone_guide,
     serialize_public_academic_status_guide,
     serialize_public_academic_support_guide,
@@ -48,6 +49,7 @@ from .services import (
     get_profile_interests,
     get_profile_meal_recommendations,
     get_profile_timetable,
+    list_about_resource_guides,
     list_academic_calendar,
     list_academic_milestone_guides,
     list_academic_status_guides,
@@ -500,8 +502,8 @@ def register_shared_tools(
         description=(
             (
                 "학생활동 안내를 읽을 때 사용합니다. 학생회, 교지/언론, "
-                "사회봉사, ROTC 같은 학생활동 유형별 정적 안내를 current snapshot으로 "
-                "돌려줍니다."
+                "중앙동아리, 기관동아리, 사회봉사, ROTC 같은 학생활동 유형별 "
+                "정적 안내를 current snapshot으로 돌려줍니다."
             )
             if public_readonly
             else "학교 학생활동 안내 current snapshot을 가져옵니다."
@@ -514,7 +516,8 @@ def register_shared_tools(
             Field(
                 description=(
                     "학생활동 안내 유형 필터. student_government, campus_media, "
-                    "social_volunteering, rotc 중 하나를 사용합니다."
+                    "social_volunteering, rotc, central_clubs, institutional_clubs "
+                    "중 하나를 사용합니다."
                 )
             ),
         ] = None,
@@ -525,6 +528,41 @@ def register_shared_tools(
             if public_readonly:
                 return [serialize_public_student_activity_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
+
+    @mcp.tool(
+        description=(
+            (
+                "가대소개 주요 정적 안내 자료를 읽을 때 사용합니다. 규정, 요람, "
+                "학사제도안내책자처럼 공식 링크와 접근 안내가 필요한 about resource를 "
+                "current snapshot으로 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 가대소개 주요 정적 안내 자료 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_about_resource_guides(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "가대소개 정적 안내 유형 필터. rules, university_bulletin, "
+                    "academic_handbook 중 하나를 사용합니다."
+                )
+            ),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                guides = list_about_resource_guides(conn, topic=topic, limit=limit)
+                if public_readonly:
+                    return [serialize_public_about_resource_guide(item) for item in guides]
+                return [item.model_dump() for item in guides]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
 
     @mcp.tool(
         description=(
@@ -1018,7 +1056,7 @@ def register_shared_tools(
         ] = None,
         query: Annotated[
             str | None,
-            Field(description="제목 또는 요약 검색어. 예: 공결, 입퇴사, OT"),
+            Field(description="제목, 요약 또는 본문 검색어. 예: 공결, 입퇴사, OT"),
         ] = None,
         limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
     ):

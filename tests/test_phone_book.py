@@ -337,6 +337,10 @@ def test_sync_official_snapshot_includes_phone_book_entries(app_env, monkeypatch
         _record(call_order, "phone_book_entries"),
     )
     monkeypatch.setattr(
+        "songsim_campus.services.refresh_about_resource_guides_from_source",
+        _record(call_order, "about_resource_guides"),
+    )
+    monkeypatch.setattr(
         "songsim_campus.services.refresh_student_exchange_partners_from_source",
         _record(call_order, "student_exchange_partners"),
     )
@@ -367,6 +371,8 @@ def test_sync_official_snapshot_includes_phone_book_entries(app_env, monkeypatch
 
     assert "phone_book_entries" in summary
     assert "phone_book_entries" in call_order
+    assert "about_resource_guides" in summary
+    assert "about_resource_guides" in call_order
     assert "campus_life_support_guides" in summary
     assert "campus_life_support_guides" in call_order
     assert "pc_software_entries" in summary

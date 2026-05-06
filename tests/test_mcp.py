@@ -9,6 +9,7 @@ import pytest
 from songsim_campus.db import connection, init_db
 from songsim_campus.mcp_server import build_mcp
 from songsim_campus.repo import (
+    replace_about_resource_guides,
     replace_campus_dining_menus,
     replace_campus_facilities,
     replace_courses,
@@ -526,6 +527,51 @@ def test_mcp_student_activity_tool_and_resource_share_service_data(app_env):
     assert resource_payload[0]["source_tag"] == "cuk_student_activity_guides"
 
 
+def test_mcp_about_resource_tool_and_resource_share_service_data(app_env):
+    pytest.importorskip("mcp.server.fastmcp")
+    init_db()
+    seed_demo(force=True)
+    with connection() as conn:
+        replace_about_resource_guides(
+            conn,
+            [
+                {
+                    "topic": "rules",
+                    "title": "규정",
+                    "summary": "규정정보시스템 안내",
+                    "steps": ["공식 규정정보시스템에서 원문을 확인합니다."],
+                    "links": [
+                        {
+                            "label": "규정정보시스템 바로가기",
+                            "url": "http://rule.catholic.ac.kr:8080/lmxsrv/main/main.srv",
+                        }
+                    ],
+                    "source_url": "https://www.catholic.ac.kr/ko/about/rule.do",
+                    "source_tag": "cuk_about_resource_guides",
+                    "last_synced_at": "2026-03-20T10:00:00+09:00",
+                }
+            ],
+        )
+
+    async def main():
+        mcp = build_mcp()
+        tool_result = await mcp.call_tool(
+            "tool_list_about_resource_guides",
+            {"topic": "rules", "limit": 10},
+        )
+        resource_result = await mcp.read_resource("songsim://about-resource-guide")
+        return tool_result, list(resource_result)
+
+    tool_result, resource_result = asyncio.run(main())
+
+    tool_payload = json.loads(tool_result[0].text)
+    resource_payload = json.loads(resource_result[0].content)
+
+    assert tool_payload["title"] == "규정"
+    assert tool_payload["topic"] == "rules"
+    assert resource_payload[0]["source_tag"] == "cuk_about_resource_guides"
+
+
 def test_mcp_student_exchange_tool_and_resource_share_service_data(app_env):
     pytest.importorskip("mcp.server.fastmcp")
     init_db()
@@ -1007,6 +1053,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
         "tool_list_seasonal_semester_guides",
         "tool_list_academic_milestone_guides",
         "tool_list_student_activity_guides",
+        "tool_list_about_resource_guides",
         "tool_list_student_exchange_guides",
         "tool_search_student_exchange_partners",
         "tool_search_phone_book",
@@ -1039,6 +1086,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     assert "songsim://seasonal-semester-guide" in resource_uris
     assert "songsim://academic-milestone-guide" in resource_uris
     assert "songsim://student-activity-guide" in resource_uris
+    assert "songsim://about-resource-guide" in resource_uris
     assert "songsim://student-exchange-guide" in resource_uris
     assert "songsim://student-exchange-partners" in resource_uris
     assert "songsim://phone-book" in resource_uris
@@ -1093,6 +1141,7 @@ def test_mcp_public_readonly_mode_registers_prompts_and_extended_resources(app_e
         "songsim://seasonal-semester-guide",
         "songsim://academic-milestone-guide",
         "songsim://student-activity-guide",
+        "songsim://about-resource-guide",
         "songsim://student-exchange-guide",
         "songsim://student-exchange-partners",
         "songsim://phone-book",
@@ -1167,9 +1216,29 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "성적평가" in tools["tool_list_academic_milestone_guides"]["description"]
     assert "졸업요건" in tools["tool_list_academic_milestone_guides"]["description"]
     assert "학생회" in tools["tool_list_student_activity_guides"]["description"]
+    assert "중앙동아리" in tools["tool_list_student_activity_guides"]["description"]
+    assert "기관동아리" in tools["tool_list_student_activity_guides"]["description"]
     assert "사회봉사" in tools["tool_list_student_activity_guides"]["description"]
     assert "student_government" in (
         tools["tool_list_student_activity_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "central_clubs" in (
+        tools["tool_list_student_activity_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "규정" in tools["tool_list_about_resource_guides"]["description"]
+    assert "요람" in tools["tool_list_about_resource_guides"]["description"]
+    assert "학사제도안내책자" in tools["tool_list_about_resource_guides"]["description"]
+    assert "rules" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "academic_handbook" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )
@@ -1508,6 +1577,7 @@ def test_mcp_public_usage_and_class_period_resources_are_readable(app_env, monke
     assert "tool_list_seasonal_semester_guides" in usage_content
     assert "tool_list_academic_milestone_guides" in usage_content
     assert "tool_list_student_activity_guides" in usage_content
+    assert "tool_list_about_resource_guides" in usage_content
     assert "tool_list_student_exchange_guides" in usage_content
     assert "tool_search_student_exchange_partners" in usage_content
     assert "tool_search_phone_book" in usage_content
@@ -1537,6 +1607,8 @@ def test_mcp_public_usage_and_class_period_resources_are_readable(app_env, monke
     assert "휴복학 문의" in usage_content
     assert "복학 신청 방법" in usage_content
     assert "재입학 지원자격" in usage_content
+    assert "학교 규정 어디서 봐?" in usage_content
+    assert "학사제도안내책자 보여줘" in usage_content
     assert "등록금 납부 방법" in usage_content
     assert "수업평가 기간" in usage_content
     assert "계절학기 신청 시기" in usage_content
@@ -2307,8 +2379,10 @@ def test_mcp_public_search_places_returns_matched_facility_metadata(app_env, mon
 
 
 def test_mcp_places_tool_populates_generic_facility_metadata_when_place_alias_matches(
+    app_env,
     monkeypatch,
 ):
+    init_db()
     with connection() as conn:
         replace_places(
             conn,

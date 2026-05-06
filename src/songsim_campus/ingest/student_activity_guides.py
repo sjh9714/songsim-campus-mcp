@@ -228,3 +228,122 @@ class RotcGuideSource(StudentActivityGuideSourceBase):
                 }
             )
         return rows
+
+
+class CentralClubGuideSource(StudentActivityGuideSourceBase):
+    topic = "central_clubs"
+
+    def __init__(self, url: str = "https://www.catholic.ac.kr/ko/campuslife/club.do"):
+        super().__init__(url)
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        soup = BeautifulSoup(html, "html.parser")
+        root = soup.select_one(".content-box.club") or soup
+        category_by_popup_id: dict[str, str] = {}
+        category_rows: list[str] = []
+        for category_node in root.select(".orgChart-wrap2 .dep1-wrap > li"):
+            category_title = _clean_text(
+                category_node.select_one(".org-tit").get_text(" ", strip=True)
+                if category_node.select_one(".org-tit")
+                else ""
+            )
+            club_names: list[str] = []
+            for anchor in category_node.select("a.btn-pop[href^='#']"):
+                name = _clean_text(anchor.get_text(" ", strip=True))
+                popup_id = str(anchor.get("href") or "").lstrip("#")
+                if category_title and popup_id:
+                    category_by_popup_id[popup_id] = category_title
+                if name:
+                    club_names.append(name)
+            if category_title and club_names:
+                category_rows.append(f"{category_title}: {', '.join(club_names)}")
+
+        intro_steps = _extract_steps(root, title="중앙동아리")
+        rows: list[dict] = []
+        if category_rows:
+            rows.append(
+                {
+                    "topic": self.topic,
+                    "title": "중앙동아리 분과 안내",
+                    "summary": intro_steps[0] if intro_steps else category_rows[0],
+                    "steps": _unique([*intro_steps, *category_rows]),
+                    "links": _extract_links(root, base_url=self.url),
+                    "source_url": self.url,
+                    "source_tag": self.source_tag,
+                    "last_synced_at": fetched_at,
+                }
+            )
+
+        for popup in soup.select(".dialog-wrap.club-pop[id]"):
+            popup_id = str(popup.get("id") or "")
+            title = _clean_text(
+                popup.select_one(".box-tit").get_text(" ", strip=True)
+                if popup.select_one(".box-tit")
+                else ""
+            )
+            if not title:
+                continue
+            category = category_by_popup_id.get(popup_id)
+            steps: list[str] = []
+            if category:
+                steps.append(f"분과: {category}")
+            for info in popup.select(".dl-box dl"):
+                info_text = _clean_text(info.get_text(" ", strip=True))
+                if info_text:
+                    steps.append(info_text)
+            for body in popup.select(".cont-wrap > p.con-p, .cont-wrap li"):
+                body_text = _clean_text(body.get_text(" ", strip=True))
+                if body_text:
+                    steps.append(body_text)
+            steps = _unique(steps)
+            rows.append(
+                {
+                    "topic": self.topic,
+                    "title": title,
+                    "summary": next(
+                        (
+                            step
+                            for step in steps
+                            if not step.startswith(("분과:", "SNS :", "전화번호 :"))
+                        ),
+                        title,
+                    ),
+                    "steps": steps,
+                    "links": _extract_links(popup, base_url=self.url),
+                    "source_url": f"{self.url}#{popup_id}" if popup_id else self.url,
+                    "source_tag": self.source_tag,
+                    "last_synced_at": fetched_at,
+                }
+            )
+        return rows
+
+
+class InstitutionalClubGuideSource(StudentActivityGuideSourceBase):
+    topic = "institutional_clubs"
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        soup = BeautifulSoup(html, "html.parser")
+        root = soup.select_one(".content-box.instClub") or soup.select_one(".content-box") or soup
+        heading = root.select_one(".h4-tit01") or root.select_one(".box-tit")
+        title = _clean_text(heading.get_text(" ", strip=True) if heading else "")
+        if not title:
+            return []
+        steps = _extract_steps(root, title=title)
+        summary = ""
+        for node in root.select(".con-box02 .con-p, .con-p"):
+            text = _clean_text(node.get_text(" ", strip=True))
+            if text and text != title:
+                summary = text
+                break
+        return [
+            {
+                "topic": self.topic,
+                "title": title,
+                "summary": summary or (steps[0] if steps else title),
+                "steps": steps,
+                "links": _extract_links(root, base_url=self.url),
+                "source_url": self.url,
+                "source_tag": self.source_tag,
+                "last_synced_at": fetched_at,
+            }
+        ]

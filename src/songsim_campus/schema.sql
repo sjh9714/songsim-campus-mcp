@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS affiliated_notices (
     title TEXT NOT NULL,
     published_at DATE NOT NULL,
     summary TEXT NOT NULL DEFAULT '',
+    body_text TEXT NOT NULL DEFAULT '',
     source_url TEXT,
     source_tag TEXT NOT NULL DEFAULT 'demo',
     last_synced_at TIMESTAMPTZ NOT NULL
@@ -296,6 +297,18 @@ CREATE TABLE IF NOT EXISTS student_activity_guides (
     last_synced_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS about_resource_guides (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    steps_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    links_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS student_exchange_partners (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     partner_code TEXT NOT NULL,
@@ -435,6 +448,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS student_year INTEGER;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS admission_type TEXT;
 ALTER TABLE restaurant_cache_items ADD COLUMN IF NOT EXISTS kakao_place_id TEXT;
 ALTER TABLE restaurant_cache_items ADD COLUMN IF NOT EXISTS source_url TEXT;
+ALTER TABLE affiliated_notices ADD COLUMN IF NOT EXISTS body_text TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS sync_runs (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -481,6 +495,10 @@ CREATE INDEX IF NOT EXISTS idx_student_activity_guides_topic
 ON student_activity_guides(topic);
 CREATE INDEX IF NOT EXISTS idx_student_activity_guides_title
 ON student_activity_guides(title);
+CREATE INDEX IF NOT EXISTS idx_about_resource_guides_topic
+ON about_resource_guides(topic);
+CREATE INDEX IF NOT EXISTS idx_about_resource_guides_title
+ON about_resource_guides(title);
 CREATE INDEX IF NOT EXISTS idx_campus_life_support_guides_topic
 ON campus_life_support_guides(topic);
 CREATE INDEX IF NOT EXISTS idx_campus_life_support_guides_title

@@ -23,6 +23,7 @@ from .api_pages import (
 )
 from .db import connection, get_connection, init_db
 from .schemas import (
+    AboutResourceGuide,
     AcademicCalendarEvent,
     AcademicMilestoneGuide,
     AcademicStatusGuide,
@@ -92,6 +93,7 @@ from .services import (
     get_profile_timetable,
     get_readiness_snapshot,
     get_sync_dashboard_state,
+    list_about_resource_guides,
     list_academic_calendar,
     list_academic_milestone_guides,
     list_academic_status_guides,
@@ -525,6 +527,17 @@ def create_app() -> FastAPI:
             except InvalidRequestError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.get("/about-resource-guides", response_model=list[AboutResourceGuide])
+    def about_resource_guides(
+        topic: str | None = Query(default=None, description="가대소개 정적 안내 유형 필터"),
+        limit: int = Query(default=20, ge=1, le=50),
+    ) -> list[AboutResourceGuide]:
+        with connection() as conn:
+            try:
+                return list_about_resource_guides(conn, topic=topic, limit=limit)
+            except InvalidRequestError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.get("/student-exchange-partners", response_model=list[StudentExchangePartner])
     def student_exchange_partners(
         query: str | None = Query(
@@ -888,7 +901,7 @@ def create_app() -> FastAPI:
     @app.get("/affiliated-notices", response_model=list[AffiliatedNotice])
     def affiliated_notices(
         topic: str | None = Query(default=None, description="공지 번들 유형 필터"),
-        query: str | None = Query(default=None, description="공지 제목 또는 요약 검색어"),
+        query: str | None = Query(default=None, description="공지 제목, 요약 또는 본문 검색어"),
         limit: int = Query(default=20, ge=1, le=50),
     ) -> list[dict[str, object]]:
         from . import services as _services

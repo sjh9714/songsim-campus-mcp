@@ -330,6 +330,25 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
                 "last_synced_at": "2026-03-20T10:00:00+09:00",
             }
         ]
+    def stub_about_resource_guides(conn, topic=None, limit=20):
+        return [
+            {
+                "id": 1,
+                "topic": "rules",
+                "title": "규정",
+                "summary": "규정정보시스템 안내",
+                "steps": ["공식 규정정보시스템에서 원문을 확인합니다."],
+                "links": [
+                    {
+                        "label": "규정정보시스템 바로가기",
+                        "url": "http://rule.catholic.ac.kr:8080/lmxsrv/main/main.srv",
+                    }
+                ],
+                "source_url": "https://www.catholic.ac.kr/ko/about/rule.do",
+                "source_tag": "cuk_about_resource_guides",
+                "last_synced_at": "2026-03-20T10:00:00+09:00",
+            }
+        ]
     def stub_student_exchange_partners(conn, query=None, limit=20):
         return [
             {
@@ -470,6 +489,12 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     )
     monkeypatch.setattr(
         services,
+        "list_about_resource_guides",
+        stub_about_resource_guides,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        services,
         "search_student_exchange_partners",
         stub_student_exchange_partners,
         raising=False,
@@ -494,6 +519,10 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     monkeypatch.setattr(
         "songsim_campus.api.list_student_activity_guides",
         stub_student_activity_guides,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.api.list_about_resource_guides",
+        stub_about_resource_guides,
     )
     monkeypatch.setattr(
         "songsim_campus.api.search_student_exchange_partners",
@@ -534,6 +563,10 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
         student_activity_guides = public_client.get(
             "/student-activity-guides",
             params={"topic": "student_government"},
+        )
+        about_resource_guides = public_client.get(
+            "/about-resource-guides",
+            params={"topic": "rules"},
         )
         student_exchange_partners = public_client.get(
             "/student-exchange-partners",
@@ -595,6 +628,7 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "/seasonal-semester-guides" in landing.text
     assert "/academic-milestone-guides" in landing.text
     assert "/student-activity-guides" in landing.text
+    assert "/about-resource-guides" in landing.text
     assert "/student-exchange-guides" in landing.text
     assert "/student-exchange-partners" in landing.text
     assert "/phone-book" in landing.text
@@ -624,6 +658,8 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert student_exchange_guides.json()[0]["topic"] == "exchange_student"
     assert student_activity_guides.status_code == 200
     assert student_activity_guides.json()[0]["topic"] == "student_government"
+    assert about_resource_guides.status_code == 200
+    assert about_resource_guides.json()[0]["topic"] == "rules"
     assert student_exchange_partners.status_code == 200
     assert student_exchange_partners.json()[0]["partner_code"] == "00122"
     assert campus_life_support.status_code == 200
@@ -655,6 +691,7 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "/seasonal-semester-guides" in openapi.text
     assert "/academic-milestone-guides" in openapi.text
     assert "/student-activity-guides" in openapi.text
+    assert "/about-resource-guides" in openapi.text
     assert "/student-exchange-guides" in openapi.text
     assert "/student-exchange-partners" in openapi.text
     assert "/phone-book" in openapi.text

@@ -315,7 +315,15 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
         "summary": "List student activity guides",
         "description": (
             "List the current Songsim student activity guidance for government, "
-            "media, volunteering, and ROTC."
+            "central clubs, institutional clubs, media, volunteering, and ROTC."
+        ),
+    },
+    "/about-resource-guides": {
+        "operationId": "listAboutResourceGuides",
+        "summary": "List about resource guides",
+        "description": (
+            "List the current Songsim official about-resource guide links for rules, "
+            "the university bulletin, and the academic handbook."
         ),
     },
 }

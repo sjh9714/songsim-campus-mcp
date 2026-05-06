@@ -21,6 +21,7 @@ def test_public_usage_guide_text_contains_current_anchor_phrases():
     assert "tool_list_seasonal_semester_guides" in content
     assert "tool_list_academic_milestone_guides" in content
     assert "tool_list_student_activity_guides" in content
+    assert "tool_list_about_resource_guides" in content
     assert "tool_list_student_exchange_guides" in content
     assert "tool_search_phone_book" in content
     assert "tool_list_dormitory_guides" in content
@@ -49,6 +50,8 @@ def test_public_usage_guide_text_contains_current_anchor_phrases():
     assert "교내미디어 뭐 있어?" in content
     assert "사회봉사 활동 알려줘" in content
     assert "학생군사교육단 안내해줘" in content
+    assert "학교 규정 어디서 봐?" in content
+    assert "학사제도안내책자 보여줘" in content
     assert "성심교정 대관안내 알려줘" in content
     assert "개인형 이동장치 안전교육 알려줘" in content
     assert "기숙사 최신 공지" in content
@@ -129,6 +132,7 @@ def test_register_shared_resources_exposes_expected_resource_uris(tmp_path):
         "songsim://seasonal-semester-guide",
         "songsim://academic-milestone-guide",
         "songsim://student-activity-guide",
+        "songsim://about-resource-guide",
         "songsim://student-exchange-guide",
         "songsim://student-exchange-partners",
         "songsim://phone-book",

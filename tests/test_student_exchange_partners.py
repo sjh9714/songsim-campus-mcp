@@ -240,6 +240,7 @@ def test_student_exchange_partner_snapshot_sync_in_public_readonly_mode(app_env,
         "refresh_campus_life_support_guides_from_source": "campus_life_support_guides",
         "refresh_pc_software_entries_from_source": "pc_software_entries",
         "refresh_student_exchange_guides_from_source": "student_exchange_guides",
+        "refresh_about_resource_guides_from_source": "about_resource_guides",
         "refresh_dormitory_guides_from_source": "dormitory_guides",
         "refresh_phone_book_entries_from_source": "phone_book_entries",
         "refresh_student_exchange_partners_from_source": "student_exchange_partners",
@@ -256,6 +257,8 @@ def test_student_exchange_partner_snapshot_sync_in_public_readonly_mode(app_env,
 
     assert "student_exchange_partners" in summary
     assert "student_exchange_partners" in call_order
+    assert "about_resource_guides" in summary
+    assert "about_resource_guides" in call_order
     assert "campus_life_support_guides" in summary
     assert "campus_life_support_guides" in call_order
     assert "pc_software_entries" in summary

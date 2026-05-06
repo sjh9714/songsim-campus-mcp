@@ -36,6 +36,7 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
         "tool_list_seasonal_semester_guides",
         "tool_list_academic_milestone_guides",
         "tool_list_student_activity_guides",
+        "tool_list_about_resource_guides",
         "tool_list_student_exchange_guides",
         "tool_search_student_exchange_partners",
         "tool_search_phone_book",
@@ -75,6 +76,9 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "학생교류" in payloads["tool_list_student_exchange_guides"]["description"]
     assert "국내 학점교류" in payloads["tool_list_student_exchange_guides"]["description"]
     assert "교류대학 현황" in payloads["tool_list_student_exchange_guides"]["description"]
+    assert "규정" in payloads["tool_list_about_resource_guides"]["description"]
+    assert "요람" in payloads["tool_list_about_resource_guides"]["description"]
+    assert "학사제도안내책자" in payloads["tool_list_about_resource_guides"]["description"]
     assert "해외협정대학" in payloads["tool_search_student_exchange_partners"]["description"]
     assert "네덜란드" in payloads["tool_search_student_exchange_partners"]["description"]
     assert "Utrecht" in payloads["tool_search_student_exchange_partners"]["description"]
@@ -94,6 +98,11 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "Visual Studio" in payloads["tool_search_pc_software"]["description"]
     assert "국제학부" in payloads["tool_list_affiliated_notices"]["description"]
     assert "기숙사" in payloads["tool_list_affiliated_notices"]["description"]
+    assert "본문" in (
+        payloads["tool_list_affiliated_notices"]["inputSchema"]["properties"]["query"][
+            "description"
+        ]
+    )
     assert "외부기관공지" in payloads["tool_list_campus_life_notices"]["description"]
     assert "행사안내" in payloads["tool_list_campus_life_notices"]["description"]
     assert "campus life notices" in payloads["tool_list_campus_life_notices"]["description"]
@@ -131,6 +140,16 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     )
     assert "exchange_programs" in (
         payloads["tool_list_student_exchange_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "rules" in (
+        payloads["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "academic_handbook" in (
+        payloads["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )

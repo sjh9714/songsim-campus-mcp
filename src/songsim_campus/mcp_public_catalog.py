@@ -9,6 +9,7 @@ from pydantic import Field
 from .services import (
     get_class_periods,
     get_notice_categories,
+    list_about_resource_guides,
     list_academic_calendar,
     list_academic_milestone_guides,
     list_academic_status_guides,
@@ -102,6 +103,7 @@ def public_usage_guide_text() -> str:
                 "tool_list_leave_of_absence_guides, tool_list_academic_status_guides, "
                 "tool_list_class_guides, tool_list_seasonal_semester_guides, "
                 "tool_list_student_activity_guides, "
+                "tool_list_about_resource_guides, "
                 "tool_list_academic_milestone_guides, tool_list_student_exchange_guides, "
                 "tool_search_student_exchange_partners, and tool_list_scholarship_guides "
                 "for academic procedures and institutional rules."
@@ -115,7 +117,9 @@ def public_usage_guide_text() -> str:
                 "계절학기 신청 시기 알려줘 / 성적평가 방법 알려줘 / "
                 "졸업요건 알려줘 / 재입학 지원자격 알려줘 / "
                 "총학생회 안내해줘 / 교내미디어 뭐 있어? / 사회봉사 활동 알려줘 / "
+                "중앙동아리 뭐 있어? / 기관동아리 CUK프렌즈 알려줘 / "
                 "학생군사교육단 안내해줘 / 학생활동 공지 알려줘 / "
+                "학교 규정 어디서 봐? / 요람 링크 알려줘 / 학사제도안내책자 보여줘 / "
                 "국내 학점교류 신청대상 알려줘 / 학점교류 신청시기 알려줘 / "
                 "교류대학 현황 알려줘 / 교환학생 프로그램 알려줘 / "
                 "해외 교류프로그램 알려줘 / 해외협정대학 알려줘 / "
@@ -171,6 +175,7 @@ def public_usage_guide_text() -> str:
             "- songsim://place-categories",
             "- songsim://notice-categories",
             "- songsim://class-periods",
+            "- songsim://about-resource-guide",
             "- songsim://source-registry",
         ]
     )
@@ -308,6 +313,16 @@ def register_shared_resources(mcp: Any, connection_factory: Any, docs_dir: Path)
         with connection_factory() as conn:
             return json.dumps(
                 [item.model_dump() for item in list_student_activity_guides(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://about-resource-guide")
+    def about_resource_guide_resource() -> str:
+        """Return the latest about resource guides as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_about_resource_guides(conn, limit=50)],
                 ensure_ascii=False,
                 indent=2,
             )

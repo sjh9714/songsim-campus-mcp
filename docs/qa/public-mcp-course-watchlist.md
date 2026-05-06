@@ -2,6 +2,8 @@
 
 `release gate`에서 분리한 course source-gap 질의를 2026-03-16 KST 기준 공개 배포에서 다시 확인한 기록입니다. 이 문서는 제품 fail 목록이 아니라 **source-backed 여부 관찰용 watchlist**입니다. 이후 normalization sync로 `데이타베이스`는 near match로 수렴하고 `CSE 420`은 `CSE420`와 같은 결과군으로 정렬됐지만, watchlist 자체는 여전히 watch-only로 유지합니다.
 
+생성형 API validation report는 각 watch row의 live observed summary를 표에 노출하지만, 이 행들은 hard fail gate에 포함하지 않습니다.
+
 ## 판정 기준
 
 - `near_match_only`
