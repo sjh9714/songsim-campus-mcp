@@ -238,6 +238,7 @@ def test_student_exchange_partner_snapshot_sync_in_public_readonly_mode(app_env,
         "refresh_seasonal_semester_guides_from_source": "seasonal_semester_guides",
         "refresh_academic_milestone_guides_from_source": "academic_milestone_guides",
         "refresh_student_activity_guides_from_source": "student_activity_guides",
+        "refresh_student_activity_notices_from_source": "student_activity_notices",
         "refresh_campus_life_support_guides_from_source": "campus_life_support_guides",
         "refresh_pc_software_entries_from_source": "pc_software_entries",
         "refresh_student_exchange_guides_from_source": "student_exchange_guides",
@@ -260,6 +261,8 @@ def test_student_exchange_partner_snapshot_sync_in_public_readonly_mode(app_env,
 
     assert "student_exchange_partners" in summary
     assert "student_exchange_partners" in call_order
+    assert "student_activity_notices" in summary
+    assert "student_activity_notices" in call_order
     assert "about_resource_guides" in summary
     assert "about_resource_guides" in call_order
     assert "service_policy_guides" in summary

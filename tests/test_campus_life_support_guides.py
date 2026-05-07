@@ -744,6 +744,7 @@ def test_sync_official_snapshot_includes_campus_life_support_and_pc_software(app
         "refresh_seasonal_semester_guides_from_source": "seasonal_semester_guides",
         "refresh_academic_milestone_guides_from_source": "academic_milestone_guides",
         "refresh_student_activity_guides_from_source": "student_activity_guides",
+        "refresh_student_activity_notices_from_source": "student_activity_notices",
         "refresh_student_exchange_guides_from_source": "student_exchange_guides",
         "refresh_student_exchange_partners_from_source": "student_exchange_partners",
         "refresh_about_resource_guides_from_source": "about_resource_guides",
@@ -765,6 +766,7 @@ def test_sync_official_snapshot_includes_campus_life_support_and_pc_software(app
         summary = sync_official_snapshot(conn)
 
     assert "campus_life_support_guides" in summary
+    assert "student_activity_notices" in summary
     assert "about_resource_guides" in summary
     assert "service_policy_guides" in summary
     assert "newsroom_posts" in summary

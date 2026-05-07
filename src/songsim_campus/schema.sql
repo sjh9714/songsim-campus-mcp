@@ -297,6 +297,19 @@ CREATE TABLE IF NOT EXISTS student_activity_guides (
     last_synced_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS student_activity_notices (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    article_no TEXT,
+    title TEXT NOT NULL,
+    published_at DATE,
+    summary TEXT NOT NULL DEFAULT '',
+    body_text TEXT NOT NULL DEFAULT '',
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS about_resource_guides (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     topic TEXT NOT NULL,
@@ -521,6 +534,12 @@ CREATE INDEX IF NOT EXISTS idx_student_activity_guides_topic
 ON student_activity_guides(topic);
 CREATE INDEX IF NOT EXISTS idx_student_activity_guides_title
 ON student_activity_guides(title);
+CREATE INDEX IF NOT EXISTS idx_student_activity_notices_topic
+ON student_activity_notices(topic);
+CREATE INDEX IF NOT EXISTS idx_student_activity_notices_published_at
+ON student_activity_notices(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_student_activity_notices_title
+ON student_activity_notices(title);
 CREATE INDEX IF NOT EXISTS idx_about_resource_guides_topic
 ON about_resource_guides(topic);
 CREATE INDEX IF NOT EXISTS idx_about_resource_guides_title

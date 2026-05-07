@@ -330,6 +330,21 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
                 "last_synced_at": "2026-03-20T10:00:00+09:00",
             }
         ]
+    def stub_student_activity_notices(conn, topic=None, query=None, limit=20):
+        return [
+            {
+                "id": 1,
+                "topic": "student_government",
+                "article_no": "42",
+                "title": "학생지원팀 학생활동 공지",
+                "published_at": "2026-03-12",
+                "summary": "학생활동 관련 공지",
+                "content": "학생지원팀에서 안내하는 학생활동 공지입니다.",
+                "source_url": "https://www.catholic.ac.kr/ko/campuslife/student.do",
+                "source_tag": "cuk_student_activity_notices",
+                "last_synced_at": "2026-03-20T10:00:00+09:00",
+            }
+        ]
     def stub_about_resource_guides(conn, topic=None, limit=20):
         return [
             {
@@ -550,6 +565,12 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     )
     monkeypatch.setattr(
         services,
+        "list_student_activity_notices",
+        stub_student_activity_notices,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        services,
         "list_about_resource_guides",
         stub_about_resource_guides,
         raising=False,
@@ -592,6 +613,11 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     monkeypatch.setattr(
         "songsim_campus.api.list_student_activity_guides",
         stub_student_activity_guides,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.api.list_student_activity_notices",
+        stub_student_activity_notices,
+        raising=False,
     )
     monkeypatch.setattr(
         "songsim_campus.api.list_about_resource_guides",
@@ -644,6 +670,10 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
         student_activity_guides = public_client.get(
             "/student-activity-guides",
             params={"topic": "student_government"},
+        )
+        student_activity_notices = public_client.get(
+            "/student-activity-notices",
+            params={"topic": "student_government", "query": "학생지원팀"},
         )
         about_resource_guides = public_client.get(
             "/about-resource-guides",
@@ -721,6 +751,7 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "/seasonal-semester-guides" in landing.text
     assert "/academic-milestone-guides" in landing.text
     assert "/student-activity-guides" in landing.text
+    assert "/student-activity-notices" in landing.text
     assert "/about-resource-guides" in landing.text
     assert "/service-policy-guides" in landing.text
     assert "/newsroom-posts" in landing.text
@@ -737,6 +768,7 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "성심교정 대관안내 알려줘" in landing.text
     assert "개인형 이동장치 안전교육 알려줘" in landing.text
     assert "진로/취업 상담 어디서 신청해?" in landing.text
+    assert "학생지원팀 공지 보여줘" in landing.text
     assert "/pc-software" in landing.text
     assert "/affiliated-notices" in landing.text
     assert "/dormitory-guides" in landing.text
@@ -754,6 +786,8 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert student_exchange_guides.json()[0]["topic"] == "exchange_student"
     assert student_activity_guides.status_code == 200
     assert student_activity_guides.json()[0]["topic"] == "student_government"
+    assert student_activity_notices.status_code == 200
+    assert student_activity_notices.json()[0]["source_tag"] == "cuk_student_activity_notices"
     assert about_resource_guides.status_code == 200
     assert about_resource_guides.json()[0]["topic"] == "rules"
     assert service_policy_guides.status_code == 200
@@ -793,6 +827,7 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "/seasonal-semester-guides" in openapi.text
     assert "/academic-milestone-guides" in openapi.text
     assert "/student-activity-guides" in openapi.text
+    assert "/student-activity-notices" in openapi.text
     assert "/about-resource-guides" in openapi.text
     assert "/service-policy-guides" in openapi.text
     assert "/newsroom-posts" in openapi.text
@@ -993,6 +1028,8 @@ def test_api_page_helpers_render_expected_strings():
     assert "/class-guides" in landing_html
     assert "/seasonal-semester-guides" in landing_html
     assert "/academic-milestone-guides" in landing_html
+    assert "/student-activity-guides" in landing_html
+    assert "/student-activity-notices" in landing_html
     assert "/student-exchange-guides" in landing_html
     assert "/service-policy-guides" in landing_html
     assert "/newsroom-posts" in landing_html
@@ -1030,6 +1067,7 @@ def test_api_page_helpers_render_expected_strings():
     assert "affiliated_notices" in sync_html
     assert "student_exchange_guides" in sync_html
     assert "student_activity_guides" in sync_html
+    assert "student_activity_notices" in sync_html
     assert "service_policy_guides" in sync_html
     assert "newsroom_posts" in sync_html
 

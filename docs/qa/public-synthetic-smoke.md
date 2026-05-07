@@ -17,6 +17,7 @@
 - `affiliated_notices`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `student_exchange_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `student_exchange_partners`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
+- `student_activity_notices`가 공식 notice board 기반 topic과 함께 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `about_resource_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `service_policy_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `notices`의 `academic` 최신 3건이 공개 HTTP와 MCP 양쪽에서 보이는지 확인
@@ -420,6 +421,47 @@ curl -fsS "$PUBLIC_HTTP_URL/student-activity-guides?topic=campus_media&limit=2" 
 - `topic=institutional_clubs` 결과는 `CUK프렌즈`, `가홍이`, `날아가대`, `가대사랑`, `COz`, `스타티스트` 중 하나를 포함
 - `topic=campus_media` 결과는 `가톨릭대학보` 또는 `영자신문사(The CUK Forum)`를 포함
 - `"source_tag":"cuk_student_activity_guides"`가 보임
+
+## 14.1 Student activity notice family smoke
+
+학생활동 notice family는 공식 1차 게시판 `https://www.catholic.ac.kr/ko/campuslife/notice.do`만 사용합니다. SNS/Instagram, 동아리별 외부 게시물, 외부 홍보글은 스크랩하지 않습니다.
+
+surface names:
+
+- `GET /student-activity-notices`
+- `songsim://student-activity-notices`
+- `tool_list_student_activity_notices`
+
+topics:
+
+- `club_recruitment`
+- `student_government`
+- `volunteering`
+- `rotc`
+- `campus_event`
+
+```bash
+curl -fsS "$PUBLIC_HTTP_URL/student-activity-notices?topic=club_recruitment&limit=3"
+curl -fsS "$PUBLIC_HTTP_URL/student-activity-notices?topic=student_government&limit=3"
+curl -fsS "$PUBLIC_HTTP_URL/student-activity-notices?topic=volunteering&limit=3"
+curl -fsS "$PUBLIC_HTTP_URL/student-activity-notices?topic=rotc&limit=3"
+curl -fsS "$PUBLIC_HTTP_URL/student-activity-notices?topic=campus_event&limit=3"
+```
+
+기대값:
+
+- HTTP `200`
+- JSON array
+- 결과가 있으면 `"topic"`이 요청한 topic 중 하나와 일치
+- 결과가 있으면 `"source_tag":"cuk_student_activity_notices"`가 보임
+- 공식 게시판에 해당 topic 결과가 없으면 빈 배열이어도 괜찮음
+
+`jq` 예시:
+
+```bash
+curl -fsS "$PUBLIC_HTTP_URL/student-activity-notices?topic=club_recruitment&limit=3" \
+  | jq '.[0] | {topic, title, published_at, source_tag}'
+```
 
 ## 14.5 About resource guide family smoke
 
@@ -984,6 +1026,7 @@ PY
 - `/pc-software`가 `SPSS` 또는 `Photoshop` query에 대해 `cuk_pc_software` source tag를 반환
 - `/student-exchange-guides`가 `exchange_student` 또는 `domestic_partner_universities` topic과 `cuk_student_exchange_guides` source tag를 반환
 - `/student-exchange-partners`가 `네덜란드` 같은 query에 대해 `country_ko`, `university_name`, `homepage_url`, `cuk_student_exchange_partners`를 반환
+- `/student-activity-notices`가 `club_recruitment`, `student_government`, `volunteering`, `rotc`, 또는 `campus_event` topic과 `cuk_student_activity_notices` source tag를 반환하거나, 공식 notice board에 해당 결과가 없으면 빈 배열로 안정 응답
 - `/about-resource-guides`가 `rules`, `university_bulletin`, `academic_handbook`, `campus_tour`, `history`, `church_literature`, 또는 `budget_account` topic과 `cuk_about_resource_guides` source tag를 반환
 - `/service-policy-guides`가 `bidding`, `job_posting`, `privacy_policy`, `cctv_policy`, 또는 `anti_graft` topic과 `cuk_service_policy_guides` source tag를 반환
 - `/phone-book`가 `보건실` 또는 질의한 부서의 `cuk_phone_book` source tag를 반환
@@ -993,7 +1036,7 @@ PY
 - `/restaurants/nearby?origin=중도`가 `central-library` origin으로 nearby 결과를 반환
 - `/restaurants/nearby?origin=학생식당&open_now=true&category=cafe&limit=3`가 `200`으로 안정 응답하고, 빈 배열이어도 `open_now` strict contract와 일치
 - `/courses?query=CSE301...`가 빈 배열이어도 좋으니 `200`으로 안정 응답
-- MCP initialize가 성공하고 `tool_list_registration_guides`, `tool_list_class_guides`, `tool_list_seasonal_semester_guides`, `tool_list_academic_milestone_guides`, `tool_list_campus_life_support_guides`, `tool_list_campus_life_notices`, `tool_list_newsroom_posts`, `tool_search_pc_software`, `tool_list_student_exchange_guides`, `tool_search_student_exchange_partners`, `tool_list_about_resource_guides`, `tool_list_service_policy_guides`, `tool_search_phone_book`, `tool_list_affiliated_notices`, `tool_list_dormitory_guides`, `tool_list_latest_notices`, `tool_find_nearby_restaurants`, `songsim://registration-guide`, `songsim://class-guide`, `songsim://seasonal-semester-guide`, `songsim://academic-milestone-guide`, `songsim://campus-life-support-guide`, `songsim://campus-life-notices`, `songsim://newsroom-posts`, `songsim://pc-software`, `songsim://student-exchange-guide`, `songsim://student-exchange-partners`, `songsim://about-resource-guide`, `songsim://service-policy-guide`, `songsim://phone-book`, `songsim://affiliated-notices`, `songsim://dormitory-guide`가 모두 노출
+- MCP initialize가 성공하고 `tool_list_registration_guides`, `tool_list_class_guides`, `tool_list_seasonal_semester_guides`, `tool_list_academic_milestone_guides`, `tool_list_campus_life_support_guides`, `tool_list_campus_life_notices`, `tool_list_newsroom_posts`, `tool_search_pc_software`, `tool_list_student_exchange_guides`, `tool_search_student_exchange_partners`, `tool_list_student_activity_notices`, `tool_list_about_resource_guides`, `tool_list_service_policy_guides`, `tool_search_phone_book`, `tool_list_affiliated_notices`, `tool_list_dormitory_guides`, `tool_list_latest_notices`, `tool_find_nearby_restaurants`, `songsim://registration-guide`, `songsim://class-guide`, `songsim://seasonal-semester-guide`, `songsim://academic-milestone-guide`, `songsim://campus-life-support-guide`, `songsim://campus-life-notices`, `songsim://newsroom-posts`, `songsim://pc-software`, `songsim://student-exchange-guide`, `songsim://student-exchange-partners`, `songsim://student-activity-notices`, `songsim://about-resource-guide`, `songsim://service-policy-guide`, `songsim://phone-book`, `songsim://affiliated-notices`, `songsim://dormitory-guide`가 모두 노출
 - MCP registration/exchange-partner/affiliated/nearby tool call이 에러 없이 응답
 
 이 기준이 통과하면 class-guides + registration-guides + seasonal-semester-guides + academic-milestone-guides + 생활지원 core guides + campus life notices + newsroom posts + PC software + student-exchange + exchange partner search + about/service policy resources + phone-book + affiliated notices + dormitory + nearby restaurant 공개 smoke는 충분합니다.

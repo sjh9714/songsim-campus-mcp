@@ -29,6 +29,7 @@ from .mcp_public_serializers import (
     serialize_public_seasonal_semester_guide,
     serialize_public_service_policy_guide,
     serialize_public_student_activity_guide,
+    serialize_public_student_activity_notice,
     serialize_public_student_exchange_guide,
     serialize_public_transport_guide,
     serialize_public_wifi_guide,
@@ -71,6 +72,7 @@ from .services import (
     list_seasonal_semester_guides,
     list_service_policy_guides,
     list_student_activity_guides,
+    list_student_activity_notices,
     list_student_exchange_guides,
     list_transport_guides,
     list_wifi_guides,
@@ -533,6 +535,53 @@ def register_shared_tools(
             if public_readonly:
                 return [serialize_public_student_activity_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
+
+    @mcp.tool(
+        description=(
+            (
+                "공식 공지사항 중 학생활동 공지와 모집성 student activity notices "
+                "게시글을 읽을 때 사용합니다. "
+                "학생지원팀 공지를 포함해 중앙동아리 모집, 총학생회/학생자치, 사회봉사, "
+                "ROTC, 교내 축제/행사 관련 글을 current snapshot으로 돌려줍니다. "
+                "SNS/Instagram 글은 "
+                "수집하지 않습니다."
+            )
+            if public_readonly
+            else "학교 학생활동 공지 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_student_activity_notices(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "학생활동 공지 유형 필터. club_recruitment, student_government, "
+                    "volunteering, rotc, campus_event 중 하나를 사용합니다."
+                )
+            ),
+        ] = None,
+        query: Annotated[
+            str | None,
+            Field(description="제목, 요약, 본문 검색어. 예: 동아리, 봉사단, 축제"),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                notices = list_student_activity_notices(
+                    conn,
+                    topic=topic,
+                    query=query,
+                    limit=limit,
+                )
+                if public_readonly:
+                    return [serialize_public_student_activity_notice(item) for item in notices]
+                return [item.model_dump() for item in notices]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
 
     @mcp.tool(
         description=(

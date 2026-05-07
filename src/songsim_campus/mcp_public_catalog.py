@@ -26,6 +26,7 @@ from .services import (
     list_seasonal_semester_guides,
     list_service_policy_guides,
     list_student_activity_guides,
+    list_student_activity_notices,
     list_student_exchange_guides,
     list_transport_guides,
     list_wifi_guides,
@@ -111,7 +112,7 @@ def public_usage_guide_text() -> str:
                 "tool_list_academic_support_guides, "
                 "tool_list_leave_of_absence_guides, tool_list_academic_status_guides, "
                 "tool_list_class_guides, tool_list_seasonal_semester_guides, "
-                "tool_list_student_activity_guides, "
+                "tool_list_student_activity_guides, tool_list_student_activity_notices, "
                 "tool_list_about_resource_guides, "
                 "tool_list_service_policy_guides, "
                 "tool_list_academic_milestone_guides, tool_list_student_exchange_guides, "
@@ -129,7 +130,8 @@ def public_usage_guide_text() -> str:
                 "총학생회 안내해줘 / 교내미디어 뭐 있어? / 사회봉사 활동 알려줘 / "
                 "중앙동아리 뭐 있어? / 기관동아리 CUK프렌즈 알려줘 / "
                 "캠퍼스투어 신청 어디서 해? / "
-                "학생군사교육단 안내해줘 / 학생활동 공지 알려줘 / "
+                "학생군사교육단 안내해줘 / 학생활동 공지 알려줘 / 동아리 모집 공지 있어? / "
+                "학생지원팀 공지 보여줘 / "
                 "학교 규정 어디서 봐? / 요람 링크 알려줘 / 학사제도안내책자 보여줘 / "
                 "개인정보처리방침 어디서 봐? / 채용공고 알려줘 / 청탁금지법 문의 어디야 / "
                 "국내 학점교류 신청대상 알려줘 / 학점교류 신청시기 알려줘 / "
@@ -191,6 +193,7 @@ def public_usage_guide_text() -> str:
             "- songsim://class-periods",
             "- songsim://about-resource-guide",
             "- songsim://service-policy-guide",
+            "- songsim://student-activity-notices",
             "- songsim://newsroom-posts",
             "- songsim://source-registry",
         ]
@@ -329,6 +332,16 @@ def register_shared_resources(mcp: Any, connection_factory: Any, docs_dir: Path)
         with connection_factory() as conn:
             return json.dumps(
                 [item.model_dump() for item in list_student_activity_guides(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://student-activity-notices")
+    def student_activity_notices_resource() -> str:
+        """Return the latest student activity notices as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_student_activity_notices(conn, limit=50)],
                 ensure_ascii=False,
                 indent=2,
             )

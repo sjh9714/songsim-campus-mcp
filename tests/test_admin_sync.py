@@ -39,6 +39,7 @@ def test_run_admin_sync_records_success_history_for_snapshot(app_env, monkeypatc
             "class_guides": 4,
             "seasonal_semester_guides": 4,
             "academic_milestone_guides": 4,
+            "student_activity_notices": 2,
             "about_resource_guides": 3,
             "service_policy_guides": 5,
             "newsroom_posts": 6,
@@ -71,6 +72,7 @@ def test_run_admin_sync_records_success_history_for_snapshot(app_env, monkeypatc
         "class_guides": 4,
         "seasonal_semester_guides": 4,
         "academic_milestone_guides": 4,
+        "student_activity_notices": 2,
         "about_resource_guides": 3,
         "service_policy_guides": 5,
         "newsroom_posts": 6,
@@ -164,6 +166,10 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
 
     def fake_academic_milestone_guides(conn, *, fetched_at: str | None = None, sources=None):
         seen["academic_milestone_guides"] = {"fetched_at": fetched_at}
+        return []
+
+    def fake_student_activity_notices(conn, *, fetched_at: str | None = None, source=None):
+        seen["student_activity_notices"] = {"fetched_at": fetched_at}
         return []
 
     def fake_about_resource_guides(conn, *, fetched_at: str | None = None, sources=None):
@@ -260,6 +266,10 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
         fake_academic_milestone_guides,
     )
     monkeypatch.setattr(
+        "songsim_campus.services.refresh_student_activity_notices_from_source",
+        fake_student_activity_notices,
+    )
+    monkeypatch.setattr(
         "songsim_campus.services.refresh_about_resource_guides_from_source",
         fake_about_resource_guides,
     )
@@ -304,6 +314,7 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     class_run = run_admin_sync(target="class_guides")
     seasonal_run = run_admin_sync(target="seasonal_semester_guides")
     milestone_run = run_admin_sync(target="academic_milestone_guides")
+    student_activity_notices_run = run_admin_sync(target="student_activity_notices")
     about_resource_run = run_admin_sync(target="about_resource_guides")
     service_policy_run = run_admin_sync(target="service_policy_guides")
     newsroom_run = run_admin_sync(target="newsroom_posts")
@@ -327,6 +338,7 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     assert class_run.summary == {"class_guides": 0}
     assert seasonal_run.summary == {"seasonal_semester_guides": 0}
     assert milestone_run.summary == {"academic_milestone_guides": 0}
+    assert student_activity_notices_run.summary == {"student_activity_notices": 0}
     assert about_resource_run.summary == {"about_resource_guides": 0}
     assert service_policy_run.summary == {"service_policy_guides": 0}
     assert newsroom_run.summary == {"newsroom_posts": 0}
@@ -349,6 +361,7 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     assert seen["class_guides"] == {"fetched_at": None}
     assert seen["seasonal_semester_guides"] == {"fetched_at": None}
     assert seen["academic_milestone_guides"] == {"fetched_at": None}
+    assert seen["student_activity_notices"] == {"fetched_at": None}
     assert seen["about_resource_guides"] == {"fetched_at": None}
     assert seen["service_policy_guides"] == {"fetched_at": None}
     assert seen["newsroom_posts"] == {"fetched_at": None}

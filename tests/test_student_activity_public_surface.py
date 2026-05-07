@@ -43,7 +43,33 @@ def test_student_activity_docs_mark_static_v1_as_implemented_with_remaining_gaps
     assert "학생군사교육단" in audit
     assert "중앙동아리" in audit
     assert "기관동아리" in audit
-    assert "학생활동 board adapter" in audit
+    assert "학생활동 공지/모집/행사" in audit
+    assert "공식 notice board 기반 학생활동 공지" in audit
+
+
+def test_student_activity_notice_docs_mark_first_party_public_surface() -> None:
+    readme = _read("README.md")
+    registry = _read("docs/source_registry.md")
+    audit = _read("docs/qa/main-site-coverage-audit-2026-03-17.md")
+    smoke = _read("docs/qa/public-synthetic-smoke.md")
+
+    for document in (readme, registry, audit, smoke):
+        assert "/student-activity-notices" in document
+        assert "tool_list_student_activity_notices" in document
+        assert "songsim://student-activity-notices" in document
+
+    assert "cuk_student_activity_notices" in registry
+    assert "https://www.catholic.ac.kr/ko/campuslife/notice.do" in registry
+    assert "club_recruitment" in registry
+    assert "student_government" in registry
+    assert "volunteering" in registry
+    assert "rotc" in registry
+    assert "campus_event" in registry
+
+    assert "SNS/Instagram" in registry
+    assert "SNS/Instagram" in audit
+    assert "SNS/Instagram" in smoke
+    assert "동아리별 외부 게시물" in smoke
 
 
 def test_student_activity_smoke_doc_matches_live_contract() -> None:

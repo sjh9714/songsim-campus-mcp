@@ -1053,6 +1053,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
         "tool_list_seasonal_semester_guides",
         "tool_list_academic_milestone_guides",
         "tool_list_student_activity_guides",
+        "tool_list_student_activity_notices",
         "tool_list_about_resource_guides",
         "tool_list_service_policy_guides",
         "tool_list_newsroom_posts",
@@ -1088,6 +1089,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     assert "songsim://seasonal-semester-guide" in resource_uris
     assert "songsim://academic-milestone-guide" in resource_uris
     assert "songsim://student-activity-guide" in resource_uris
+    assert "songsim://student-activity-notices" in resource_uris
     assert "songsim://about-resource-guide" in resource_uris
     assert "songsim://service-policy-guide" in resource_uris
     assert "songsim://newsroom-posts" in resource_uris
@@ -1145,6 +1147,7 @@ def test_mcp_public_readonly_mode_registers_prompts_and_extended_resources(app_e
         "songsim://seasonal-semester-guide",
         "songsim://academic-milestone-guide",
         "songsim://student-activity-guide",
+        "songsim://student-activity-notices",
         "songsim://about-resource-guide",
         "songsim://newsroom-posts",
         "songsim://student-exchange-guide",

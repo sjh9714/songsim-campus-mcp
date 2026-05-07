@@ -125,6 +125,7 @@ from .ingest.student_activity_guides import (
     SocialVolunteeringGuideSource,
     StudentGovernmentGuideSource,
 )
+from .ingest.student_activity_notices import StudentActivityNoticeSource
 from .schemas import (
     AboutResourceGuide,
     AcademicCalendarEvent,
@@ -171,6 +172,7 @@ from .schemas import (
     SeasonalSemesterGuide,
     ServicePolicyGuide,
     StudentActivityGuide,
+    StudentActivityNotice,
     StudentExchangeGuide,
     StudentExchangePartner,
     SyncRun,
@@ -349,6 +351,7 @@ SYNC_DATASET_TABLES = (
     "seasonal_semester_guides",
     "academic_milestone_guides",
     "student_activity_guides",
+    "student_activity_notices",
     "about_resource_guides",
     "service_policy_guides",
     "newsroom_posts",
@@ -397,6 +400,7 @@ PUBLIC_READY_BEST_EFFORT_DATASETS = frozenset(
         "affiliated_notices",
         "campus_life_notices",
         "newsroom_posts",
+        "student_activity_notices",
     }
 )
 PUBLIC_READY_OPTIONAL_DATASETS = frozenset({"courses"})
@@ -431,6 +435,7 @@ ADMIN_SYNC_TARGETS = {
     "seasonal_semester_guides",
     "academic_milestone_guides",
     "student_activity_guides",
+    "student_activity_notices",
     "about_resource_guides",
     "service_policy_guides",
     "newsroom_posts",
@@ -540,6 +545,13 @@ STUDENT_ACTIVITY_GUIDE_TOPICS = {
     "rotc",
     "central_clubs",
     "institutional_clubs",
+}
+STUDENT_ACTIVITY_NOTICE_TOPICS = {
+    "club_recruitment",
+    "student_government",
+    "volunteering",
+    "rotc",
+    "campus_event",
 }
 ABOUT_RESOURCE_GUIDE_TOPICS = {
     "rules",
@@ -3059,6 +3071,89 @@ def refresh_student_activity_guides_from_source(
     ]
 
 
+def list_student_activity_notices(
+    conn: DBConnection,
+    *,
+    topic: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+) -> list[StudentActivityNotice]:
+    normalized_limit = max(1, min(limit, 50))
+    normalized_topic = topic.strip() if topic else None
+    if normalized_topic and normalized_topic not in STUDENT_ACTIVITY_NOTICE_TOPICS:
+        raise InvalidRequestError(
+            "topic must be one of club_recruitment, student_government, "
+            "volunteering, rotc, campus_event."
+        )
+    normalized_query = query.strip() if query else None
+    return [
+        StudentActivityNotice.model_validate(item)
+        for item in repo.list_student_activity_notices(
+            conn,
+            topic=normalized_topic,
+            query=normalized_query,
+            limit=normalized_limit,
+        )
+    ]
+
+
+def refresh_student_activity_notices_from_source(
+    conn: DBConnection,
+    *,
+    source: StudentActivityNoticeSource | None = None,
+    pages: int = 3,
+    fetched_at: str | None = None,
+) -> list[StudentActivityNotice]:
+    source = source or StudentActivityNoticeSource(NOTICE_SOURCE_URL)
+    synced_at = fetched_at or _now_iso()
+    rows: list[dict[str, Any]] = []
+    seen_articles: set[str] = set()
+    for page in range(max(0, pages)):
+        offset = page * 10
+        list_html = source.fetch_list(offset=offset, limit=10)
+        for item in source.parse_list(list_html):
+            article_no = item.get("article_no")
+            if not article_no or article_no in seen_articles:
+                continue
+            seen_articles.add(article_no)
+            try:
+                detail_html = source.fetch_detail(article_no, offset=offset, limit=10)
+                detail = source.parse_detail(
+                    detail_html,
+                    default_title=item["title"] or "",
+                    default_summary="",
+                    default_published_at=item.get("published_at"),
+                )
+            except httpx.HTTPError:
+                detail = source.parse_detail(
+                    "",
+                    default_title=item["title"] or "",
+                    default_summary="",
+                    default_published_at=item.get("published_at"),
+                )
+            topic = detail.get("topic")
+            if topic not in STUDENT_ACTIVITY_NOTICE_TOPICS:
+                continue
+            rows.append(
+                {
+                    "topic": topic,
+                    "article_no": article_no,
+                    "title": detail.get("title") or item["title"],
+                    "published_at": detail.get("published_at") or item.get("published_at"),
+                    "summary": detail.get("summary", ""),
+                    "body_text": detail.get("body_text", ""),
+                    "source_url": item.get("source_url"),
+                    "source_tag": source.source_tag,
+                    "last_synced_at": synced_at,
+                }
+            )
+    repo.replace_student_activity_notices(conn, rows)
+    return [
+        StudentActivityNotice.model_validate(item)
+        for item in repo.list_student_activity_notices(conn, limit=max(len(rows), 1))
+    ]
+
+
 def list_about_resource_guides(
     conn: DBConnection,
     *,
@@ -3636,6 +3731,10 @@ def _run_admin_sync_target(
         }
     if target == "student_activity_guides":
         return {"student_activity_guides": len(refresh_student_activity_guides_from_source(conn))}
+    if target == "student_activity_notices":
+        return {
+            "student_activity_notices": len(refresh_student_activity_notices_from_source(conn))
+        }
     if target == "about_resource_guides":
         return {"about_resource_guides": len(refresh_about_resource_guides_from_source(conn))}
     if target == "service_policy_guides":
@@ -5553,6 +5652,7 @@ def sync_official_snapshot(
     seasonal_semester_guides = refresh_seasonal_semester_guides_from_source(conn)
     academic_milestone_guides = refresh_academic_milestone_guides_from_source(conn)
     student_activity_guides = refresh_student_activity_guides_from_source(conn)
+    student_activity_notices = refresh_student_activity_notices_from_source(conn)
     about_resource_guides = refresh_about_resource_guides_from_source(conn)
     service_policy_guides = refresh_service_policy_guides_from_source(conn)
     newsroom_posts = refresh_newsroom_posts_from_source(conn)
@@ -5583,6 +5683,7 @@ def sync_official_snapshot(
         "seasonal_semester_guides": len(seasonal_semester_guides),
         "academic_milestone_guides": len(academic_milestone_guides),
         "student_activity_guides": len(student_activity_guides),
+        "student_activity_notices": len(student_activity_notices),
         "about_resource_guides": len(about_resource_guides),
         "service_policy_guides": len(service_policy_guides),
         "newsroom_posts": len(newsroom_posts),

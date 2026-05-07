@@ -87,6 +87,7 @@ def render_admin_sync_page(
         {"title": "seasonal_semester_guides", "fields": []},
         {"title": "academic_milestone_guides", "fields": []},
         {"title": "student_activity_guides", "fields": []},
+        {"title": "student_activity_notices", "fields": []},
         {"title": "about_resource_guides", "fields": []},
         {"title": "service_policy_guides", "fields": []},
         {"title": "newsroom_posts", "fields": []},
@@ -339,6 +340,7 @@ def render_landing_page(
         "SPSS 설치된 컴퓨터실 어디야",
         "포토샵 있는 PC실 알려줘",
         "Visual Studio 설치된 실습실 있어?",
+        "학생지원팀 공지 보여줘",
         "성심교정 기숙사 안내해줘",
         "기숙사 최신 공지 알려줘",
         "외부기관공지 알려줘",
@@ -511,6 +513,9 @@ def render_landing_page(
             <li>
               <code>/student-activity-guides</code> student government, campus media,
               social volunteering, and ROTC guides
+            </li>
+            <li>
+              <code>/student-activity-notices</code> student activity notice bundles
             </li>
             <li>
               <code>/about-resource-guides</code> official rules, university bulletin,

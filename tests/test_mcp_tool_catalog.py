@@ -36,6 +36,7 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
         "tool_list_seasonal_semester_guides",
         "tool_list_academic_milestone_guides",
         "tool_list_student_activity_guides",
+        "tool_list_student_activity_notices",
         "tool_list_about_resource_guides",
         "tool_list_service_policy_guides",
         "tool_list_newsroom_posts",
@@ -75,6 +76,11 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "신청절차" in payloads["tool_list_seasonal_semester_guides"]["description"]
     assert "성적평가" in payloads["tool_list_academic_milestone_guides"]["description"]
     assert "졸업요건" in payloads["tool_list_academic_milestone_guides"]["description"]
+    assert "학생활동 공지" in payloads["tool_list_student_activity_notices"]["description"]
+    assert "학생지원팀" in payloads["tool_list_student_activity_notices"]["description"]
+    assert "student activity notices" in (
+        payloads["tool_list_student_activity_notices"]["description"]
+    )
     assert "학생교류" in payloads["tool_list_student_exchange_guides"]["description"]
     assert "국내 학점교류" in payloads["tool_list_student_exchange_guides"]["description"]
     assert "교류대학 현황" in payloads["tool_list_student_exchange_guides"]["description"]
@@ -145,6 +151,16 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     )
     assert "grade_evaluation" in (
         payloads["tool_list_academic_milestone_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "본문" in (
+        payloads["tool_list_student_activity_notices"]["inputSchema"]["properties"]["query"][
+            "description"
+        ]
+    )
+    assert "student_government" in (
+        payloads["tool_list_student_activity_notices"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )

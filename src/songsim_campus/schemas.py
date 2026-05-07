@@ -252,6 +252,18 @@ class StudentActivityGuide(BaseModel):
     last_synced_at: str
 
 
+class StudentActivityNotice(BaseModel):
+    id: int
+    topic: str
+    article_no: str | None = None
+    title: str
+    published_at: str | None = None
+    summary: str = ""
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
 class AboutResourceGuide(BaseModel):
     id: int
     topic: str
