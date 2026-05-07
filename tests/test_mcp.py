@@ -1056,7 +1056,11 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
         "tool_list_student_activity_notices",
         "tool_list_about_resource_guides",
         "tool_list_service_policy_guides",
+        "tool_list_service_policy_posts",
         "tool_list_newsroom_posts",
+        "tool_list_research_posts",
+        "tool_list_newsroom_resource_guides",
+        "tool_list_anniversary_guides",
         "tool_list_student_exchange_guides",
         "tool_search_student_exchange_partners",
         "tool_search_phone_book",
@@ -1092,7 +1096,11 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     assert "songsim://student-activity-notices" in resource_uris
     assert "songsim://about-resource-guide" in resource_uris
     assert "songsim://service-policy-guide" in resource_uris
+    assert "songsim://service-policy-posts" in resource_uris
     assert "songsim://newsroom-posts" in resource_uris
+    assert "songsim://research-posts" in resource_uris
+    assert "songsim://newsroom-resource-guide" in resource_uris
+    assert "songsim://anniversary-guide" in resource_uris
     assert "songsim://student-exchange-guide" in resource_uris
     assert "songsim://student-exchange-partners" in resource_uris
     assert "songsim://phone-book" in resource_uris

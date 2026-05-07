@@ -14,6 +14,7 @@ from .services import (
     list_academic_milestone_guides,
     list_academic_status_guides,
     list_academic_support_guides,
+    list_anniversary_guides,
     list_campus_life_notices,
     list_campus_life_support_guides,
     list_certificate_guides,
@@ -21,10 +22,13 @@ from .services import (
     list_dormitory_guides,
     list_leave_of_absence_guides,
     list_newsroom_posts,
+    list_newsroom_resource_guides,
     list_registration_guides,
+    list_research_posts,
     list_scholarship_guides,
     list_seasonal_semester_guides,
     list_service_policy_guides,
+    list_service_policy_posts,
     list_student_activity_guides,
     list_student_activity_notices,
     list_student_exchange_guides,
@@ -84,9 +88,10 @@ def public_usage_guide_text() -> str:
             (
                 "Use tool_list_latest_notices, tool_list_affiliated_notices, "
                 "tool_list_campus_life_notices, tool_list_newsroom_posts, "
+                "tool_list_service_policy_posts, tool_list_research_posts, "
                 "and tool_list_academic_calendar for "
-                "latest notices, department/dormitory boards, campus-life notices, and "
-                "academic calendar deadlines."
+                "latest notices, department/dormitory boards, campus-life notices, "
+                "service/policy boards, research results, and academic calendar deadlines."
             ),
             (
                 "Example: 최신 학사 공지 2개 보여줘 / 국제학부 최신 공지 알려줘 / "
@@ -114,7 +119,8 @@ def public_usage_guide_text() -> str:
                 "tool_list_class_guides, tool_list_seasonal_semester_guides, "
                 "tool_list_student_activity_guides, tool_list_student_activity_notices, "
                 "tool_list_about_resource_guides, "
-                "tool_list_service_policy_guides, "
+                "tool_list_service_policy_guides, tool_list_newsroom_resource_guides, "
+                "tool_list_anniversary_guides, "
                 "tool_list_academic_milestone_guides, tool_list_student_exchange_guides, "
                 "tool_search_student_exchange_partners, and tool_list_scholarship_guides "
                 "for academic procedures and institutional rules."
@@ -195,8 +201,12 @@ def public_usage_guide_text() -> str:
             "- songsim://class-periods",
             "- songsim://about-resource-guide",
             "- songsim://service-policy-guide",
+            "- songsim://service-policy-posts",
             "- songsim://student-activity-notices",
             "- songsim://newsroom-posts",
+            "- songsim://research-posts",
+            "- songsim://newsroom-resource-guide",
+            "- songsim://anniversary-guide",
             "- songsim://source-registry",
         ]
     )
@@ -368,12 +378,52 @@ def register_shared_resources(mcp: Any, connection_factory: Any, docs_dir: Path)
                 indent=2,
             )
 
+    @mcp.resource("songsim://service-policy-posts")
+    def service_policy_posts_resource() -> str:
+        """Return the latest service/policy board posts as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_service_policy_posts(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
     @mcp.resource("songsim://newsroom-posts")
     def newsroom_posts_resource() -> str:
         """Return the latest official newsroom posts as JSON."""
         with connection_factory() as conn:
             return json.dumps(
                 [item.model_dump() for item in list_newsroom_posts(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://research-posts")
+    def research_posts_resource() -> str:
+        """Return the latest official research posts as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_research_posts(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://newsroom-resource-guide")
+    def newsroom_resource_guide_resource() -> str:
+        """Return the latest newsroom resource guides as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_newsroom_resource_guides(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://anniversary-guide")
+    def anniversary_guide_resource() -> str:
+        """Return the latest 170th anniversary guides as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_anniversary_guides(conn, limit=50)],
                 ensure_ascii=False,
                 indent=2,
             )

@@ -39,7 +39,11 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
         "tool_list_student_activity_notices",
         "tool_list_about_resource_guides",
         "tool_list_service_policy_guides",
+        "tool_list_service_policy_posts",
         "tool_list_newsroom_posts",
+        "tool_list_research_posts",
+        "tool_list_newsroom_resource_guides",
+        "tool_list_anniversary_guides",
         "tool_list_student_exchange_guides",
         "tool_search_student_exchange_partners",
         "tool_search_phone_book",
@@ -78,6 +82,8 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "졸업요건" in payloads["tool_list_academic_milestone_guides"]["description"]
     assert "학생활동 공지" in payloads["tool_list_student_activity_notices"]["description"]
     assert "학생지원팀" in payloads["tool_list_student_activity_notices"]["description"]
+    assert "학생혁신서포터즈" in payloads["tool_list_student_activity_guides"]["description"]
+    assert "CAT-CERT" in payloads["tool_list_student_activity_guides"]["description"]
     assert "student activity notices" in (
         payloads["tool_list_student_activity_notices"]["description"]
     )
@@ -92,11 +98,16 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "총장실" in payloads["tool_list_about_resource_guides"]["description"]
     assert "개인정보처리방침" in payloads["tool_list_service_policy_guides"]["description"]
     assert "청탁금지법" in payloads["tool_list_service_policy_guides"]["description"]
+    assert "입찰공고" in payloads["tool_list_service_policy_posts"]["description"]
+    assert "채용공고" in payloads["tool_list_service_policy_posts"]["description"]
     assert "포토뉴스" in payloads["tool_list_newsroom_posts"]["description"]
     assert "보도자료" in payloads["tool_list_newsroom_posts"]["description"]
     assert "동문 인터뷰" in payloads["tool_list_newsroom_posts"]["description"]
     assert "홍보영상" in payloads["tool_list_newsroom_posts"]["description"]
     assert "외부 언론 본문" in payloads["tool_list_newsroom_posts"]["description"]
+    assert "연구성과" in payloads["tool_list_research_posts"]["description"]
+    assert "공식브로슈어" in payloads["tool_list_newsroom_resource_guides"]["description"]
+    assert "170주년" in payloads["tool_list_anniversary_guides"]["description"]
     assert "해외협정대학" in payloads["tool_search_student_exchange_partners"]["description"]
     assert "네덜란드" in payloads["tool_search_student_exchange_partners"]["description"]
     assert "Utrecht" in payloads["tool_search_student_exchange_partners"]["description"]
@@ -211,6 +222,16 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     )
     assert "anti_graft" in (
         payloads["tool_list_service_policy_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "student_innovation_supporters" in (
+        payloads["tool_list_student_activity_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "cat_cert" in (
+        payloads["tool_list_student_activity_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )

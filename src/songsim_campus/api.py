@@ -29,6 +29,7 @@ from .schemas import (
     AcademicStatusGuide,
     AcademicSupportGuide,
     AffiliatedNotice,
+    AnniversaryGuide,
     CampusDiningMenu,
     CampusLifeNotice,
     CampusLifeSupportGuide,
@@ -53,6 +54,7 @@ from .schemas import (
     MealRecommendationResponse,
     NearbyRestaurant,
     NewsroomPost,
+    NewsroomResourceGuide,
     Notice,
     NoticeCategoryInfo,
     PCSoftwareEntry,
@@ -66,11 +68,13 @@ from .schemas import (
     ProfileNoticePreferences,
     ProfileUpdateRequest,
     RegistrationGuide,
+    ResearchPost,
     Restaurant,
     RestaurantSearchResult,
     ScholarshipGuide,
     SeasonalSemesterGuide,
     ServicePolicyGuide,
+    ServicePolicyPost,
     StudentActivityGuide,
     StudentActivityNotice,
     StudentExchangeGuide,
@@ -101,6 +105,7 @@ from .services import (
     list_academic_milestone_guides,
     list_academic_status_guides,
     list_academic_support_guides,
+    list_anniversary_guides,
     list_campus_life_notices,
     list_campus_life_support_guides,
     list_certificate_guides,
@@ -110,12 +115,15 @@ from .services import (
     list_latest_notices,
     list_leave_of_absence_guides,
     list_newsroom_posts,
+    list_newsroom_resource_guides,
     list_profile_notices,
     list_registration_guides,
+    list_research_posts,
     list_restaurants,
     list_scholarship_guides,
     list_seasonal_semester_guides,
     list_service_policy_guides,
+    list_service_policy_posts,
     list_student_activity_guides,
     list_student_activity_notices,
     list_student_exchange_guides,
@@ -572,6 +580,18 @@ def create_app() -> FastAPI:
             except InvalidRequestError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.get("/service-policy-posts", response_model=list[ServicePolicyPost])
+    def service_policy_posts(
+        topic: str | None = Query(default=None, description="서비스/정책 게시글 유형 필터"),
+        query: str | None = Query(default=None, description="제목/요약/본문 검색어"),
+        limit: int = Query(default=20, ge=1, le=50),
+    ) -> list[ServicePolicyPost]:
+        with connection() as conn:
+            try:
+                return list_service_policy_posts(conn, topic=topic, query=query, limit=limit)
+            except InvalidRequestError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.get("/newsroom-posts", response_model=list[NewsroomPost])
     def newsroom_posts(
         topic: str | None = Query(default=None, description="뉴스룸 유형 필터"),
@@ -581,6 +601,40 @@ def create_app() -> FastAPI:
         with connection() as conn:
             try:
                 return list_newsroom_posts(conn, topic=topic, query=query, limit=limit)
+            except InvalidRequestError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/research-posts", response_model=list[ResearchPost])
+    def research_posts(
+        topic: str | None = Query(default=None, description="연구ㆍ산학 게시글 유형 필터"),
+        query: str | None = Query(default=None, description="제목/요약/본문 검색어"),
+        limit: int = Query(default=20, ge=1, le=50),
+    ) -> list[ResearchPost]:
+        with connection() as conn:
+            try:
+                return list_research_posts(conn, topic=topic, query=query, limit=limit)
+            except InvalidRequestError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/newsroom-resource-guides", response_model=list[NewsroomResourceGuide])
+    def newsroom_resource_guides(
+        topic: str | None = Query(default=None, description="CUK홍보 자료 안내 유형 필터"),
+        limit: int = Query(default=20, ge=1, le=50),
+    ) -> list[NewsroomResourceGuide]:
+        with connection() as conn:
+            try:
+                return list_newsroom_resource_guides(conn, topic=topic, limit=limit)
+            except InvalidRequestError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/anniversary-guides", response_model=list[AnniversaryGuide])
+    def anniversary_guides(
+        topic: str | None = Query(default=None, description="170주년 안내 유형 필터"),
+        limit: int = Query(default=20, ge=1, le=50),
+    ) -> list[AnniversaryGuide]:
+        with connection() as conn:
+            try:
+                return list_anniversary_guides(conn, topic=topic, limit=limit)
             except InvalidRequestError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
 

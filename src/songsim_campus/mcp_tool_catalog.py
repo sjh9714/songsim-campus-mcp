@@ -9,6 +9,7 @@ from .mcp_public_serializers import (
     serialize_public_academic_milestone_guide,
     serialize_public_academic_status_guide,
     serialize_public_academic_support_guide,
+    serialize_public_anniversary_guide,
     serialize_public_campus_life_notice,
     serialize_public_campus_life_support_guide,
     serialize_public_certificate_guide,
@@ -20,14 +21,17 @@ from .mcp_public_serializers import (
     serialize_public_leave_of_absence_guide,
     serialize_public_nearby_restaurant,
     serialize_public_newsroom_post,
+    serialize_public_newsroom_resource_guide,
     serialize_public_notice,
     serialize_public_pc_software_entry,
     serialize_public_place,
     serialize_public_registration_guide,
+    serialize_public_research_post,
     serialize_public_restaurant_search,
     serialize_public_scholarship_guide,
     serialize_public_seasonal_semester_guide,
     serialize_public_service_policy_guide,
+    serialize_public_service_policy_post,
     serialize_public_student_activity_guide,
     serialize_public_student_activity_notice,
     serialize_public_student_exchange_guide,
@@ -57,6 +61,7 @@ from .services import (
     list_academic_milestone_guides,
     list_academic_status_guides,
     list_academic_support_guides,
+    list_anniversary_guides,
     list_campus_life_notices,
     list_campus_life_support_guides,
     list_certificate_guides,
@@ -66,11 +71,14 @@ from .services import (
     list_latest_notices,
     list_leave_of_absence_guides,
     list_newsroom_posts,
+    list_newsroom_resource_guides,
     list_profile_notices,
     list_registration_guides,
+    list_research_posts,
     list_scholarship_guides,
     list_seasonal_semester_guides,
     list_service_policy_guides,
+    list_service_policy_posts,
     list_student_activity_guides,
     list_student_activity_notices,
     list_student_exchange_guides,
@@ -509,8 +517,9 @@ def register_shared_tools(
         description=(
             (
                 "학생활동 안내를 읽을 때 사용합니다. 학생회, 교지/언론, "
-                "중앙동아리, 기관동아리, 사회봉사, ROTC 같은 학생활동 유형별 "
-                "정적 안내를 current snapshot으로 돌려줍니다."
+                "중앙동아리, 기관동아리, 학생혁신서포터즈, CAT-CERT, "
+                "사회봉사, ROTC 같은 학생활동 유형별 정적 안내를 "
+                "current snapshot으로 돌려줍니다."
             )
             if public_readonly
             else "학교 학생활동 안내 current snapshot을 가져옵니다."
@@ -523,8 +532,8 @@ def register_shared_tools(
             Field(
                 description=(
                     "학생활동 안내 유형 필터. student_government, campus_media, "
-                    "social_volunteering, rotc, central_clubs, institutional_clubs "
-                    "중 하나를 사용합니다."
+                    "social_volunteering, rotc, central_clubs, institutional_clubs, "
+                    "student_innovation_supporters, cat_cert 중 하나를 사용합니다."
                 )
             ),
         ] = None,
@@ -660,6 +669,39 @@ def register_shared_tools(
     @mcp.tool(
         description=(
             (
+                "서비스/정책 공식 게시글을 검색할 때 사용합니다. 입찰공고와 채용공고 "
+                "게시판의 제목, 날짜, 요약, 본문 검색용 current snapshot을 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 서비스/정책 게시글 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_service_policy_posts(
+        topic: Annotated[
+            str | None,
+            Field(description="서비스/정책 게시글 유형 필터. bidding, job_posting 중 하나입니다."),
+        ] = None,
+        query: Annotated[
+            str | None,
+            Field(description="제목, 요약, 본문 검색어. 예: 입찰, 채용, 현장설명회"),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                posts = list_service_policy_posts(conn, topic=topic, query=query, limit=limit)
+                if public_readonly:
+                    return [serialize_public_service_policy_post(item) for item in posts]
+                return [item.model_dump() for item in posts]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
                 "공식 뉴스룸 게시물을 읽을 때 사용합니다. 포토뉴스와 보도자료의 "
                 "공식 제목, 날짜, 요약, 썸네일, 외부 언론 링크와 동문 인터뷰, 홍보영상 "
                 "공식 페이지 링크를 current snapshot으로 돌려줍니다. 외부 언론 본문, "
@@ -692,6 +734,107 @@ def register_shared_tools(
                 if public_readonly:
                     return [serialize_public_newsroom_post(item) for item in posts]
                 return [item.model_dump() for item in posts]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "연구ㆍ산학 주요연구성과 게시글을 검색할 때 사용합니다. 학교 공식 "
+                "연구성과 게시판의 제목, 날짜, 요약, 본문 검색용 current snapshot을 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 연구성과 게시글 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_research_posts(
+        topic: Annotated[
+            str | None,
+            Field(description="연구 게시글 유형 필터. research_result 하나를 사용합니다."),
+        ] = None,
+        query: Annotated[
+            str | None,
+            Field(description="제목, 요약, 본문 검색어. 예: 연구성과, 하이드로겔, 교수팀"),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                posts = list_research_posts(conn, topic=topic, query=query, limit=limit)
+                if public_readonly:
+                    return [serialize_public_research_post(item) for item in posts]
+                return [item.model_dump() for item in posts]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "CUK홍보 자료 안내를 읽을 때 사용합니다. 공식브로슈어, 가대이야기, "
+                "홍보자료실처럼 학교 공식 페이지의 링크와 접근 안내를 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 CUK홍보 자료 안내 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_newsroom_resource_guides(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "CUK홍보 자료 유형 필터. brochure, cuk_story, gallery 중 하나입니다."
+                )
+            ),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                guides = list_newsroom_resource_guides(conn, topic=topic, limit=limit)
+                if public_readonly:
+                    return [serialize_public_newsroom_resource_guide(item) for item in guides]
+                return [item.model_dump() for item in guides]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "170주년 기념사업 안내를 읽을 때 사용합니다. 총장 축사글, 연혁, 슬로건, "
+                "홍보영상, 온라인 역사관, 기념사업 일정, 기부 안내를 공식 링크와 "
+                "요약으로 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 170주년 기념사업 안내 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_anniversary_guides(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "170주년 안내 유형 필터. president_message, milestone, slogan, promo_video, "
+                    "online_museum, event_schedule, donation_info 중 하나입니다."
+                )
+            ),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                guides = list_anniversary_guides(conn, topic=topic, limit=limit)
+                if public_readonly:
+                    return [serialize_public_anniversary_guide(item) for item in guides]
+                return [item.model_dump() for item in guides]
             except InvalidRequestError as exc:
                 if public_readonly:
                     return serialize_public_error(exc)

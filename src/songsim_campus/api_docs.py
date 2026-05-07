@@ -316,7 +316,8 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
         "summary": "List student activity guides",
         "description": (
             "List the current Songsim student activity guidance for government, "
-            "central clubs, institutional clubs, media, volunteering, and ROTC."
+            "central clubs, institutional clubs, student innovation supporters, "
+            "CAT-CERT, media, volunteering, and ROTC."
         ),
     },
     "/student-activity-notices": {
@@ -334,6 +335,38 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
             "List current official CUK newsroom posts such as 포토뉴스 and 보도자료. "
             "External press article bodies, social posts, and video bodies are outside "
             "this official-page summary surface."
+        ),
+    },
+    "/service-policy-posts": {
+        "operationId": "listServicePolicyPosts",
+        "summary": "List service and policy board posts",
+        "description": (
+            "List current official service and policy board posts such as 입찰공고 "
+            "and 채용공고 with title, date, official summary, and source link."
+        ),
+    },
+    "/research-posts": {
+        "operationId": "listResearchPosts",
+        "summary": "List official research posts",
+        "description": (
+            "List current official research-result posts from the university research "
+            "and industry-cooperation section."
+        ),
+    },
+    "/newsroom-resource-guides": {
+        "operationId": "listNewsroomResourceGuides",
+        "summary": "List newsroom resource guides",
+        "description": (
+            "List official CUK promotion resource links such as brochures, 가대이야기, "
+            "and the promotion image DB guide."
+        ),
+    },
+    "/anniversary-guides": {
+        "operationId": "listAnniversaryGuides",
+        "summary": "List 170th anniversary guides",
+        "description": (
+            "List official 170th anniversary guide links and summaries for messages, "
+            "history, slogan, media, online museum, events, and donation information."
         ),
     },
     "/about-resource-guides": {

@@ -26,7 +26,7 @@ services:
       - key: SONGSIM_SYNC_OFFICIAL_ON_START
         value: "false"
       - key: SONGSIM_AUTOMATION_ENABLED
-        value: "true"
+        value: "false"
       - key: SONGSIM_AUTOMATION_TICK_SECONDS
         value: "60"
       - key: SONGSIM_AUTOMATION_SNAPSHOT_INTERVAL_MINUTES

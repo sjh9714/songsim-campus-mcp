@@ -288,6 +288,18 @@ class ServicePolicyGuide(BaseModel):
     last_synced_at: str
 
 
+class ServicePolicyPost(BaseModel):
+    id: int
+    topic: str
+    article_no: str | None = None
+    title: str
+    published_at: str | None = None
+    summary: str = ""
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
 class NewsroomPost(BaseModel):
     id: int
     topic: str
@@ -297,6 +309,42 @@ class NewsroomPost(BaseModel):
     summary: str = ""
     thumbnail_url: str | None = None
     external_url: str | None = None
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class ResearchPost(BaseModel):
+    id: int
+    topic: str
+    article_no: str | None = None
+    title: str
+    published_at: str | None = None
+    summary: str = ""
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class NewsroomResourceGuide(BaseModel):
+    id: int
+    topic: str
+    title: str
+    summary: str = ""
+    steps: list[str] = Field(default_factory=list)
+    links: list[dict[str, str]] = Field(default_factory=list)
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class AnniversaryGuide(BaseModel):
+    id: int
+    topic: str
+    title: str
+    summary: str = ""
+    steps: list[str] = Field(default_factory=list)
+    links: list[dict[str, str]] = Field(default_factory=list)
     source_url: str | None = None
     source_tag: str = "demo"
     last_synced_at: str

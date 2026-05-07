@@ -12,11 +12,13 @@ from songsim_campus.api import create_app
 from songsim_campus.db import connection, init_db
 from songsim_campus.ingest.student_activity_guides import (
     CampusMediaGuideSource,
+    CatCertGuideSource,
     CentralClubGuideSource,
     InstitutionalClubGuideSource,
     RotcGuideSource,
     SocialVolunteeringGuideSource,
     StudentGovernmentGuideSource,
+    StudentInnovationSupportersGuideSource,
 )
 from songsim_campus.mcp_server import build_mcp
 from songsim_campus.services import (
@@ -46,6 +48,8 @@ def test_student_activity_source_defaults() -> None:
     institutional_clubs = InstitutionalClubGuideSource(
         "https://www.catholic.ac.kr/ko/campuslife/institutional_club1.do"
     )
+    supporters = StudentInnovationSupportersGuideSource()
+    cat_cert = CatCertGuideSource()
 
     assert government.topic == "student_government"
     assert media.topic == "campus_media"
@@ -53,18 +57,24 @@ def test_student_activity_source_defaults() -> None:
     assert rotc.topic == "rotc"
     assert central_clubs.topic == "central_clubs"
     assert institutional_clubs.topic == "institutional_clubs"
+    assert supporters.topic == "student_innovation_supporters"
+    assert cat_cert.topic == "cat_cert"
     assert government.source_tag == "cuk_student_activity_guides"
     assert media.source_tag == "cuk_student_activity_guides"
     assert volunteer.source_tag == "cuk_student_activity_guides"
     assert rotc.source_tag == "cuk_student_activity_guides"
     assert central_clubs.source_tag == "cuk_student_activity_guides"
     assert institutional_clubs.source_tag == "cuk_student_activity_guides"
+    assert supporters.source_tag == "cuk_student_activity_guides"
+    assert cat_cert.source_tag == "cuk_student_activity_guides"
     assert government.url.endswith("/campuslife/student_government.do")
     assert media.url.endswith("/campuslife/media.do")
     assert volunteer.url.endswith("/campuslife/volunteer.do")
     assert rotc.url.endswith("/campuslife/rotc.do")
     assert central_clubs.url.endswith("/campuslife/club.do")
     assert institutional_clubs.url.endswith("/campuslife/institutional_club1.do")
+    assert supporters.url.endswith("/campuslife/supporters.do")
+    assert cat_cert.url.endswith("/campuslife/cat-cert.do")
 
 
 def test_student_government_parser_extracts_expected_rows() -> None:
@@ -205,6 +215,41 @@ def test_institutional_club_parser_extracts_expected_row() -> None:
     assert "‘CUK프렌즈’를 소개합니다." in row["steps"]
     assert any("SNS운영팀" in step for step in row["steps"])
     assert {item["label"] for item in row["links"]} == {"@lovecuk", "ilovecuk"}
+
+
+def test_student_innovation_supporters_parser_extracts_expected_row() -> None:
+    rows = StudentInnovationSupportersGuideSource().parse(
+        _fixture("supporters.do.html"),
+        fetched_at="2026-03-26T00:00:00+09:00",
+    )
+
+    assert [row["title"] for row in rows] == ["학생혁신서포터즈"]
+    row = rows[0]
+    assert row["topic"] == "student_innovation_supporters"
+    assert row["summary"].startswith("학생혁신서포터즈는 가톨릭대학교 CUK비전혁신원")
+    assert "학생주도 교육혁신 컨퍼런스 운영" in row["steps"]
+    assert any("뉴스레터를 기획" in step for step in row["steps"])
+    assert row["source_url"].endswith("/campuslife/supporters.do")
+
+
+def test_cat_cert_parser_extracts_expected_row_and_link() -> None:
+    rows = CatCertGuideSource().parse(
+        _fixture("cat-cert.do.html"),
+        fetched_at="2026-03-26T00:00:00+09:00",
+    )
+
+    assert [row["title"] for row in rows] == ["가톨릭대학교 침해사고대응팀 CAT-CERT"]
+    row = rows[0]
+    assert row["topic"] == "cat_cert"
+    assert row["summary"].startswith("가톨릭대학교 침해사고대응센터 CAT-CERT는")
+    assert "학내 전산망 점검" in row["steps"]
+    assert "스터디 및 연구활동" in row["steps"]
+    assert row["links"] == [
+        {
+            "label": "CAT-CERT 홈페이지",
+            "url": "https://www.catsecurity.net/",
+        }
+    ]
 
 
 def test_student_activity_guides_refresh_replace_and_list(app_env) -> None:

@@ -9,12 +9,13 @@
 ## 주요 사용 질문
 
 - 최신 학사 공지와 소속기관 공지
-- 포토뉴스, 보도자료, 동문 인터뷰, 홍보영상
+- 포토뉴스, 보도자료, 동문 인터뷰, 홍보영상, 브로슈어, CUK Story, 갤러리
 - 월별 학사일정과 등록·휴학·복학·증명·장학 안내
 - 건물, 시설, 편의시설, 전화번호, 운영시간
 - 과목 검색, 교시 정보, 도서관 좌석, 예상 빈 강의실
 - 학식, 주변 식당, PC 소프트웨어, Wi-Fi
 - 기숙사, 상담, 병원, 예비군, 웹메일/Office 365 같은 IT서비스, 학생활동 안내
+- 입찰/채용 게시글, 연구성과, 170주년 기념사업 공식 안내
 
 ## Surface
 
@@ -30,7 +31,11 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `songsim://student-activity-guide`
 - `songsim://student-activity-notices`
 - `songsim://service-policy-guide`
+- `songsim://service-policy-posts`
 - `songsim://newsroom-posts`
+- `songsim://research-posts`
+- `songsim://newsroom-resource-guide`
+- `songsim://anniversary-guide`
 - `songsim://phone-book`
 - `songsim://dormitory-guide`
 - `tool_search_places`
@@ -38,9 +43,14 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `tool_search_phone_book`
 - `tool_list_latest_notices`
 - `tool_list_affiliated_notices`
+- `tool_list_student_activity_guides`
 - `tool_list_student_activity_notices`
 - `tool_list_service_policy_guides`
+- `tool_list_service_policy_posts`
 - `tool_list_newsroom_posts`
+- `tool_list_research_posts`
+- `tool_list_newsroom_resource_guides`
+- `tool_list_anniversary_guides`
 - `tool_search_dining_menus`
 - `tool_find_nearby_restaurants`
 - `tool_get_library_seat_status`
@@ -59,12 +69,16 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `/student-activity-notices`
 - `/about-resource-guides`
 - `/service-policy-guides`
+- `/service-policy-posts`
 - `/campus-life-support-guides`
 - `/scholarship-guides`
 - `/notices`
 - `/affiliated-notices`
 - `/campus-life-notices`
 - `/newsroom-posts`
+- `/research-posts`
+- `/newsroom-resource-guides`
+- `/anniversary-guides`
 - `/dormitory-guides`
 - `/pc-software`
 - `/dining-menus`
@@ -153,7 +167,9 @@ uv run songsim-mcp --transport streamable-http
 ```bash
 uv run pytest
 uv run ruff check .
-uv run songsim-eval-public
+uv run songsim-eval-public run \
+  --truth data/qa/public_api_eval_truth_1000.jsonl \
+  --report /tmp/songsim-public-api-validation.md
 ```
 
 공개 API와 MCP 검증 기록은 `docs/qa/` 아래의 live validation 문서와 release pack 문서에서 확인할 수 있습니다.

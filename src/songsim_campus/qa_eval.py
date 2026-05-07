@@ -123,7 +123,9 @@ _search_course_rows = getattr(
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_CORPUS_PATH = ROOT_DIR / "data" / "qa" / "public_api_eval_corpus_1000.jsonl"
 DEFAULT_WATCHLIST_PATH = ROOT_DIR / "data" / "qa" / "public_api_eval_watchlist.jsonl"
-DEFAULT_REPORT_PATH = ROOT_DIR / "docs" / "qa" / "public-api-live-validation-1000.md"
+DEFAULT_REPORT_PATH = Path(
+    os.environ.get("SONGSIM_PUBLIC_EVAL_REPORT_PATH", "/tmp/songsim-public-api-validation.md")
+)
 PUBLIC_EVAL_HTTP_TIMEOUT_SECONDS = 20.0
 PUBLIC_EVAL_HTTP_RETRIES = 2
 PUBLIC_EVAL_MAX_WORKERS = 4
@@ -151,6 +153,10 @@ EvalDomain = Literal[
     "student_activity_guides",
     "student_activity_notices",
     "service_policy_guides",
+    "service_policy_posts",
+    "research_posts",
+    "newsroom_resource_guides",
+    "anniversary_guides",
     "student_exchange_partners",
     "campus_life_support_guides",
     "pc_software_entries",
@@ -467,6 +473,46 @@ def _summarize_payload(payload: Any, *, summary_kind: str) -> Any:
             for item in rows[:5]
         ]
     if summary_kind == "service_policy_guides_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "summary": item.get("summary"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "service_policy_posts_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "published_at": item.get("published_at"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "research_posts_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "published_at": item.get("published_at"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "newsroom_resource_guides_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "summary": item.get("summary"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "anniversary_guides_top5":
         rows = payload if isinstance(payload, list) else []
         return [
             {
@@ -996,6 +1042,36 @@ def _payload_from_db(conn: psycopg.Connection, row: EvalCorpusRow) -> Any:
         return [item.model_dump() for item in items]
     if path == "/service-policy-guides":
         items = services.list_service_policy_guides(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/service-policy-posts":
+        items = services.list_service_policy_posts(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            query=row.api_request.params.get("query"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/research-posts":
+        items = services.list_research_posts(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            query=row.api_request.params.get("query"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/newsroom-resource-guides":
+        items = services.list_newsroom_resource_guides(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/anniversary-guides":
+        items = services.list_anniversary_guides(
             conn,
             topic=row.api_request.params.get("topic"),
             limit=_limit_from_row(row, 20),
@@ -2252,6 +2328,10 @@ def render_validation_report(
         "academic_milestone_guides",
         "student_activity_guides",
         "student_activity_notices",
+        "service_policy_posts",
+        "research_posts",
+        "newsroom_resource_guides",
+        "anniversary_guides",
         "phone_book",
         "scholarship_guides",
         "wifi_guides",

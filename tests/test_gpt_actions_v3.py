@@ -49,11 +49,15 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         "/gpt/restaurants/nearby",
         "/gpt/restaurants/search",
         "/leave-of-absence-guides",
+        "/anniversary-guides",
         "/newsroom-posts",
+        "/newsroom-resource-guides",
         "/pc-software",
         "/phone-book",
         "/registration-guides",
+        "/research-posts",
         "/service-policy-guides",
+        "/service-policy-posts",
         "/scholarship-guides",
         "/seasonal-semester-guides",
         "/student-activity-guides",
@@ -90,6 +94,19 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
     )
     assert payload["paths"]["/newsroom-posts"]["get"]["operationId"] == "listNewsroomPosts"
     assert (
+        payload["paths"]["/service-policy-posts"]["get"]["operationId"]
+        == "listServicePolicyPosts"
+    )
+    assert payload["paths"]["/research-posts"]["get"]["operationId"] == "listResearchPosts"
+    assert (
+        payload["paths"]["/newsroom-resource-guides"]["get"]["operationId"]
+        == "listNewsroomResourceGuides"
+    )
+    assert (
+        payload["paths"]["/anniversary-guides"]["get"]["operationId"]
+        == "listAnniversaryGuides"
+    )
+    assert (
         payload["paths"]["/service-policy-guides"]["get"]["operationId"]
         == "listServicePolicyGuides"
     )
@@ -105,6 +122,11 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
     assert "연혁" in about_description
     assert "교회문헌" in about_description
     assert "예결산공고" in about_description
+    student_activity_description = payload["paths"]["/student-activity-guides"]["get"][
+        "description"
+    ]
+    assert "student innovation supporters" in student_activity_description
+    assert "CAT-CERT" in student_activity_description
 
 
 def test_public_readonly_mode_keeps_gpt_actions_v2_slim(monkeypatch):

@@ -347,3 +347,17 @@ class InstitutionalClubGuideSource(StudentActivityGuideSourceBase):
                 "last_synced_at": fetched_at,
             }
         ]
+
+
+class StudentInnovationSupportersGuideSource(InstitutionalClubGuideSource):
+    topic = "student_innovation_supporters"
+
+    def __init__(self, url: str = "https://www.catholic.ac.kr/ko/campuslife/supporters.do"):
+        super().__init__(url)
+
+
+class CatCertGuideSource(InstitutionalClubGuideSource):
+    topic = "cat_cert"
+
+    def __init__(self, url: str = "https://www.catholic.ac.kr/ko/campuslife/cat-cert.do"):
+        super().__init__(url)

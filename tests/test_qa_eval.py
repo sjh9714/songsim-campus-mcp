@@ -1827,6 +1827,81 @@ def test_render_validation_report_includes_student_activity_notices_coverage() -
     assert report.count("| student_activity_notices | 1 | 1 |") == 2
 
 
+@pytest.mark.parametrize(
+    ("domain", "path", "tool", "summary_kind", "topic"),
+    [
+        (
+            "service_policy_posts",
+            "/service-policy-posts",
+            "tool_list_service_policy_posts",
+            "service_policy_posts_top5",
+            "bidding",
+        ),
+        (
+            "research_posts",
+            "/research-posts",
+            "tool_list_research_posts",
+            "research_posts_top5",
+            "research_result",
+        ),
+        (
+            "newsroom_resource_guides",
+            "/newsroom-resource-guides",
+            "tool_list_newsroom_resource_guides",
+            "newsroom_resource_guides_top5",
+            "brochure",
+        ),
+        (
+            "anniversary_guides",
+            "/anniversary-guides",
+            "tool_list_anniversary_guides",
+            "anniversary_guides_top5",
+            "president_message",
+        ),
+    ],
+)
+def test_render_validation_report_includes_release_gate_new_domain_coverage(
+    domain: str,
+    path: str,
+    tool: str,
+    summary_kind: str,
+    topic: str,
+) -> None:
+    row = EvalCorpusRow.model_validate(
+        {
+            "id": "NEW001",
+            "domain": domain,
+            "style": "normal",
+            "user_utterance": "공식 공개정보 알려줘",
+            "api_request": {"path": path, "params": {"topic": topic, "limit": 5}},
+            "expected_mcp_flow": tool,
+            "truth_mode": "invariant_only",
+            "pass_rule": {"summary_kind": summary_kind, "allow_empty": True},
+            "watch_policy": "none",
+            "notes": "",
+        }
+    )
+    result = {
+        "id": "NEW001",
+        "status": "completed",
+        "verdict": "pass",
+        "actual_summary": [],
+        "comparison": "invariants_hold",
+        "truth_source": "database_snapshot",
+        "checked_at": "2026-05-07T10:20:00+09:00",
+    }
+
+    report = render_validation_report(
+        rows=[row],
+        results=[result],
+        checked_at="2026-05-07T10:20:00+09:00",
+        base_url="https://songsim-public-api.onrender.com",
+    )
+
+    assert "Guide-Domain Coverage" in report
+    assert report.count(f"| {domain} | 1 | 1 |") == 2
+
+
 def test_render_validation_report_includes_phone_book_coverage() -> None:
     rows = [
         EvalCorpusRow.model_validate(
@@ -2401,8 +2476,12 @@ def test_default_eval_assets_match_distribution_plan() -> None:
     assert by_domain == DOMAIN_QUOTAS
     assert by_style == STYLE_QUOTAS
     assert by_truth_mode == TRUTH_MODE_QUOTAS
-    assert DOMAIN_QUOTAS["student_activity_guides"] == 15
+    assert DOMAIN_QUOTAS["student_activity_guides"] == 11
     assert DOMAIN_QUOTAS["student_activity_notices"] == 5
+    assert DOMAIN_QUOTAS["service_policy_posts"] == 1
+    assert DOMAIN_QUOTAS["research_posts"] == 1
+    assert DOMAIN_QUOTAS["newsroom_resource_guides"] == 1
+    assert DOMAIN_QUOTAS["anniversary_guides"] == 1
 
     truth_ids = {row.id for row in truth_rows}
     assert Counter(row.domain for row in rows if row.id in truth_ids) == Counter(DOMAIN_QUOTAS)
@@ -2512,12 +2591,16 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "campus_media",
         "social_volunteering",
         "rotc",
+        "student_innovation_supporters",
+        "cat_cert",
     }
     assert {
         "총학생회 안내해줘",
         "교내미디어 뭐 있어?",
         "사회봉사 활동 알려줘",
         "학생군사교육단 안내해줘",
+        "학생혁신 서포터즈 알려줘",
+        "CAT-CERT 뭐야?",
     }.issubset({row.user_utterance for row in student_activity_rows})
 
     student_activity_notice_rows = [
@@ -2560,6 +2643,69 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "privacy_policy",
         "cctv_policy",
         "anti_graft",
+    }
+    truth_by_id = {row.id: row for row in truth_rows}
+    for row in service_policy_rows:
+        expected = truth_by_id[row.id].normalized_expected
+        assert isinstance(expected, list)
+        assert expected[0]["topic"] == row.api_request.params["topic"]
+
+    service_policy_post_rows = [row for row in rows if row.domain == "service_policy_posts"]
+
+    assert len(service_policy_post_rows) == DOMAIN_QUOTAS["service_policy_posts"]
+    assert {row.api_request.path for row in service_policy_post_rows} == {
+        "/service-policy-posts"
+    }
+    assert {row.expected_mcp_flow for row in service_policy_post_rows} == {
+        "tool_list_service_policy_posts"
+    }
+    assert {row.pass_rule["summary_kind"] for row in service_policy_post_rows} == {
+        "service_policy_posts_top5"
+    }
+    assert {row.pass_rule["allow_empty"] for row in service_policy_post_rows} == {True}
+    assert {row.api_request.params["topic"] for row in service_policy_post_rows} == {"bidding"}
+
+    research_post_rows = [row for row in rows if row.domain == "research_posts"]
+
+    assert len(research_post_rows) == DOMAIN_QUOTAS["research_posts"]
+    assert {row.api_request.path for row in research_post_rows} == {"/research-posts"}
+    assert {row.expected_mcp_flow for row in research_post_rows} == {
+        "tool_list_research_posts"
+    }
+    assert {row.pass_rule["summary_kind"] for row in research_post_rows} == {
+        "research_posts_top5"
+    }
+    assert {row.pass_rule["allow_empty"] for row in research_post_rows} == {True}
+    assert {row.api_request.params["topic"] for row in research_post_rows} == {
+        "research_result"
+    }
+
+    newsroom_resource_rows = [row for row in rows if row.domain == "newsroom_resource_guides"]
+
+    assert len(newsroom_resource_rows) == DOMAIN_QUOTAS["newsroom_resource_guides"]
+    assert {row.api_request.path for row in newsroom_resource_rows} == {
+        "/newsroom-resource-guides"
+    }
+    assert {row.expected_mcp_flow for row in newsroom_resource_rows} == {
+        "tool_list_newsroom_resource_guides"
+    }
+    assert {row.pass_rule["summary_kind"] for row in newsroom_resource_rows} == {
+        "newsroom_resource_guides_top5"
+    }
+    assert {row.api_request.params["topic"] for row in newsroom_resource_rows} == {"brochure"}
+
+    anniversary_rows = [row for row in rows if row.domain == "anniversary_guides"]
+
+    assert len(anniversary_rows) == DOMAIN_QUOTAS["anniversary_guides"]
+    assert {row.api_request.path for row in anniversary_rows} == {"/anniversary-guides"}
+    assert {row.expected_mcp_flow for row in anniversary_rows} == {
+        "tool_list_anniversary_guides"
+    }
+    assert {row.pass_rule["summary_kind"] for row in anniversary_rows} == {
+        "anniversary_guides_top5"
+    }
+    assert {row.api_request.params["topic"] for row in anniversary_rows} == {
+        "president_message"
     }
 
     partner_rows = [row for row in rows if row.domain == "student_exchange_partners"]

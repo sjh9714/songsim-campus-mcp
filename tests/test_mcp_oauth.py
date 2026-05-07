@@ -108,7 +108,10 @@ def test_mcp_oauth_metadata_and_initialize_flow(app_env, monkeypatch):
     assert "academic milestone" in initialize.json()["result"]["instructions"]
     assert "about resource guides" in initialize.json()["result"]["instructions"]
     assert "service policy guides" in initialize.json()["result"]["instructions"]
+    assert "service policy posts" in initialize.json()["result"]["instructions"]
     assert "newsroom posts" in initialize.json()["result"]["instructions"]
+    assert "research posts" in initialize.json()["result"]["instructions"]
+    assert "anniversary guides" in initialize.json()["result"]["instructions"]
     assert "student activity notices" in initialize.json()["result"]["instructions"]
     assert "phone book" in initialize.json()["result"]["instructions"]
     assert "affiliated notices" in initialize.json()["result"]["instructions"]
@@ -130,7 +133,11 @@ def test_mcp_oauth_metadata_and_initialize_flow(app_env, monkeypatch):
         "tool_list_student_activity_notices",
         "tool_list_about_resource_guides",
         "tool_list_service_policy_guides",
+        "tool_list_service_policy_posts",
         "tool_list_newsroom_posts",
+        "tool_list_research_posts",
+        "tool_list_newsroom_resource_guides",
+        "tool_list_anniversary_guides",
         "tool_list_student_exchange_guides",
         "tool_search_student_exchange_partners",
         "tool_search_phone_book",

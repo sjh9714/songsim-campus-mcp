@@ -41,6 +41,15 @@ from .ingest.about_resource_guides import (
     RuleGuideSource,
     UniversityBulletinGuideSource,
 )
+from .ingest.anniversary_guides import (
+    AnniversaryDonationInfoGuideSource,
+    AnniversaryEventScheduleGuideSource,
+    AnniversaryMilestoneGuideSource,
+    AnniversaryOnlineMuseumGuideSource,
+    AnniversaryPresidentMessageGuideSource,
+    AnniversaryPromoVideoGuideSource,
+    AnniversarySloganGuideSource,
+)
 from .ingest.campus_life_support_guides import (
     FacilityRentalGuideSource,
     HealthCenterGuideSource,
@@ -59,6 +68,11 @@ from .ingest.newsroom_posts import (
     PhotoNewsSource,
     PressSource,
     PromoVideoSource,
+)
+from .ingest.newsroom_resource_guides import (
+    BrochureGuideSource,
+    CukStoryGuideSource,
+    GalleryGuideSource,
 )
 from .ingest.official_sources import (
     AcademicCalendarSource,
@@ -116,6 +130,7 @@ from .ingest.pc_software import (
 from .ingest.pc_software import (
     search_pc_software_entries as rank_pc_software_entries,
 )
+from .ingest.research_posts import ResearchResultPostSource
 from .ingest.service_policy_guides import (
     AntiGraftGuideSource,
     BiddingGuideSource,
@@ -123,13 +138,19 @@ from .ingest.service_policy_guides import (
     JobPostingGuideSource,
     PrivacyPolicyGuideSource,
 )
+from .ingest.service_policy_posts import (
+    BiddingPostSource,
+    JobPostingPostSource,
+)
 from .ingest.student_activity_guides import (
     CampusMediaGuideSource,
+    CatCertGuideSource,
     CentralClubGuideSource,
     InstitutionalClubGuideSource,
     RotcGuideSource,
     SocialVolunteeringGuideSource,
     StudentGovernmentGuideSource,
+    StudentInnovationSupportersGuideSource,
 )
 from .ingest.student_activity_notices import StudentActivityNoticeSource
 from .schemas import (
@@ -139,6 +160,7 @@ from .schemas import (
     AcademicStatusGuide,
     AcademicSupportGuide,
     AffiliatedNotice,
+    AnniversaryGuide,
     AutomationJobObservability,
     AutomationObservability,
     CampusDiningMenu,
@@ -159,6 +181,7 @@ from .schemas import (
     MealRecommendationResponse,
     NearbyRestaurant,
     NewsroomPost,
+    NewsroomResourceGuide,
     Notice,
     NoticeCategoryInfo,
     ObservabilitySnapshot,
@@ -172,11 +195,13 @@ from .schemas import (
     ProfileNoticePreferences,
     ProfileUpdateRequest,
     RegistrationGuide,
+    ResearchPost,
     Restaurant,
     RestaurantSearchResult,
     ScholarshipGuide,
     SeasonalSemesterGuide,
     ServicePolicyGuide,
+    ServicePolicyPost,
     StudentActivityGuide,
     StudentActivityNotice,
     StudentExchangeGuide,
@@ -240,6 +265,8 @@ STUDENT_ACTIVITY_GUIDE_SOURCE_URLS = {
     "institutional_club_startist": (
         "https://www.catholic.ac.kr/ko/campuslife/institutional_club6.do"
     ),
+    "student_innovation_supporters": "https://www.catholic.ac.kr/ko/campuslife/supporters.do",
+    "cat_cert": "https://www.catholic.ac.kr/ko/campuslife/cat-cert.do",
 }
 ABOUT_RESOURCE_GUIDE_SOURCE_URLS = {
     "rules": "https://www.catholic.ac.kr/ko/about/rule.do",
@@ -260,11 +287,32 @@ SERVICE_POLICY_GUIDE_SOURCE_URLS = {
     "cctv_policy": "https://www.catholic.ac.kr/ko/service/notice_cctv_regulation.do",
     "anti_graft": "https://www.catholic.ac.kr/ko/service/anti_graft_law1.do",
 }
+SERVICE_POLICY_POST_SOURCE_URLS = {
+    "bidding": "https://www.catholic.ac.kr/ko/service/Bidding.do",
+    "job_posting": "https://www.catholic.ac.kr/ko/service/Job-posting.do",
+}
 NEWSROOM_POST_SOURCE_URLS = {
     "photo_news": "https://www.catholic.ac.kr/ko/newsroom/photonews.do",
     "press": "https://www.catholic.ac.kr/ko/newsroom/press.do",
     "alumni_interview": "https://www.catholic.ac.kr/ko/newsroom/interview.do",
     "promo_video": "https://www.catholic.ac.kr/ko/newsroom/media.do",
+}
+RESEARCH_POST_SOURCE_URLS = {
+    "research_result": "https://www.catholic.ac.kr/ko/research/result.do",
+}
+NEWSROOM_RESOURCE_GUIDE_SOURCE_URLS = {
+    "brochure": "https://www.catholic.ac.kr/ko/newsroom/brochure.do",
+    "cuk_story": "https://www.catholic.ac.kr/ko/newsroom/cukstory.do",
+    "gallery": "https://www.catholic.ac.kr/ko/newsroom/gallery.do",
+}
+ANNIVERSARY_GUIDE_SOURCE_URLS = {
+    "president_message": "https://www.catholic.ac.kr/ko/170ani/president-message-170.do",
+    "milestone": "https://www.catholic.ac.kr/ko/170ani/milestone-170.do",
+    "slogan": "https://www.catholic.ac.kr/ko/170ani/slogan-170.do",
+    "promo_video": "https://www.catholic.ac.kr/ko/170ani/promo-video-170.do",
+    "online_museum": "https://www.catholic.ac.kr/ko/170ani/online-museum-170.do",
+    "event_schedule": "https://www.catholic.ac.kr/ko/170ani/event-schedule-170_1.do",
+    "donation_info": "https://www.catholic.ac.kr/ko/170ani/donation-info-170.do",
 }
 RETURN_FROM_LEAVE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/return_from_leave_of_absence.do"
 DROPOUT_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/dropout.do"
@@ -367,7 +415,11 @@ SYNC_DATASET_TABLES = (
     "student_activity_notices",
     "about_resource_guides",
     "service_policy_guides",
+    "service_policy_posts",
     "newsroom_posts",
+    "research_posts",
+    "newsroom_resource_guides",
+    "anniversary_guides",
     "student_exchange_guides",
     "student_exchange_partners",
     "dormitory_guides",
@@ -394,6 +446,8 @@ PUBLIC_READY_CORE_DATASETS = frozenset(
         "student_activity_guides",
         "about_resource_guides",
         "service_policy_guides",
+        "newsroom_resource_guides",
+        "anniversary_guides",
         "student_exchange_guides",
         "student_exchange_partners",
         "dormitory_guides",
@@ -414,6 +468,8 @@ PUBLIC_READY_BEST_EFFORT_DATASETS = frozenset(
         "campus_life_notices",
         "newsroom_posts",
         "student_activity_notices",
+        "service_policy_posts",
+        "research_posts",
     }
 )
 PUBLIC_READY_OPTIONAL_DATASETS = frozenset({"courses"})
@@ -451,7 +507,11 @@ ADMIN_SYNC_TARGETS = {
     "student_activity_notices",
     "about_resource_guides",
     "service_policy_guides",
+    "service_policy_posts",
     "newsroom_posts",
+    "research_posts",
+    "newsroom_resource_guides",
+    "anniversary_guides",
     "student_exchange_guides",
     "student_exchange_partners",
     "dormitory_guides",
@@ -558,6 +618,8 @@ STUDENT_ACTIVITY_GUIDE_TOPICS = {
     "rotc",
     "central_clubs",
     "institutional_clubs",
+    "student_innovation_supporters",
+    "cat_cert",
 }
 STUDENT_ACTIVITY_NOTICE_TOPICS = {
     "club_recruitment",
@@ -585,7 +647,19 @@ SERVICE_POLICY_GUIDE_TOPICS = {
     "cctv_policy",
     "anti_graft",
 }
+SERVICE_POLICY_POST_TOPICS = {"bidding", "job_posting"}
 NEWSROOM_POST_TOPICS = {"photo_news", "press", "alumni_interview", "promo_video"}
+RESEARCH_POST_TOPICS = {"research_result"}
+NEWSROOM_RESOURCE_GUIDE_TOPICS = {"brochure", "cuk_story", "gallery"}
+ANNIVERSARY_GUIDE_TOPICS = {
+    "president_message",
+    "milestone",
+    "slogan",
+    "promo_video",
+    "online_museum",
+    "event_schedule",
+    "donation_info",
+}
 DORMITORY_GUIDE_TOPICS = {"hall_info", "quick_links", "latest_notices", "fees"}
 AFFILIATED_NOTICE_TOPICS = {
     "international_studies",
@@ -3066,7 +3140,8 @@ def list_student_activity_guides(
     if normalized_topic and normalized_topic not in STUDENT_ACTIVITY_GUIDE_TOPICS:
         raise InvalidRequestError(
             "topic must be one of student_government, campus_media, "
-            "social_volunteering, rotc, central_clubs, institutional_clubs."
+            "social_volunteering, rotc, central_clubs, institutional_clubs, "
+            "student_innovation_supporters, cat_cert."
         )
     return [
         StudentActivityGuide.model_validate(item)
@@ -3109,6 +3184,10 @@ def refresh_student_activity_guides_from_source(
             InstitutionalClubGuideSource(
                 STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["institutional_club_startist"]
             ),
+            StudentInnovationSupportersGuideSource(
+                STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["student_innovation_supporters"]
+            ),
+            CatCertGuideSource(STUDENT_ACTIVITY_GUIDE_SOURCE_URLS["cat_cert"]),
         ]
     synced_at = fetched_at or _now_iso()
     rows: list[dict[str, Any]] = []
@@ -3314,6 +3393,74 @@ def refresh_service_policy_guides_from_source(
     ]
 
 
+def list_service_policy_posts(
+    conn: DBConnection,
+    *,
+    topic: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+) -> list[ServicePolicyPost]:
+    normalized_limit = max(1, min(limit, 50))
+    normalized_topic = topic.strip() if topic else None
+    normalized_query = query.strip() if query else None
+    if normalized_topic and normalized_topic not in SERVICE_POLICY_POST_TOPICS:
+        allowed_topics = ", ".join(sorted(SERVICE_POLICY_POST_TOPICS))
+        raise InvalidRequestError(f"topic must be one of {allowed_topics}.")
+    return [
+        ServicePolicyPost.model_validate(item)
+        for item in repo.list_service_policy_posts(
+            conn,
+            topic=normalized_topic,
+            query=normalized_query,
+            limit=normalized_limit,
+        )
+    ]
+
+
+def refresh_service_policy_posts_from_source(
+    conn: DBConnection,
+    *,
+    sources: list[Any] | None = None,
+    fetched_at: str | None = None,
+    limit_per_source: int = 16,
+) -> list[ServicePolicyPost]:
+    if sources is None:
+        sources = [
+            BiddingPostSource(SERVICE_POLICY_POST_SOURCE_URLS["bidding"]),
+            JobPostingPostSource(SERVICE_POLICY_POST_SOURCE_URLS["job_posting"]),
+        ]
+    synced_at = fetched_at or _now_iso()
+    rows: list[dict[str, Any]] = []
+    for source in sources:
+        list_rows = source.parse_list(source.fetch_list(limit=limit_per_source))
+        for item in list_rows[:limit_per_source]:
+            merged = dict(item)
+            article_no = item.get("article_no")
+            if article_no:
+                try:
+                    detail = source.parse_detail(
+                        source.fetch_detail(str(article_no), limit=limit_per_source),
+                        default_title=str(item.get("title") or ""),
+                        default_summary=str(item.get("summary") or ""),
+                        default_published_at=item.get("published_at"),
+                    )
+                except httpx.HTTPError:
+                    detail = source.parse_detail(
+                        "",
+                        default_title=str(item.get("title") or ""),
+                        default_summary=str(item.get("summary") or ""),
+                        default_published_at=item.get("published_at"),
+                    )
+                merged.update({key: value for key, value in detail.items() if value})
+            merged["last_synced_at"] = synced_at
+            rows.append(merged)
+    repo.replace_service_policy_posts(conn, rows)
+    return [
+        ServicePolicyPost.model_validate(item)
+        for item in repo.list_service_policy_posts(conn, limit=max(len(rows), 1))
+    ]
+
+
 def list_newsroom_posts(
     conn: DBConnection,
     *,
@@ -3373,6 +3520,165 @@ def refresh_newsroom_posts_from_source(
     return [
         NewsroomPost.model_validate(item)
         for item in repo.list_newsroom_posts(conn, limit=max(len(rows), 1))
+    ]
+
+
+def list_research_posts(
+    conn: DBConnection,
+    *,
+    topic: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+) -> list[ResearchPost]:
+    normalized_limit = max(1, min(limit, 50))
+    normalized_topic = topic.strip() if topic else None
+    normalized_query = query.strip() if query else None
+    if normalized_topic and normalized_topic not in RESEARCH_POST_TOPICS:
+        allowed_topics = ", ".join(sorted(RESEARCH_POST_TOPICS))
+        raise InvalidRequestError(f"topic must be one of {allowed_topics}.")
+    return [
+        ResearchPost.model_validate(item)
+        for item in repo.list_research_posts(
+            conn,
+            topic=normalized_topic,
+            query=normalized_query,
+            limit=normalized_limit,
+        )
+    ]
+
+
+def refresh_research_posts_from_source(
+    conn: DBConnection,
+    *,
+    sources: list[Any] | None = None,
+    fetched_at: str | None = None,
+    limit_per_source: int = 16,
+) -> list[ResearchPost]:
+    if sources is None:
+        sources = [ResearchResultPostSource(RESEARCH_POST_SOURCE_URLS["research_result"])]
+    synced_at = fetched_at or _now_iso()
+    rows: list[dict[str, Any]] = []
+    for source in sources:
+        list_rows = source.parse_list(source.fetch_list(limit=limit_per_source))
+        for item in list_rows[:limit_per_source]:
+            merged = dict(item)
+            article_no = item.get("article_no")
+            if article_no:
+                try:
+                    detail = source.parse_detail(
+                        source.fetch_detail(str(article_no), limit=limit_per_source),
+                        default_title=str(item.get("title") or ""),
+                        default_summary=str(item.get("summary") or ""),
+                        default_published_at=item.get("published_at"),
+                    )
+                except httpx.HTTPError:
+                    detail = source.parse_detail(
+                        "",
+                        default_title=str(item.get("title") or ""),
+                        default_summary=str(item.get("summary") or ""),
+                        default_published_at=item.get("published_at"),
+                    )
+                merged.update({key: value for key, value in detail.items() if value})
+            merged["last_synced_at"] = synced_at
+            rows.append(merged)
+    repo.replace_research_posts(conn, rows)
+    return [
+        ResearchPost.model_validate(item)
+        for item in repo.list_research_posts(conn, limit=max(len(rows), 1))
+    ]
+
+
+def list_newsroom_resource_guides(
+    conn: DBConnection,
+    *,
+    topic: str | None = None,
+    limit: int = 20,
+) -> list[NewsroomResourceGuide]:
+    normalized_limit = max(1, min(limit, 50))
+    normalized_topic = topic.strip() if topic else None
+    if normalized_topic and normalized_topic not in NEWSROOM_RESOURCE_GUIDE_TOPICS:
+        allowed_topics = ", ".join(sorted(NEWSROOM_RESOURCE_GUIDE_TOPICS))
+        raise InvalidRequestError(f"topic must be one of {allowed_topics}.")
+    return [
+        NewsroomResourceGuide.model_validate(item)
+        for item in repo.list_newsroom_resource_guides(
+            conn,
+            topic=normalized_topic,
+            limit=normalized_limit,
+        )
+    ]
+
+
+def refresh_newsroom_resource_guides_from_source(
+    conn: DBConnection,
+    *,
+    sources: list[Any] | None = None,
+    fetched_at: str | None = None,
+) -> list[NewsroomResourceGuide]:
+    if sources is None:
+        sources = [
+            BrochureGuideSource(NEWSROOM_RESOURCE_GUIDE_SOURCE_URLS["brochure"]),
+            CukStoryGuideSource(NEWSROOM_RESOURCE_GUIDE_SOURCE_URLS["cuk_story"]),
+            GalleryGuideSource(NEWSROOM_RESOURCE_GUIDE_SOURCE_URLS["gallery"]),
+        ]
+    synced_at = fetched_at or _now_iso()
+    rows: list[dict[str, Any]] = []
+    for source in sources:
+        rows.extend(source.parse(source.fetch(), fetched_at=synced_at))
+    repo.replace_newsroom_resource_guides(conn, rows)
+    return [
+        NewsroomResourceGuide.model_validate(item)
+        for item in repo.list_newsroom_resource_guides(conn, limit=max(len(rows), 1))
+    ]
+
+
+def list_anniversary_guides(
+    conn: DBConnection,
+    *,
+    topic: str | None = None,
+    limit: int = 20,
+) -> list[AnniversaryGuide]:
+    normalized_limit = max(1, min(limit, 50))
+    normalized_topic = topic.strip() if topic else None
+    if normalized_topic and normalized_topic not in ANNIVERSARY_GUIDE_TOPICS:
+        allowed_topics = ", ".join(sorted(ANNIVERSARY_GUIDE_TOPICS))
+        raise InvalidRequestError(f"topic must be one of {allowed_topics}.")
+    return [
+        AnniversaryGuide.model_validate(item)
+        for item in repo.list_anniversary_guides(
+            conn,
+            topic=normalized_topic,
+            limit=normalized_limit,
+        )
+    ]
+
+
+def refresh_anniversary_guides_from_source(
+    conn: DBConnection,
+    *,
+    sources: list[Any] | None = None,
+    fetched_at: str | None = None,
+) -> list[AnniversaryGuide]:
+    if sources is None:
+        sources = [
+            AnniversaryPresidentMessageGuideSource(
+                ANNIVERSARY_GUIDE_SOURCE_URLS["president_message"]
+            ),
+            AnniversaryMilestoneGuideSource(ANNIVERSARY_GUIDE_SOURCE_URLS["milestone"]),
+            AnniversarySloganGuideSource(ANNIVERSARY_GUIDE_SOURCE_URLS["slogan"]),
+            AnniversaryPromoVideoGuideSource(ANNIVERSARY_GUIDE_SOURCE_URLS["promo_video"]),
+            AnniversaryOnlineMuseumGuideSource(ANNIVERSARY_GUIDE_SOURCE_URLS["online_museum"]),
+            AnniversaryEventScheduleGuideSource(ANNIVERSARY_GUIDE_SOURCE_URLS["event_schedule"]),
+            AnniversaryDonationInfoGuideSource(ANNIVERSARY_GUIDE_SOURCE_URLS["donation_info"]),
+        ]
+    synced_at = fetched_at or _now_iso()
+    rows: list[dict[str, Any]] = []
+    for source in sources:
+        rows.extend(source.parse(source.fetch(), fetched_at=synced_at))
+    repo.replace_anniversary_guides(conn, rows)
+    return [
+        AnniversaryGuide.model_validate(item)
+        for item in repo.list_anniversary_guides(conn, limit=max(len(rows), 1))
     ]
 
 
@@ -3813,8 +4119,18 @@ def _run_admin_sync_target(
         return {"about_resource_guides": len(refresh_about_resource_guides_from_source(conn))}
     if target == "service_policy_guides":
         return {"service_policy_guides": len(refresh_service_policy_guides_from_source(conn))}
+    if target == "service_policy_posts":
+        return {"service_policy_posts": len(refresh_service_policy_posts_from_source(conn))}
     if target == "newsroom_posts":
         return {"newsroom_posts": len(refresh_newsroom_posts_from_source(conn))}
+    if target == "research_posts":
+        return {"research_posts": len(refresh_research_posts_from_source(conn))}
+    if target == "newsroom_resource_guides":
+        return {
+            "newsroom_resource_guides": len(refresh_newsroom_resource_guides_from_source(conn))
+        }
+    if target == "anniversary_guides":
+        return {"anniversary_guides": len(refresh_anniversary_guides_from_source(conn))}
     if target == "student_exchange_guides":
         return {"student_exchange_guides": len(refresh_student_exchange_guides_from_source(conn))}
     if target == "student_exchange_partners":
@@ -5733,7 +6049,11 @@ def sync_official_snapshot(
     )
     about_resource_guides = refresh_about_resource_guides_from_source(conn)
     service_policy_guides = refresh_service_policy_guides_from_source(conn)
+    service_policy_posts = refresh_service_policy_posts_from_source(conn)
     newsroom_posts = refresh_newsroom_posts_from_source(conn)
+    research_posts = refresh_research_posts_from_source(conn)
+    newsroom_resource_guides = refresh_newsroom_resource_guides_from_source(conn)
+    anniversary_guides = refresh_anniversary_guides_from_source(conn)
     student_exchange_guides = refresh_student_exchange_guides_from_source(conn)
     dormitory_guides = refresh_dormitory_guides_from_source(conn)
     phone_book_entries = refresh_phone_book_entries_from_source(conn)
@@ -5764,7 +6084,11 @@ def sync_official_snapshot(
         "student_activity_notices": len(student_activity_notices),
         "about_resource_guides": len(about_resource_guides),
         "service_policy_guides": len(service_policy_guides),
+        "service_policy_posts": len(service_policy_posts),
         "newsroom_posts": len(newsroom_posts),
+        "research_posts": len(research_posts),
+        "newsroom_resource_guides": len(newsroom_resource_guides),
+        "anniversary_guides": len(anniversary_guides),
         "student_exchange_guides": len(student_exchange_guides),
         "student_exchange_partners": len(student_exchange_partners),
         "dormitory_guides": len(dormitory_guides),

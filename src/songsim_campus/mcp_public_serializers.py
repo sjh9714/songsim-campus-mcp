@@ -8,6 +8,7 @@ from .schemas import (
     AcademicMilestoneGuide,
     AcademicStatusGuide,
     AcademicSupportGuide,
+    AnniversaryGuide,
     CampusDiningMenu,
     CampusLifeNotice,
     CampusLifeSupportGuide,
@@ -24,14 +25,17 @@ from .schemas import (
     McpToolError,
     NearbyRestaurant,
     NewsroomPost,
+    NewsroomResourceGuide,
     Notice,
     PCSoftwareEntry,
     Place,
     RegistrationGuide,
+    ResearchPost,
     RestaurantSearchResult,
     ScholarshipGuide,
     SeasonalSemesterGuide,
     ServicePolicyGuide,
+    ServicePolicyPost,
     StudentActivityGuide,
     StudentActivityNotice,
     StudentExchangeGuide,
@@ -303,9 +307,35 @@ def serialize_public_service_policy_guide(
     return payload
 
 
+def serialize_public_service_policy_post(post: ServicePolicyPost) -> dict[str, object]:
+    payload = post.model_dump()
+    payload["post_summary"] = post.summary
+    return payload
+
+
 def serialize_public_newsroom_post(post: NewsroomPost) -> dict[str, object]:
     payload = post.model_dump()
     payload["post_summary"] = post.summary
+    return payload
+
+
+def serialize_public_research_post(post: ResearchPost) -> dict[str, object]:
+    payload = post.model_dump()
+    payload["post_summary"] = post.summary
+    return payload
+
+
+def serialize_public_newsroom_resource_guide(
+    guide: NewsroomResourceGuide,
+) -> dict[str, object]:
+    payload = guide.model_dump()
+    payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
+    return payload
+
+
+def serialize_public_anniversary_guide(guide: AnniversaryGuide) -> dict[str, object]:
+    payload = guide.model_dump()
+    payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
     return payload
 
 

@@ -33,6 +33,10 @@ EvalDomain = Literal[
     "student_activity_guides",
     "student_activity_notices",
     "service_policy_guides",
+    "service_policy_posts",
+    "research_posts",
+    "newsroom_resource_guides",
+    "anniversary_guides",
     "student_exchange_partners",
     "campus_life_support_guides",
     "pc_software_entries",
@@ -74,6 +78,10 @@ DOMAIN_ORDER: tuple[EvalDomain, ...] = (
     "student_activity_guides",
     "student_activity_notices",
     "service_policy_guides",
+    "service_policy_posts",
+    "research_posts",
+    "newsroom_resource_guides",
+    "anniversary_guides",
     "out_of_scope",
 )
 STYLE_ORDER: tuple[EvalStyle, ...] = (
@@ -111,9 +119,13 @@ DOMAIN_QUOTAS: dict[EvalDomain, int] = {
     "pc_software_entries": 20,
     "student_exchange_guides": 25,
     "student_exchange_partners": 32,
-    "student_activity_guides": 15,
+    "student_activity_guides": 11,
     "student_activity_notices": 5,
     "service_policy_guides": 5,
+    "service_policy_posts": 1,
+    "research_posts": 1,
+    "newsroom_resource_guides": 1,
+    "anniversary_guides": 1,
     "out_of_scope": 20,
 }
 
@@ -157,9 +169,13 @@ DOMAIN_TRUTH_COUNTS: dict[EvalDomain, dict[TruthMode, int]] = {
     "pc_software_entries": {"invariant_only": 20},
     "student_exchange_guides": {"set_contains": 23, "invariant_only": 2},
     "student_exchange_partners": {"set_contains": 32},
-    "student_activity_guides": {"invariant_only": 15},
+    "student_activity_guides": {"invariant_only": 11},
     "student_activity_notices": {"invariant_only": 5},
     "service_policy_guides": {"invariant_only": 5},
+    "service_policy_posts": {"invariant_only": 1},
+    "research_posts": {"invariant_only": 1},
+    "newsroom_resource_guides": {"invariant_only": 1},
+    "anniversary_guides": {"invariant_only": 1},
     "out_of_scope": {"invariant_only": 20},
 }
 
@@ -191,6 +207,10 @@ ID_PREFIXES: dict[EvalDomain, str] = {
     "student_activity_guides": "SAV-",
     "student_activity_notices": "SAN-",
     "service_policy_guides": "SPG-",
+    "service_policy_posts": "SPP-",
+    "research_posts": "RSP-",
+    "newsroom_resource_guides": "NRG-",
+    "anniversary_guides": "ANG-",
     "out_of_scope": "OOS-",
 }
 
@@ -281,9 +301,11 @@ COARSE_CAP_MAX = 4
 
 STUDENT_ACTIVITY_GUIDE_CANARY_UTTERANCES: dict[str, str] = {
     "campus_media": "교내미디어 뭐 있어?",
+    "cat_cert": "CAT-CERT 뭐야?",
     "rotc": "학생군사교육단 안내해줘",
     "social_volunteering": "사회봉사 활동 알려줘",
     "student_government": "총학생회 안내해줘",
+    "student_innovation_supporters": "학생혁신 서포터즈 알려줘",
 }
 
 STYLE_PRIORITY: dict[str, int] = {
@@ -683,6 +705,61 @@ def _service_policy_seed(topic: str, utterance: str, *, notes: str) -> RequestSe
     )
 
 
+def _student_activity_guide_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "student_activity_guides",
+        utterance,
+        {"path": "/student-activity-guides", "params": {"topic": topic, "limit": 5}},
+        "tool_list_student_activity_guides",
+        {"summary_kind": "student_activity_guides_top5"},
+        notes,
+    )
+
+
+def _service_policy_post_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "service_policy_posts",
+        utterance,
+        {"path": "/service-policy-posts", "params": {"topic": topic, "limit": 5}},
+        "tool_list_service_policy_posts",
+        {"summary_kind": "service_policy_posts_top5", "allow_empty": True},
+        notes,
+    )
+
+
+def _research_post_seed(utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "research_posts",
+        utterance,
+        {"path": "/research-posts", "params": {"topic": "research_result", "limit": 5}},
+        "tool_list_research_posts",
+        {"summary_kind": "research_posts_top5", "allow_empty": True},
+        notes,
+    )
+
+
+def _newsroom_resource_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "newsroom_resource_guides",
+        utterance,
+        {"path": "/newsroom-resource-guides", "params": {"topic": topic, "limit": 5}},
+        "tool_list_newsroom_resource_guides",
+        {"summary_kind": "newsroom_resource_guides_top5"},
+        notes,
+    )
+
+
+def _anniversary_guide_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "anniversary_guides",
+        utterance,
+        {"path": "/anniversary-guides", "params": {"topic": topic, "limit": 5}},
+        "tool_list_anniversary_guides",
+        {"summary_kind": "anniversary_guides_top5"},
+        notes,
+    )
+
+
 def _student_activity_notice_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
     return _seed(
         "student_activity_notices",
@@ -924,6 +1001,16 @@ def _manual_extra_seeds() -> list[RequestSeed]:
             "학생 행사 공지 알려줘",
             notes="campus_event-current-snapshot",
         ),
+        _student_activity_guide_seed(
+            "student_innovation_supporters",
+            "학생혁신 서포터즈 알려줘",
+            notes="student_innovation_supporters-current-snapshot",
+        ),
+        _student_activity_guide_seed(
+            "cat_cert",
+            "CAT-CERT 뭐야?",
+            notes="cat_cert-current-snapshot",
+        ),
         _service_policy_seed("bidding", "입찰공고 어디서 확인해?", notes="bidding"),
         _service_policy_seed("job_posting", "채용공고 알려줘", notes="job-posting"),
         _service_policy_seed(
@@ -937,6 +1024,22 @@ def _manual_extra_seeds() -> list[RequestSeed]:
             notes="cctv-policy",
         ),
         _service_policy_seed("anti_graft", "청탁금지법 문의 어디야?", notes="anti-graft"),
+        _service_policy_post_seed(
+            "bidding",
+            "입찰공고 게시글 검색해줘",
+            notes="bidding-posts-current-snapshot",
+        ),
+        _research_post_seed("연구성과 최근 글 알려줘", notes="research-result-current-snapshot"),
+        _newsroom_resource_seed(
+            "brochure",
+            "학교 브로슈어 어디서 봐?",
+            notes="brochure-current-snapshot",
+        ),
+        _anniversary_guide_seed(
+            "president_message",
+            "170주년 총장 축사글 알려줘",
+            notes="anniversary-president-message",
+        ),
     ]
 
 
