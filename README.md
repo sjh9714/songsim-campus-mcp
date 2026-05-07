@@ -1,6 +1,6 @@
 # songsim-campus-mcp
 
-`songsim-campus-mcp`는 가톨릭대학교 성심교정 학생이 자주 묻는 학사·생활 정보를 **공식 source 기반 Remote MCP + HTTP API**로 제공하는 캠퍼스 도우미 서버입니다. 공지, 학사일정, 건물/연락처, 강의, 도서관 좌석, 식당, Wi-Fi, 기숙사와 생활지원 정보를 LLM 클라이언트에서 읽기 전용으로 조회할 수 있게 구성했습니다.
+`songsim-campus-mcp`는 가톨릭대학교 성심교정 학생이 자주 묻는 학사·생활 정보를 **공식 source 기반 Remote MCP + HTTP API**로 제공하는 캠퍼스 도우미 서버입니다. 공지, 학사일정, 건물/연락처, 강의, 도서관 좌석, 식당, Wi-Fi, IT서비스, 기숙사와 생활지원 정보를 LLM 클라이언트에서 읽기 전용으로 조회할 수 있게 구성했습니다.
 
 ## 문제의식
 
@@ -9,12 +9,12 @@
 ## 주요 사용 질문
 
 - 최신 학사 공지와 소속기관 공지
-- 포토뉴스와 보도자료
+- 포토뉴스, 보도자료, 동문 인터뷰, 홍보영상
 - 월별 학사일정과 등록·휴학·복학·증명·장학 안내
 - 건물, 시설, 편의시설, 전화번호, 운영시간
 - 과목 검색, 교시 정보, 도서관 좌석, 예상 빈 강의실
 - 학식, 주변 식당, PC 소프트웨어, Wi-Fi
-- 기숙사, 상담, 병원, 예비군, 학생활동 안내
+- 기숙사, 상담, 병원, 예비군, 웹메일/Office 365 같은 IT서비스, 학생활동 안내
 
 ## Surface
 
@@ -59,6 +59,7 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `/student-activity-notices`
 - `/about-resource-guides`
 - `/service-policy-guides`
+- `/campus-life-support-guides`
 - `/scholarship-guides`
 - `/notices`
 - `/affiliated-notices`

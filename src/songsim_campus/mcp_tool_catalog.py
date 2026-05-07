@@ -297,7 +297,7 @@ def register_shared_tools(
             (
                 "생활지원 안내를 읽을 때 사용합니다. 보건실, 유실물, 성심교정 주차요금, "
                 "학생상담, 장애학생지원센터, 예비군, 부속병원, 대관안내, "
-                "개인형 이동장치 안전교육, 진로/취업 상담처럼 학생이 바로 행동에 "
+                "개인형 이동장치 안전교육, 진로/취업 상담, IT서비스처럼 학생이 바로 행동에 "
                 "옮길 수 있는 정적 안내를 current snapshot으로 돌려줍니다."
             )
             if public_readonly
@@ -313,7 +313,7 @@ def register_shared_tools(
                     "생활지원 안내 유형 필터. health_center, lost_found, parking, "
                     "mobility_safety, facility_rental, student_counseling, "
                     "disability_support, student_reservist, hospital_use, "
-                    "career_counseling 중 하나를 사용합니다."
+                    "career_counseling, it_service 중 하나를 사용합니다."
                 )
             ),
         ] = None,
@@ -587,9 +587,9 @@ def register_shared_tools(
         description=(
             (
                 "가대소개 주요 정적 안내 자료를 읽을 때 사용합니다. 규정, 요람, "
-                "학사제도안내책자, 캠퍼스투어, 연혁, 교회문헌, 예결산공고처럼 "
-                "공식 링크와 접근 안내가 필요한 about resource를 current snapshot으로 "
-                "돌려줍니다."
+                "학사제도안내책자, 캠퍼스투어, 연혁, 교육이념, 가톨릭교육브랜드, "
+                "교회문헌, 예결산공고, 총장실처럼 공식 링크와 접근 안내가 필요한 "
+                "about resource를 current snapshot으로 돌려줍니다."
             )
             if public_readonly
             else "학교 가대소개 주요 정적 안내 자료 current snapshot을 가져옵니다."
@@ -603,7 +603,8 @@ def register_shared_tools(
                 description=(
                     "가대소개 정적 안내 유형 필터. rules, university_bulletin, "
                     "academic_handbook, campus_tour, history, church_literature, "
-                    "budget_account 중 하나를 사용합니다."
+                    "budget_account, education_philosophy, catholic_education_brand, "
+                    "president_office_static 중 하나를 사용합니다."
                 )
             ),
         ] = None,
@@ -660,8 +661,9 @@ def register_shared_tools(
         description=(
             (
                 "공식 뉴스룸 게시물을 읽을 때 사용합니다. 포토뉴스와 보도자료의 "
-                "공식 제목, 날짜, 요약, 썸네일, 외부 언론 링크를 current snapshot으로 "
-                "돌려줍니다. 외부 언론 본문은 수집하지 않습니다."
+                "공식 제목, 날짜, 요약, 썸네일, 외부 언론 링크와 동문 인터뷰, 홍보영상 "
+                "공식 페이지 링크를 current snapshot으로 돌려줍니다. 외부 언론 본문, "
+                "외부 영상 본문, SNS 본문은 수집하지 않습니다."
             )
             if public_readonly
             else "학교 뉴스룸 게시물 current snapshot을 가져옵니다."
@@ -671,7 +673,12 @@ def register_shared_tools(
     def tool_list_newsroom_posts(
         topic: Annotated[
             str | None,
-            Field(description="뉴스룸 유형 필터. photo_news, press 중 하나를 사용합니다."),
+            Field(
+                description=(
+                    "뉴스룸 유형 필터. photo_news, press, alumni_interview, "
+                    "promo_video 중 하나를 사용합니다."
+                )
+            ),
         ] = None,
         query: Annotated[
             str | None,

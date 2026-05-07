@@ -39,6 +39,7 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         "/class-guides",
         "/courses",
         "/dormitory-guides",
+        "/gpt/notice-categories",
         "/gpt/classrooms/empty",
         "/gpt/dining-menus",
         "/gpt/library-seats",
@@ -48,9 +49,11 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         "/gpt/restaurants/nearby",
         "/gpt/restaurants/search",
         "/leave-of-absence-guides",
+        "/newsroom-posts",
         "/pc-software",
         "/phone-book",
         "/registration-guides",
+        "/service-policy-guides",
         "/scholarship-guides",
         "/seasonal-semester-guides",
         "/student-activity-guides",
@@ -85,10 +88,23 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         payload["paths"]["/student-activity-notices"]["get"]["operationId"]
         == "listStudentActivityNotices"
     )
+    assert payload["paths"]["/newsroom-posts"]["get"]["operationId"] == "listNewsroomPosts"
+    assert (
+        payload["paths"]["/service-policy-guides"]["get"]["operationId"]
+        == "listServicePolicyGuides"
+    )
     assert (
         payload["paths"]["/about-resource-guides"]["get"]["operationId"]
         == "listAboutResourceGuides"
     )
+    assert (
+        payload["paths"]["/gpt/notice-categories"]["get"]["operationId"]
+        == "listNoticeCategoriesForGpt"
+    )
+    about_description = payload["paths"]["/about-resource-guides"]["get"]["description"]
+    assert "연혁" in about_description
+    assert "교회문헌" in about_description
+    assert "예결산공고" in about_description
 
 
 def test_public_readonly_mode_keeps_gpt_actions_v2_slim(monkeypatch):

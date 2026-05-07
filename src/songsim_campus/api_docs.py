@@ -201,6 +201,7 @@ GPT_ACTION_V2_PATHS: dict[str, dict[str, str]] = {
 GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
     "/gpt/places": GPT_ACTION_V2_PATHS["/gpt/places"],
     "/gpt/notices": GPT_ACTION_V2_PATHS["/gpt/notices"],
+    "/gpt/notice-categories": GPT_ACTION_V2_PATHS["/gpt/notice-categories"],
     "/gpt/periods": GPT_ACTION_V2_PATHS["/gpt/periods"],
     "/gpt/library-seats": GPT_ACTION_V2_PATHS["/gpt/library-seats"],
     "/gpt/dining-menus": GPT_ACTION_V2_PATHS["/gpt/dining-menus"],
@@ -278,7 +279,7 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
         "summary": "List campus life support guides",
         "description": (
             "List the current Songsim campus life support guidance for counseling, "
-            "career counseling, disability support, reservist, and hospital use."
+            "career counseling, IT service, disability support, reservist, and hospital use."
         ),
     },
     "/dormitory-guides": {
@@ -326,12 +327,30 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
             "club recruitment, student government, volunteering, ROTC, and campus events."
         ),
     },
+    "/newsroom-posts": {
+        "operationId": "listNewsroomPosts",
+        "summary": "List official newsroom posts",
+        "description": (
+            "List current official CUK newsroom posts such as 포토뉴스 and 보도자료. "
+            "External press article bodies, social posts, and video bodies are outside "
+            "this official-page summary surface."
+        ),
+    },
     "/about-resource-guides": {
         "operationId": "listAboutResourceGuides",
         "summary": "List about resource guides",
         "description": (
             "List the current Songsim official about-resource guide links for rules, "
-            "the university bulletin, the academic handbook, and campus tours."
+            "the university bulletin, the academic handbook, campus tours, 연혁, "
+            "교육이념, 가톨릭교육브랜드, 교회문헌, 예결산공고, and 총장실."
+        ),
+    },
+    "/service-policy-guides": {
+        "operationId": "listServicePolicyGuides",
+        "summary": "List service and policy guides",
+        "description": (
+            "List current official service and policy guide links for 입찰공고, 채용공고, "
+            "개인정보처리방침, CCTV policy, and 청탁금지법 안내."
         ),
     },
 }

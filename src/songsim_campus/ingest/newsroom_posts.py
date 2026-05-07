@@ -17,6 +17,11 @@ def _clean_text(value: str | None) -> str:
     return WHITESPACE_PATTERN.sub(" ", text).strip()
 
 
+def _clean_board_title(value: str | None) -> str:
+    text = _clean_text(value)
+    return re.sub(r"\s*바로가기$", "", text).strip()
+
+
 def _extract_article_no(value: str | None) -> str | None:
     if not value:
         return None
@@ -142,10 +147,13 @@ class PhotoNewsSource(NewsroomPostSourceBase):
                 continue
             article_no = _extract_article_no(anchor.get("href"))
             title_node = item.select_one(".b-img-title") or item.select_one(".b-title")
-            title = _clean_text(
+            if title_node is not None:
+                for category_node in title_node.select(".b-cate"):
+                    category_node.decompose()
+            title = _clean_board_title(
                 title_node.get_text(" ", strip=True)
                 if title_node
-                else anchor.get_text(" ", strip=True)
+                else str(anchor.get("title") or anchor.get_text(" ", strip=True))
             )
             date_node = item.select_one(".b-date")
             image_node = item.select_one("img[src]")
@@ -166,6 +174,22 @@ class PhotoNewsSource(NewsroomPostSourceBase):
                 )
             )
         return rows
+
+
+class AlumniInterviewSource(PhotoNewsSource):
+    topic = "alumni_interview"
+    default_category = "동문 인터뷰"
+
+    def __init__(self, url: str = "https://www.catholic.ac.kr/ko/newsroom/interview.do"):
+        super().__init__(url)
+
+
+class PromoVideoSource(PhotoNewsSource):
+    topic = "promo_video"
+    default_category = "홍보영상"
+
+    def __init__(self, url: str = "https://www.catholic.ac.kr/ko/newsroom/media.do"):
+        super().__init__(url)
 
 
 class PressSource(NewsroomPostSourceBase):

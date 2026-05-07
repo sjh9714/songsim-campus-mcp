@@ -5587,11 +5587,17 @@ def test_refresh_campus_life_support_guides_uses_all_default_sources(app_env, mo
         lambda url: FakeGuideSource("career_counseling", url),
         raising=False,
     )
+    monkeypatch.setattr(
+        services_module,
+        "ITServiceGuideSource",
+        lambda url: FakeGuideSource("it_service", url),
+        raising=False,
+    )
 
     with connection() as conn:
         guides = refresh_campus_life_support_guides_from_source(conn)
 
-    assert len(guides) == 10
+    assert len(guides) == 11
     assert {item.topic for item in guides} == {
         "health_center",
         "lost_found",
@@ -5603,6 +5609,7 @@ def test_refresh_campus_life_support_guides_uses_all_default_sources(app_env, mo
         "student_reservist",
         "hospital_use",
         "career_counseling",
+        "it_service",
     }
     assert {item.title for item in guides} == {
         "health_center title",
@@ -5615,6 +5622,7 @@ def test_refresh_campus_life_support_guides_uses_all_default_sources(app_env, mo
         "student_reservist title",
         "hospital_use title",
         "career_counseling title",
+        "it_service title",
     }
     assert services_module.PUBLIC_READY_DATASET_POLICIES["campus_life_support_guides"] == "core"
 

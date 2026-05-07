@@ -263,6 +263,49 @@ class CareerCounselingGuideSource(CampusLifeSupportGuideSourceBase):
         ]
 
 
+class ITServiceGuideSource(CampusLifeSupportGuideSourceBase):
+    topic = "it_service"
+
+    def __init__(self, url: str = "https://www.catholic.ac.kr/ko/campuslife/itservice.do"):
+        super().__init__(url)
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        soup = BeautifulSoup(html, "html.parser")
+        root = soup.select_one(".content-box.ITserv") or soup.select_one("#cms-content") or soup
+        sections = root.find_all("div", class_="con-box", recursive=False) or [root]
+        rows: list[dict[str, object]] = []
+
+        for section in sections:
+            title_node = section.select_one(".h4-tit01") or section.select_one(".box-tit")
+            title = _clean_text(title_node.get_text(" ", strip=True) if title_node else "")
+            if not title:
+                continue
+            links = _extract_links(section, base_url=self.url)
+            link_labels = {item["label"] for item in links}
+            steps = _extract_section_steps(
+                section,
+                title=title,
+                extra_skip=link_labels,
+            )
+            summary = next(
+                (step for step in steps if step not in link_labels),
+                title,
+            )
+            rows.append(
+                {
+                    "topic": self.topic,
+                    "title": title,
+                    "summary": summary,
+                    "steps": steps,
+                    "links": links,
+                    "source_url": self.url,
+                    "source_tag": self.source_tag,
+                    "last_synced_at": fetched_at,
+                }
+            )
+        return rows
+
+
 class DisabilitySupportGuideSource(CampusLifeSupportGuideSourceBase):
     topic = "disability_support"
 

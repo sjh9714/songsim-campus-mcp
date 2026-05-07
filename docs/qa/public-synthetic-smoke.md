@@ -11,7 +11,7 @@
 - `phone_book_entries`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `campus_life_support_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `campus_life_notices`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
-- `newsroom_posts`의 `photo_news`와 `press`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
+- `newsroom_posts`의 `photo_news`, `press`, `alumni_interview`, `promo_video`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `pc_software_entries`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `dormitory_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `affiliated_notices`가 기숙사 공지 본문 검색 canary를 포함해 공개 HTTP와 MCP 양쪽에서 보이는지 확인
@@ -219,7 +219,7 @@ curl -fsS "$PUBLIC_HTTP_URL/campus-life-notices?query=%EC%99%B8%EB%B6%80%EA%B8%B
 
 ## 5.7 Newsroom posts HTTP smoke
 
-CUK홍보 뉴스룸은 학교 공식 뉴스룸의 포토뉴스와 보도자료만 다룹니다. 보도자료가 외부 언론 보도 링크를 포함하더라도 외부 매체 본문은 스크랩하지 않습니다. Instagram 등 SNS/social 게시글은 여전히 out of scope/watch입니다.
+CUK홍보 뉴스룸은 학교 공식 뉴스룸의 포토뉴스, 보도자료, 동문 인터뷰, 홍보영상을 다룹니다. 보도자료가 외부 언론 보도 링크를 포함하거나 홍보영상이 외부 영상 링크를 포함하더라도 외부 매체/영상 본문은 스크랩하지 않습니다. Instagram 등 SNS/social 게시글은 여전히 out of scope/watch입니다.
 
 surface names:
 
@@ -231,17 +231,21 @@ topics:
 
 - `photo_news`
 - `press`
+- `alumni_interview`
+- `promo_video`
 
 ```bash
 curl -fsS "$PUBLIC_HTTP_URL/newsroom-posts?topic=photo_news&limit=3"
 curl -fsS "$PUBLIC_HTTP_URL/newsroom-posts?topic=press&limit=3"
+curl -fsS "$PUBLIC_HTTP_URL/newsroom-posts?topic=alumni_interview&limit=3"
+curl -fsS "$PUBLIC_HTTP_URL/newsroom-posts?topic=promo_video&limit=3"
 ```
 
 기대값:
 
 - HTTP `200`
 - JSON array
-- 첫 결과 또는 상위 결과 안에 `"topic":"photo_news"` 또는 `"topic":"press"`가 보임
+- 첫 결과 또는 상위 결과 안에 `"topic":"photo_news"`, `"topic":"press"`, `"topic":"alumni_interview"` 또는 `"topic":"promo_video"`가 보임
 - `"source_tag":"cuk_newsroom_posts"`가 보임
 
 `jq` 예시:
@@ -323,6 +327,7 @@ curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=student_counseling&
 curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=student_reservist&limit=2"
 curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=hospital_use&limit=2"
 curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=career_counseling&limit=2"
+curl -fsS "$PUBLIC_HTTP_URL/campus-life-support-guides?topic=it_service&limit=2"
 ```
 
 기대값:
@@ -518,8 +523,11 @@ topics:
 - `academic_handbook`
 - `campus_tour`
 - `history`
+- `education_philosophy`
+- `catholic_education_brand`
 - `church_literature`
 - `budget_account`
+- `president_office_static`
 
 `jq` 예시:
 
@@ -537,8 +545,11 @@ curl -fsS "$PUBLIC_HTTP_URL/about-resource-guides?topic=rules&limit=2" \
 - `topic=academic_handbook` 결과는 `학사제도안내책자` 관련 공식 링크를 포함
 - `topic=campus_tour` 결과는 `캠퍼스투어`와 신청 링크를 포함
 - `topic=history` 결과는 `연혁` 관련 안내를 포함
+- `topic=education_philosophy` 결과는 교육이념 관련 안내를 포함
+- `topic=catholic_education_brand` 결과는 가톨릭교육브랜드 관련 안내를 포함
 - `topic=church_literature` 결과는 `교회문헌` 관련 공식 링크를 포함
 - `topic=budget_account` 결과는 `예결산공고` 관련 공식 링크를 포함
+- `topic=president_office_static` 결과는 총장실 인사말/프로필/모토/역대총장 공식 링크를 포함
 - `"source_tag":"cuk_about_resource_guides"`가 보임
 
 ## 14.6 Service policy guide family smoke
@@ -1076,7 +1087,7 @@ PY
 - `tool_list_class_guides` payload가 빈 결과가 아니고 `course_evaluation` 항목을 포함함
 - `tool_list_seasonal_semester_guides` payload가 빈 결과가 아니고 `seasonal_semester` 항목을 포함함
 - `tool_list_academic_milestone_guides` payload가 빈 결과가 아니고 `grade_evaluation` 항목을 포함함
-- `tool_list_campus_life_support_guides` payload가 빈 결과가 아니고 `health_center`, `parking`, `facility_rental`, `mobility_safety`, `student_counseling`, `student_reservist`, `hospital_use`, 또는 `career_counseling` 항목을 포함함
+- `tool_list_campus_life_support_guides` payload가 빈 결과가 아니고 `health_center`, `parking`, `facility_rental`, `mobility_safety`, `student_counseling`, `student_reservist`, `hospital_use`, `career_counseling`, 또는 `it_service` 항목을 포함함
 - `tool_search_pc_software` payload가 빈 결과가 아니고 `SPSS` 또는 `Photoshop` 항목을 포함함
 - `tool_list_student_exchange_guides` payload가 빈 결과가 아니고 `exchange_student` 또는 `domestic_partner_universities` 항목을 포함함
 - `tool_search_student_exchange_partners` payload가 빈 결과가 아니고 `네덜란드` 또는 `Utrecht University` 항목을 포함함
@@ -1084,7 +1095,7 @@ PY
 - `tool_list_service_policy_guides` payload가 빈 결과가 아니고 `privacy_policy`, `cctv_policy`, 또는 `anti_graft` 항목을 포함함
 - `tool_search_phone_book` payload가 빈 결과가 아니고 `보건실` 항목을 포함함
 - `tool_list_campus_life_notices` payload가 빈 결과가 아니고 `outside_agencies` 또는 `events` 항목을 포함함
-- `tool_list_newsroom_posts` payload가 빈 결과가 아니고 `photo_news` 또는 `press` 항목을 포함함
+- `tool_list_newsroom_posts` payload가 빈 결과가 아니고 `photo_news`, `press`, `alumni_interview` 또는 `promo_video` 항목을 포함함
 - `tool_list_affiliated_notices` payload가 빈 결과가 아니고 `international_studies` 또는 dorm topic 항목을 포함함
 - `tool_list_affiliated_notices dorm body` payload는 빈 배열이어도 안정 응답이어야 하며, 결과가 있으면 `dorm_k_a_general` topic과 `source_tag=cuk_affiliated_notice_boards`를 포함함
 - `tool_list_dormitory_guides` payload가 빈 결과가 아니고 `latest_notices`, `hall_info`, 또는 `fees` 항목을 포함함
@@ -1112,7 +1123,7 @@ PY
 - `/class-guides`가 `course_evaluation` topic과 `cuk_class_guides` source tag를 반환
 - `/seasonal-semester-guides`가 `seasonal_semester` topic과 `cuk_seasonal_semester_guides` source tag를 반환
 - `/academic-milestone-guides`가 `grade_evaluation` topic과 `cuk_academic_milestone_guides` source tag를 반환
-- `/campus-life-support-guides`가 `health_center`, `parking`, `facility_rental`, `mobility_safety`, `student_counseling`, `student_reservist`, `hospital_use`, 또는 `career_counseling` topic과 `cuk_campus_life_support_guides` source tag를 반환
+- `/campus-life-support-guides`가 `health_center`, `parking`, `facility_rental`, `mobility_safety`, `student_counseling`, `student_reservist`, `hospital_use`, `career_counseling`, 또는 `it_service` topic과 `cuk_campus_life_support_guides` source tag를 반환
 - `/pc-software`가 `SPSS` 또는 `Photoshop` query에 대해 `cuk_pc_software` source tag를 반환
 - `/student-exchange-guides`가 `exchange_student` 또는 `domestic_partner_universities` topic과 `cuk_student_exchange_guides` source tag를 반환
 - `/student-exchange-partners`가 `네덜란드` 같은 query에 대해 `country_ko`, `university_name`, `homepage_url`, `cuk_student_exchange_partners`를 반환
@@ -1122,7 +1133,7 @@ PY
 - `/phone-book`가 `보건실` 또는 질의한 부서의 `cuk_phone_book` source tag를 반환
 - `/affiliated-notices`가 `international_studies` 또는 질의한 dorm/topic의 `cuk_affiliated_notice_boards` source tag를 반환
 - `/affiliated-notices?topic=dorm_k_a_general&query=점호&limit=3`와 `/affiliated-notices?topic=dorm_francis_general&query=점호&limit=3`가 제목/요약/본문 검색 canary로 `200` 안정 응답하고, 빈 배열이 아니면 질의한 dorm topic과 `cuk_affiliated_notice_boards` source tag를 반환
-- `/newsroom-posts`가 `photo_news` 또는 `press` topic과 `cuk_newsroom_posts` source tag를 반환
+- `/newsroom-posts`가 `photo_news`, `press`, `alumni_interview` 또는 `promo_video` topic과 `cuk_newsroom_posts` source tag를 반환
 - `/notices?category=academic&limit=3`가 `academic` notice와 `cuk_campus_notices` source tag를 반환
 - `/restaurants/nearby?origin=중도`가 `central-library` origin으로 nearby 결과를 반환
 - `/restaurants/nearby?origin=학생식당&open_now=true&category=cafe&limit=3`가 `200`으로 안정 응답하고, 빈 배열이어도 `open_now` strict contract와 일치

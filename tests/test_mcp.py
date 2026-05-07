@@ -1241,6 +1241,8 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "요람" in tools["tool_list_about_resource_guides"]["description"]
     assert "학사제도안내책자" in tools["tool_list_about_resource_guides"]["description"]
     assert "캠퍼스투어" in tools["tool_list_about_resource_guides"]["description"]
+    assert "교육이념" in tools["tool_list_about_resource_guides"]["description"]
+    assert "총장실" in tools["tool_list_about_resource_guides"]["description"]
     assert "rules" in (
         tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
             "description"
@@ -1271,6 +1273,16 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
             "description"
         ]
     )
+    assert "education_philosophy" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "president_office_static" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
     assert "개인정보처리방침" in tools["tool_list_service_policy_guides"]["description"]
     assert "청탁금지법" in tools["tool_list_service_policy_guides"]["description"]
     assert "privacy_policy" in (
@@ -1285,12 +1297,24 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     )
     assert "포토뉴스" in tools["tool_list_newsroom_posts"]["description"]
     assert "보도자료" in tools["tool_list_newsroom_posts"]["description"]
+    assert "동문 인터뷰" in tools["tool_list_newsroom_posts"]["description"]
+    assert "홍보영상" in tools["tool_list_newsroom_posts"]["description"]
     assert "photo_news" in (
         tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )
     assert "press" in (
+        tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "alumni_interview" in (
+        tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "promo_video" in (
         tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
@@ -1311,6 +1335,7 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "부속병원" in tools["tool_list_campus_life_support_guides"]["description"]
     assert "대관안내" in tools["tool_list_campus_life_support_guides"]["description"]
     assert "진로/취업 상담" in tools["tool_list_campus_life_support_guides"]["description"]
+    assert "IT서비스" in tools["tool_list_campus_life_support_guides"]["description"]
     assert "개인형 이동장치 안전교육" in (
         tools["tool_list_campus_life_support_guides"]["description"]
     )

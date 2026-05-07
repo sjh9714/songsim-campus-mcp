@@ -21,6 +21,7 @@ from . import place_search_runtime, services
 from .ingest.campus_life_support_guides import (
     CareerCounselingGuideSource,
     HealthCenterGuideSource,
+    ITServiceGuideSource,
     LostFoundGuideSource,
     ParkingGuideSource,
 )
@@ -1627,6 +1628,7 @@ def _payload_from_sources(
                 LostFoundGuideSource(services.LOST_FOUND_GUIDE_SOURCE_URL),
                 ParkingGuideSource(services.CAMPUS_PARKING_GUIDE_SOURCE_URL),
                 CareerCounselingGuideSource(services.CAREER_COUNSELING_GUIDE_SOURCE_URL),
+                ITServiceGuideSource(services.IT_SERVICE_GUIDE_SOURCE_URL),
             ):
                 rows.extend(source.parse(source.fetch(), fetched_at=captured_at))
             source_cache[cache_key] = rows

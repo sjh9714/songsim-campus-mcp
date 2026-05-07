@@ -14,8 +14,11 @@ from songsim_campus.ingest.about_resource_guides import (
     AcademicHandbookGuideSource,
     BudgetAccountGuideSource,
     CampusTourGuideSource,
+    CatholicEducationBrandGuideSource,
     ChurchLiteratureGuideSource,
+    EducationPhilosophyGuideSource,
     HistoryGuideSource,
+    PresidentOfficeStaticGuideSource,
     RuleGuideSource,
     UniversityBulletinGuideSource,
 )
@@ -46,6 +49,9 @@ def test_about_resource_source_defaults() -> None:
     history = HistoryGuideSource()
     church_literature = ChurchLiteratureGuideSource()
     budget_account = BudgetAccountGuideSource()
+    education_philosophy = EducationPhilosophyGuideSource()
+    catholic_education_brand = CatholicEducationBrandGuideSource()
+    president_office_static = PresidentOfficeStaticGuideSource()
 
     assert rules.topic == "rules"
     assert bulletin.topic == "university_bulletin"
@@ -54,6 +60,9 @@ def test_about_resource_source_defaults() -> None:
     assert history.topic == "history"
     assert church_literature.topic == "church_literature"
     assert budget_account.topic == "budget_account"
+    assert education_philosophy.topic == "education_philosophy"
+    assert catholic_education_brand.topic == "catholic_education_brand"
+    assert president_office_static.topic == "president_office_static"
     assert rules.source_tag == "cuk_about_resource_guides"
     assert bulletin.source_tag == "cuk_about_resource_guides"
     assert handbook.source_tag == "cuk_about_resource_guides"
@@ -61,6 +70,9 @@ def test_about_resource_source_defaults() -> None:
     assert history.source_tag == "cuk_about_resource_guides"
     assert church_literature.source_tag == "cuk_about_resource_guides"
     assert budget_account.source_tag == "cuk_about_resource_guides"
+    assert education_philosophy.source_tag == "cuk_about_resource_guides"
+    assert catholic_education_brand.source_tag == "cuk_about_resource_guides"
+    assert president_office_static.source_tag == "cuk_about_resource_guides"
     assert rules.url.endswith("/about/rule.do")
     assert bulletin.url.endswith("/about/univ_bulletin.do")
     assert handbook.url.endswith("/about/brochure_rule.do")
@@ -68,6 +80,9 @@ def test_about_resource_source_defaults() -> None:
     assert history.url.endswith("/about/history.do")
     assert church_literature.url.endswith("/about/church_literature2.do")
     assert budget_account.url.endswith("/about/budgetaccount.do")
+    assert education_philosophy.url.endswith("/about/educational_philosophy.do")
+    assert catholic_education_brand.url.endswith("/about/educational_brand.do")
+    assert president_office_static.url.endswith("/about/president_greeting.do")
 
 
 def test_about_resource_parsers_extract_expected_rows() -> None:
@@ -91,12 +106,24 @@ def test_about_resource_parsers_extract_expected_rows() -> None:
         _fixture("history.do.html"),
         fetched_at="2026-03-22T00:00:00+09:00",
     )
+    education_philosophy = EducationPhilosophyGuideSource().parse(
+        _fixture("educational_philosophy.do.html"),
+        fetched_at="2026-03-22T00:00:00+09:00",
+    )
+    catholic_education_brand = CatholicEducationBrandGuideSource().parse(
+        _fixture("educational_brand.do.html"),
+        fetched_at="2026-03-22T00:00:00+09:00",
+    )
     church_literature = ChurchLiteratureGuideSource().parse(
         _fixture("church_literature2.do.html"),
         fetched_at="2026-03-22T00:00:00+09:00",
     )
     budget_account = BudgetAccountGuideSource().parse(
         _fixture("budgetaccount.do.html"),
+        fetched_at="2026-03-22T00:00:00+09:00",
+    )
+    president_office_static = PresidentOfficeStaticGuideSource().parse(
+        _fixture("president_greeting.do.html"),
         fetched_at="2026-03-22T00:00:00+09:00",
     )
 
@@ -135,6 +162,14 @@ def test_about_resource_parsers_extract_expected_rows() -> None:
     assert history[0]["summary"].startswith("가톨릭대학교 연혁")
     assert {item["label"] for item in history[0]["links"]} == {"1900년 이전", "1900~1990년"}
     assert history[0]["links"][0]["url"] == "https://www.catholic.ac.kr/ko/about/history1.do"
+    assert education_philosophy[0]["topic"] == "education_philosophy"
+    assert education_philosophy[0]["title"] == "교육이념"
+    assert education_philosophy[0]["summary"].startswith("건학이념, 교육이념, 교육목표")
+    assert "가톨릭 정신에 바탕을 둔 진리, 사랑, 봉사" in education_philosophy[0]["steps"]
+    assert catholic_education_brand[0]["topic"] == "catholic_education_brand"
+    assert catholic_education_brand[0]["title"] == "가톨릭교육브랜드"
+    assert catholic_education_brand[0]["summary"].startswith("DESIGNer 학년제")
+    assert "I-DESIGN" in catholic_education_brand[0]["steps"]
     assert church_literature[0]["topic"] == "church_literature"
     assert church_literature[0]["title"] == "가톨릭대학교회문헌"
     assert "교회문헌" in church_literature[0]["summary"]
@@ -150,6 +185,15 @@ def test_about_resource_parsers_extract_expected_rows() -> None:
         "2026학년도 가톨릭대학교 자금예산서",
         "2024학년도 결산 공고",
     }
+    assert president_office_static[0]["topic"] == "president_office_static"
+    assert president_office_static[0]["title"] == "총장실"
+    assert president_office_static[0]["summary"].startswith("총장 인사말, 프로필, 모토")
+    assert [item["label"] for item in president_office_static[0]["links"]] == [
+        "총장 인사말",
+        "총장 프로필",
+        "총장 모토",
+        "역대총장",
+    ]
 
 
 def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
@@ -175,6 +219,14 @@ def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
         def fetch(self) -> str:
             return _fixture("history.do.html")
 
+    class EducationPhilosophyFixtureSource(EducationPhilosophyGuideSource):
+        def fetch(self) -> str:
+            return _fixture("educational_philosophy.do.html")
+
+    class CatholicEducationBrandFixtureSource(CatholicEducationBrandGuideSource):
+        def fetch(self) -> str:
+            return _fixture("educational_brand.do.html")
+
     class ChurchLiteratureFixtureSource(ChurchLiteratureGuideSource):
         def fetch(self) -> str:
             return _fixture("church_literature2.do.html")
@@ -182,6 +234,10 @@ def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
     class BudgetAccountFixtureSource(BudgetAccountGuideSource):
         def fetch(self) -> str:
             return _fixture("budgetaccount.do.html")
+
+    class PresidentOfficeStaticFixtureSource(PresidentOfficeStaticGuideSource):
+        def fetch(self) -> str:
+            return _fixture("president_greeting.do.html")
 
     with connection() as conn:
         refresh_about_resource_guides_from_source(
@@ -192,8 +248,11 @@ def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
                 HandbookFixtureSource(),
                 CampusTourFixtureSource(),
                 HistoryFixtureSource(),
+                EducationPhilosophyFixtureSource(),
+                CatholicEducationBrandFixtureSource(),
                 ChurchLiteratureFixtureSource(),
                 BudgetAccountFixtureSource(),
+                PresidentOfficeStaticFixtureSource(),
             ],
             fetched_at="2026-03-22T00:00:00+09:00",
         )
@@ -211,8 +270,11 @@ def test_about_resource_guides_refresh_replace_and_list(app_env) -> None:
         "academic_handbook",
         "budget_account",
         "campus_tour",
+        "catholic_education_brand",
         "church_literature",
+        "education_philosophy",
         "history",
+        "president_office_static",
         "rules",
         "university_bulletin",
     ]

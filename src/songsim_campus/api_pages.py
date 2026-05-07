@@ -341,6 +341,7 @@ def render_landing_page(
         "성심교정 대관안내 알려줘",
         "개인형 이동장치 안전교육 알려줘",
         "진로/취업 상담 어디서 신청해?",
+        "웹메일 신청이나 Office 365 이용 방법 알려줘",
         "보건실 위치와 운영시간 알려줘",
         "유실물 찾는 방법 알려줘",
         "성심교정 주차요금 알려줘",
@@ -528,15 +529,16 @@ def render_landing_page(
             </li>
             <li>
               <code>/about-resource-guides</code> official rules, university bulletin,
-              academic handbook, and campus tour resource links
+              academic handbook, campus tour, education philosophy, and president office
+              resource links
             </li>
             <li>
               <code>/service-policy-guides</code> official bidding, job posting,
               privacy, CCTV, and anti-graft policy links
             </li>
             <li>
-              <code>/newsroom-posts</code> official newsroom photo-news and press
-              post snapshots
+              <code>/newsroom-posts</code> official newsroom photo-news, press,
+              alumni interview, and promo-video post snapshots
             </li>
             <li>
               <code>/student-exchange-guides</code> domestic credit exchange, partner
@@ -549,8 +551,8 @@ def render_landing_page(
             <li><code>/phone-book</code> campus-wide department contacts and phone numbers</li>
             <li>
               <code>/campus-life-support-guides</code> health center, counseling,
-              disability, reservist, hospital use, facility rental, mobility
-              safety, career counseling, lost-found, and Songsim parking guides
+              IT service, disability, reservist, hospital use, facility rental,
+              mobility safety, career counseling, lost-found, and Songsim parking guides
             </li>
             <li>
               <code>/campus-life-notices</code> outside-agency and event campus-life

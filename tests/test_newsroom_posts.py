@@ -10,7 +10,12 @@ from fastapi.testclient import TestClient
 from songsim_campus import repo, services
 from songsim_campus.api import create_app
 from songsim_campus.db import connection, init_db
-from songsim_campus.ingest.newsroom_posts import PhotoNewsSource, PressSource
+from songsim_campus.ingest.newsroom_posts import (
+    AlumniInterviewSource,
+    PhotoNewsSource,
+    PressSource,
+    PromoVideoSource,
+)
 from songsim_campus.mcp_server import build_mcp
 from songsim_campus.services import (
     list_newsroom_posts,
@@ -33,18 +38,28 @@ def _tool_payloads(result) -> list[dict[str, object]]:
 def test_newsroom_source_defaults() -> None:
     photo_news = PhotoNewsSource()
     press = PressSource()
+    alumni_interview = AlumniInterviewSource()
+    promo_video = PromoVideoSource()
 
     assert photo_news.topic == "photo_news"
     assert press.topic == "press"
+    assert alumni_interview.topic == "alumni_interview"
+    assert promo_video.topic == "promo_video"
     assert photo_news.source_tag == "cuk_newsroom_posts"
     assert press.source_tag == "cuk_newsroom_posts"
+    assert alumni_interview.source_tag == "cuk_newsroom_posts"
+    assert promo_video.source_tag == "cuk_newsroom_posts"
     assert photo_news.url.endswith("/newsroom/photonews.do")
     assert press.url.endswith("/newsroom/press.do")
+    assert alumni_interview.url.endswith("/newsroom/interview.do")
+    assert promo_video.url.endswith("/newsroom/media.do")
 
 
 def test_newsroom_parsers_extract_expected_rows() -> None:
     photo_source = PhotoNewsSource()
     press_source = PressSource()
+    alumni_source = AlumniInterviewSource()
+    promo_source = PromoVideoSource()
 
     photo_rows = photo_source.parse_list(_fixture("photonews_list.html"))
     photo_detail = photo_source.parse_detail(
@@ -58,6 +73,18 @@ def test_newsroom_parsers_extract_expected_rows() -> None:
         default_title=press_rows[0]["title"] or "",
         default_summary=press_rows[0]["summary"] or "",
         default_published_at=press_rows[0]["published_at"],
+    )
+    alumni_rows = alumni_source.parse_list(_fixture("newsroom_interview_list.html"))
+    alumni_detail = alumni_source.parse_detail(
+        _fixture("newsroom_interview_detail.html"),
+        default_title=alumni_rows[0]["title"] or "",
+        default_published_at=alumni_rows[0]["published_at"],
+    )
+    promo_rows = promo_source.parse_list(_fixture("newsroom_media_list.html"))
+    promo_detail = promo_source.parse_detail(
+        _fixture("newsroom_media_detail.html"),
+        default_title=promo_rows[0]["title"] or "",
+        default_published_at=promo_rows[0]["published_at"],
     )
 
     assert photo_rows[0]["topic"] == "photo_news"
@@ -77,6 +104,20 @@ def test_newsroom_parsers_extract_expected_rows() -> None:
         "?mode=view&articleNo=400&article.offset=0&articleLimit=16"
     )
     assert press_detail["summary"] == "가톨릭뉴스"
+    assert alumni_rows[0]["topic"] == "alumni_interview"
+    assert alumni_rows[0]["article_no"] == "500"
+    assert alumni_rows[0]["title"] == "키스자산평가 파생평가본부 스왑실장 김승환 동문"
+    assert alumni_rows[0]["published_at"] == "2026-04-21"
+    assert alumni_rows[0]["thumbnail_url"] == (
+        "https://www.catholic.ac.kr/app/board/attach/image/thumb_220977.do"
+    )
+    assert alumni_detail["summary"].startswith("김승환 동문은 수학과와 회계학과에서")
+    assert promo_rows[0]["topic"] == "promo_video"
+    assert promo_rows[0]["article_no"] == "600"
+    assert promo_rows[0]["title"] == "가톨릭대학교 홍보영상 (베트남어)"
+    assert promo_rows[0]["published_at"] == "2025-12-08"
+    assert promo_rows[0]["external_url"] is None
+    assert promo_detail["summary"] == ""
 
 
 def test_newsroom_posts_refresh_replace_and_list(app_env) -> None:
@@ -96,14 +137,45 @@ def test_newsroom_posts_refresh_replace_and_list(app_env) -> None:
         def fetch_detail(self, article_no: str, *, offset: int = 0, limit: int = 16) -> str:
             return _fixture("press_detail.html")
 
+    class AlumniInterviewFixtureSource(AlumniInterviewSource):
+        def fetch_list(self, *, offset: int = 0, limit: int = 16) -> str:
+            return _fixture("newsroom_interview_list.html")
+
+        def fetch_detail(self, article_no: str, *, offset: int = 0, limit: int = 16) -> str:
+            return _fixture("newsroom_interview_detail.html")
+
+    class PromoVideoFixtureSource(PromoVideoSource):
+        def fetch_list(self, *, offset: int = 0, limit: int = 16) -> str:
+            return _fixture("newsroom_media_list.html")
+
+        def fetch_detail(self, article_no: str, *, offset: int = 0, limit: int = 16) -> str:
+            return _fixture("newsroom_media_detail.html")
+
     with connection() as conn:
         refresh_newsroom_posts_from_source(
             conn,
-            sources=[PhotoFixtureSource(), PressFixtureSource()],
+            sources=[
+                PhotoFixtureSource(),
+                PressFixtureSource(),
+                AlumniInterviewFixtureSource(),
+                PromoVideoFixtureSource(),
+            ],
             fetched_at="2026-03-24T00:00:00+09:00",
         )
         all_posts = list_newsroom_posts(conn, limit=20)
         filtered = list_newsroom_posts(conn, topic="press", query="지역사회", limit=20)
+        alumni_filtered = list_newsroom_posts(
+            conn,
+            topic="alumni_interview",
+            query="김승환",
+            limit=20,
+        )
+        promo_filtered = list_newsroom_posts(
+            conn,
+            topic="promo_video",
+            query="베트남어",
+            limit=20,
+        )
 
         refresh_newsroom_posts_from_source(
             conn,
@@ -112,8 +184,17 @@ def test_newsroom_posts_refresh_replace_and_list(app_env) -> None:
         )
         replaced = list_newsroom_posts(conn, limit=20)
 
-    assert [post.topic for post in all_posts] == ["photo_news", "press"]
+    assert [post.topic for post in all_posts] == [
+        "alumni_interview",
+        "photo_news",
+        "press",
+        "promo_video",
+    ]
     assert [post.title for post in filtered] == ["가톨릭대, 지역사회 협력 성과 발표"]
+    assert [post.title for post in alumni_filtered] == [
+        "키스자산평가 파생평가본부 스왑실장 김승환 동문"
+    ]
+    assert [post.title for post in promo_filtered] == ["가톨릭대학교 홍보영상 (베트남어)"]
     assert [post.topic for post in replaced] == ["photo_news"]
 
 
@@ -154,14 +235,26 @@ def test_newsroom_posts_http_route_filters_and_rejects_invalid_topic(app_env) ->
                     "last_synced_at": "2026-03-24T00:00:00+09:00",
                 },
                 {
-                    "topic": "press",
+                    "topic": "alumni_interview",
                     "article_no": "400",
-                    "title": "가톨릭대, 지역사회 협력 성과 발표",
+                    "title": "키스자산평가 파생평가본부 스왑실장 김승환 동문",
                     "published_at": "2026-03-11",
-                    "summary": "가톨릭뉴스",
+                    "summary": "김승환 동문 인터뷰",
                     "thumbnail_url": None,
-                    "external_url": "https://media.example.com/cuk-press",
-                    "source_url": "https://www.catholic.ac.kr/ko/newsroom/press.do",
+                    "external_url": None,
+                    "source_url": "https://www.catholic.ac.kr/ko/newsroom/interview.do",
+                    "source_tag": "cuk_newsroom_posts",
+                    "last_synced_at": "2026-03-24T00:00:00+09:00",
+                },
+                {
+                    "topic": "promo_video",
+                    "article_no": "600",
+                    "title": "가톨릭대학교 홍보영상 (베트남어)",
+                    "published_at": "2025-12-08",
+                    "summary": "",
+                    "thumbnail_url": "https://example.com/video.jpg",
+                    "external_url": None,
+                    "source_url": "https://www.catholic.ac.kr/ko/newsroom/media.do",
                     "source_tag": "cuk_newsroom_posts",
                     "last_synced_at": "2026-03-24T00:00:00+09:00",
                 },
@@ -172,12 +265,18 @@ def test_newsroom_posts_http_route_filters_and_rejects_invalid_topic(app_env) ->
     with TestClient(app) as client:
         response = client.get(
             "/newsroom-posts",
-            params={"topic": "press", "query": "지역사회", "limit": 5},
+            params={"topic": "alumni_interview", "query": "김승환", "limit": 5},
+        )
+        promo_response = client.get(
+            "/newsroom-posts",
+            params={"topic": "promo_video", "query": "베트남어", "limit": 5},
         )
         invalid = client.get("/newsroom-posts", params={"topic": "not-a-topic"})
 
     assert response.status_code == 200
-    assert [item["topic"] for item in response.json()] == ["press"]
+    assert [item["topic"] for item in response.json()] == ["alumni_interview"]
+    assert promo_response.status_code == 200
+    assert [item["topic"] for item in promo_response.json()] == ["promo_video"]
     assert invalid.status_code == 400
 
 

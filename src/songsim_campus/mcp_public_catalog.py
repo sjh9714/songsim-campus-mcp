@@ -175,7 +175,8 @@ def public_usage_guide_text() -> str:
                 "Use tool_list_dormitory_guides for dormitory guidance and "
                 "tool_list_campus_life_support_guides for health center, lost and found, "
                 "parking, counseling, disability support, reservist guidance, hospital use, "
-                "facility rental, personal mobility safety guidance, and career counseling."
+                "facility rental, personal mobility safety guidance, career counseling, "
+                "and IT service guidance."
             ),
             (
                 "Example: 성심교정 기숙사 안내해줘 / 기숙사 입사안내 어디서 봐? / "
@@ -184,6 +185,7 @@ def public_usage_guide_text() -> str:
                 "장애학생지원센터 뭐 해줘? / 예비군 신고 시기 알려줘 / "
                 "부속병원 이용 안내해줘 / 성심교정 대관안내 알려줘 / "
                 "개인형 이동장치 안전교육 알려줘 / 진로/취업 상담 어디서 신청해? / "
+                "웹메일 신청이나 Office 365 이용 방법 알려줘 / "
                 "헬스장 어디야 / 편의점 어디야"
             ),
             "",

@@ -2660,6 +2660,7 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "student_reservist",
         "hospital_use",
         "career_counseling",
+        "it_service",
     }
 
 
@@ -2684,3 +2685,48 @@ def test_public_synthetic_smoke_documents_dormitory_affiliated_body_search() -> 
     assert "`body_text`" in smoke_doc
     assert "기숙사 affiliated notice 제목/요약/본문 검색" in audit_doc
     assert "`기숙사`의 상세 board / 본문 검색 확장" not in audit_doc
+
+
+def test_release_docs_track_completion_loop_topics_without_goal_surface() -> None:
+    root = DEFAULT_CORPUS_PATH.parents[2]
+    source_registry = (root / "docs" / "source_registry.md").read_text(encoding="utf-8")
+    smoke_doc = (root / "docs" / "qa" / "public-synthetic-smoke.md").read_text(
+        encoding="utf-8"
+    )
+    audit_doc = (
+        root / "docs" / "qa" / "main-site-coverage-audit-2026-03-17.md"
+    ).read_text(encoding="utf-8")
+    combined_docs = "\n".join([source_registry, smoke_doc, audit_doc])
+
+    for implemented_source in (
+        "https://www.catholic.ac.kr/ko/campuslife/itservice.do",
+        "https://www.catholic.ac.kr/ko/newsroom/interview.do",
+        "https://www.catholic.ac.kr/ko/newsroom/media.do",
+        "https://www.catholic.ac.kr/ko/about/educational_philosophy.do",
+        "https://www.catholic.ac.kr/ko/about/educational_brand.do",
+        "https://www.catholic.ac.kr/ko/about/president_greeting.do",
+        "https://www.catholic.ac.kr/ko/about/president_profile.do",
+        "https://www.catholic.ac.kr/ko/about/president_moto.do",
+        "https://www.catholic.ac.kr/ko/about/former_president.do",
+    ):
+        assert implemented_source in source_registry
+
+    for implemented_topic in (
+        "it_service",
+        "alumni_interview",
+        "promo_video",
+        "education_philosophy",
+        "catholic_education_brand",
+        "president_office_static",
+    ):
+        assert implemented_topic in smoke_doc
+        assert implemented_topic in audit_doc
+
+    assert "not release gate" not in smoke_doc
+    assert "SNS/Instagram" in combined_docs
+    assert "uPortal/e-Cyber" in combined_docs
+    slash = "/"
+    goal = "goal"
+    assert "GET " + slash + goal not in combined_docs
+    assert "songsim:" + slash + slash + goal not in combined_docs
+    assert "Goal" + "Snapshot" not in combined_docs

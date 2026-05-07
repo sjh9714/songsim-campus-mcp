@@ -88,10 +88,14 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "요람" in payloads["tool_list_about_resource_guides"]["description"]
     assert "학사제도안내책자" in payloads["tool_list_about_resource_guides"]["description"]
     assert "캠퍼스투어" in payloads["tool_list_about_resource_guides"]["description"]
+    assert "교육이념" in payloads["tool_list_about_resource_guides"]["description"]
+    assert "총장실" in payloads["tool_list_about_resource_guides"]["description"]
     assert "개인정보처리방침" in payloads["tool_list_service_policy_guides"]["description"]
     assert "청탁금지법" in payloads["tool_list_service_policy_guides"]["description"]
     assert "포토뉴스" in payloads["tool_list_newsroom_posts"]["description"]
     assert "보도자료" in payloads["tool_list_newsroom_posts"]["description"]
+    assert "동문 인터뷰" in payloads["tool_list_newsroom_posts"]["description"]
+    assert "홍보영상" in payloads["tool_list_newsroom_posts"]["description"]
     assert "외부 언론 본문" in payloads["tool_list_newsroom_posts"]["description"]
     assert "해외협정대학" in payloads["tool_search_student_exchange_partners"]["description"]
     assert "네덜란드" in payloads["tool_search_student_exchange_partners"]["description"]
@@ -106,6 +110,7 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "부속병원" in payloads["tool_list_campus_life_support_guides"]["description"]
     assert "대관안내" in payloads["tool_list_campus_life_support_guides"]["description"]
     assert "진로/취업 상담" in payloads["tool_list_campus_life_support_guides"]["description"]
+    assert "IT서비스" in payloads["tool_list_campus_life_support_guides"]["description"]
     assert "개인형 이동장치 안전교육" in (
         payloads["tool_list_campus_life_support_guides"]["description"]
     )
@@ -189,6 +194,16 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
             "description"
         ]
     )
+    assert "education_philosophy" in (
+        payloads["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "president_office_static" in (
+        payloads["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
     assert "privacy_policy" in (
         payloads["tool_list_service_policy_guides"]["inputSchema"]["properties"]["topic"][
             "description"
@@ -205,6 +220,16 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
         ]
     )
     assert "press" in (
+        payloads["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "alumni_interview" in (
+        payloads["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "promo_video" in (
         payloads["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
             "description"
         ]

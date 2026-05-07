@@ -192,6 +192,42 @@ class HistoryGuideSource(AboutResourceGuideSourceBase):
         return rows
 
 
+class EducationPhilosophyGuideSource(AboutResourceGuideSourceBase):
+    topic = "education_philosophy"
+    default_title = "교육이념"
+
+    def __init__(
+        self,
+        url: str = "https://www.catholic.ac.kr/ko/about/educational_philosophy.do",
+    ):
+        super().__init__(url)
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        rows = super().parse(html, fetched_at=fetched_at)
+        rows[0]["summary"] = (
+            "건학이념, 교육이념, 교육목표, CUK 핵심역량을 공식 페이지에서 확인할 수 있습니다."
+        )
+        return rows
+
+
+class CatholicEducationBrandGuideSource(AboutResourceGuideSourceBase):
+    topic = "catholic_education_brand"
+    default_title = "가톨릭교육브랜드"
+
+    def __init__(
+        self,
+        url: str = "https://www.catholic.ac.kr/ko/about/educational_brand.do",
+    ):
+        super().__init__(url)
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        rows = super().parse(html, fetched_at=fetched_at)
+        rows[0]["summary"] = (
+            "DESIGNer 학년제와 Trinity 역량 통합교육과정 안내를 공식 페이지에서 확인할 수 있습니다."
+        )
+        return rows
+
+
 class ChurchLiteratureGuideSource(AboutResourceGuideSourceBase):
     topic = "church_literature"
     default_title = "가톨릭대학교회문헌"
@@ -229,6 +265,50 @@ class ChurchLiteratureGuideSource(AboutResourceGuideSourceBase):
             },
         ]
         return rows
+
+
+class PresidentOfficeStaticGuideSource(AboutResourceGuideSourceBase):
+    topic = "president_office_static"
+    default_title = "총장실"
+
+    def __init__(
+        self,
+        url: str = "https://www.catholic.ac.kr/ko/about/president_greeting.do",
+        *,
+        profile_url: str = "https://www.catholic.ac.kr/ko/about/president_profile.do",
+        moto_url: str = "https://www.catholic.ac.kr/ko/about/president_moto.do",
+        former_president_url: str = "https://www.catholic.ac.kr/ko/about/former_president.do",
+    ):
+        super().__init__(url)
+        self.profile_url = profile_url
+        self.moto_url = moto_url
+        self.former_president_url = former_president_url
+
+    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
+        return [
+            {
+                "topic": self.topic,
+                "title": self.default_title,
+                "summary": (
+                    "총장 인사말, 프로필, 모토, 역대총장 공식 페이지 링크를 확인할 수 있습니다."
+                ),
+                "steps": [
+                    "총장 인사말은 공식 총장실 인사말 페이지에서 확인합니다.",
+                    "프로필은 공식 프로필 페이지에서 약력, 논문, 저서를 확인합니다.",
+                    "모토는 공식 모토 페이지에서 생명과 진리를 향한 설명을 확인합니다.",
+                    "역대총장은 공식 역대총장 페이지에서 통합 이후와 통합 이전 정보를 확인합니다.",
+                ],
+                "links": [
+                    {"label": "총장 인사말", "url": self.url},
+                    {"label": "총장 프로필", "url": self.profile_url},
+                    {"label": "총장 모토", "url": self.moto_url},
+                    {"label": "역대총장", "url": self.former_president_url},
+                ],
+                "source_url": self.url,
+                "source_tag": self.source_tag,
+                "last_synced_at": fetched_at,
+            }
+        ]
 
 
 class BudgetAccountGuideSource(AboutResourceGuideSourceBase):

@@ -14,6 +14,7 @@ from songsim_campus.ingest.campus_life_support_guides import (
     FacilityRentalGuideSource,
     HealthCenterGuideSource,
     HospitalUseGuideSource,
+    ITServiceGuideSource,
     LostFoundGuideSource,
     MobilitySafetyGuideSource,
     ParkingGuideSource,
@@ -66,6 +67,7 @@ def test_campus_life_support_source_defaults() -> None:
     disability_support = DisabilitySupportGuideSource()
     student_reservist = StudentReservistGuideSource()
     hospital_use = HospitalUseGuideSource()
+    it_service = ITServiceGuideSource()
     career_counseling_source = getattr(
         campus_life_support_guides_ingest,
         "CareerCounselingGuideSource",
@@ -83,6 +85,7 @@ def test_campus_life_support_source_defaults() -> None:
     assert disability_support.topic == "disability_support"
     assert student_reservist.topic == "student_reservist"
     assert hospital_use.topic == "hospital_use"
+    assert it_service.topic == "it_service"
     assert career_counseling.topic == "career_counseling"
     assert health.source_tag == "cuk_campus_life_support_guides"
     assert lost_found.source_tag == "cuk_campus_life_support_guides"
@@ -93,6 +96,7 @@ def test_campus_life_support_source_defaults() -> None:
     assert disability_support.source_tag == "cuk_campus_life_support_guides"
     assert student_reservist.source_tag == "cuk_campus_life_support_guides"
     assert hospital_use.source_tag == "cuk_campus_life_support_guides"
+    assert it_service.source_tag == "cuk_campus_life_support_guides"
     assert career_counseling.source_tag == "cuk_campus_life_support_guides"
     assert health.url.endswith("/campuslife/health.do")
     assert lost_found.url.endswith("/campuslife/find.do")
@@ -103,6 +107,7 @@ def test_campus_life_support_source_defaults() -> None:
     assert disability_support.url.endswith("/campuslife/disability_service.do")
     assert student_reservist.url.endswith("/campuslife/student_reservist.do")
     assert hospital_use.url.endswith("/campuslife/hospital1.do")
+    assert it_service.url.endswith("/campuslife/itservice.do")
     assert career_counseling.url == (
         "https://career.catholic.ac.kr/career/job/job_counseling.do"
     )
@@ -375,6 +380,71 @@ def test_career_counseling_guide_parser_extracts_expected_core_details() -> None
     ]
 
 
+def test_it_service_guide_parser_extracts_expected_core_details() -> None:
+    rows = ITServiceGuideSource().parse(
+        _fixture("itservice.do.html"),
+        fetched_at="2026-05-07T00:00:00+09:00",
+    )
+
+    assert [row["title"] for row in rows] == [
+        "uCUPS 서비스",
+        "웹메일 서비스",
+        "카카오채널 이용안내",
+        "Microsoft Office 365 Program",
+        "마리아관 실습실 이용안내",
+        "바이러스 백신 설치",
+    ]
+    assert {row["topic"] for row in rows} == {"it_service"}
+    assert {row["source_tag"] for row in rows} == {"cuk_campus_life_support_guides"}
+
+    ucups, webmail, kakao_channel, office365, maria_lab, v3 = rows
+    assert ucups["summary"] == "출력물 사용관련 오류 해결방법 안내"
+    assert any("출력물 조회시 빈페이지만 보이는 경우" in step for step in ucups["steps"])
+    assert ucups["links"] == [
+        {
+            "label": "출력프로그램(Report Designer 5.0 OCX Viewer) 설치",
+            "url": "https://www.catholic.ac.kr/_res/cuk/ko/etc/ReportDesigner.exe",
+        }
+    ]
+
+    assert webmail["summary"] == "신청방법"
+    assert any("회원가입 신청 후, 관리자의 승인 후 이용 가능" in step for step in webmail["steps"])
+    assert any("6개월간 로그인 기록이 없는 ID(계정)" in step for step in webmail["steps"])
+    assert any("전화번호: 02 - 740 - 9749" in step for step in webmail["steps"])
+    assert webmail["links"] == [
+        {
+            "label": "웹메일 홈페이지 바로가기",
+            "url": "https://zm902.mailplug.com/member/login?host_domain=catholic.ac.kr&",
+        },
+        {
+            "label": "웹메일 공지사항 바로가기",
+            "url": "https://www.catholic.ac.kr/ko/service/webmail_notice.do",
+        },
+    ]
+
+    assert kakao_channel["summary"].startswith("‘가톨릭대학교 성심교정’ 카카오채널")
+    assert any("가톨릭대학교성심교정" in step for step in kakao_channel["steps"])
+    assert kakao_channel["links"] == [
+        {"label": "홈페이지 바로가기", "url": "http://pf.kakao.com/_xeYxgan"}
+    ]
+
+    assert office365["summary"].startswith("Microsoft에서는 학생과 교직원에게 무상")
+    assert any("트리니티 접속" in step for step in office365["steps"])
+    assert any("졸업생, 수료생은 이용 불가" in step for step in office365["steps"])
+
+    assert maria_lab["summary"].startswith("교내 모든 알림 사항은 가대톡")
+    assert any("명칭: 제1실습실" in step and "장소: M307" in step for step in maria_lab["steps"])
+    assert any("사용가능한 S/W: 한글, MS-OFFICE, SPSS" in step for step in maria_lab["steps"])
+
+    assert v3["summary"] == (
+        "교내 사용자들을 위한 컴퓨터 바이러스 백신입니다. (교내에서만 설치 가능합니다.)"
+    )
+    assert any("V3백신 Agent 파일" in step for step in v3["steps"])
+    assert v3["links"] == [
+        {"label": "V3 백신 설치페이지 바로가기", "url": "http://mypc.catholic.ac.kr:8810/"}
+    ]
+
+
 def test_disability_support_guide_parser_extracts_expected_core_details() -> None:
     rows = DisabilitySupportGuideSource().parse(
         _fixture("disability_service.do.html"),
@@ -601,9 +671,15 @@ def test_campus_life_support_guides_accepts_newer_topics(app_env) -> None:
             topic="career_counseling",
             limit=5,
         )
+        it_guides = list_campus_life_support_guides(
+            conn,
+            topic="it_service",
+            limit=5,
+        )
 
     assert mobility_guides == []
     assert career_guides == []
+    assert it_guides == []
 
 
 def test_campus_life_support_http_and_mcp_surfaces(client, app_env, monkeypatch):
@@ -655,6 +731,17 @@ def test_campus_life_support_http_and_mcp_surfaces(client, app_env, monkeypatch)
                         ],
                     )
                 ),
+                FakeGuideSource(
+                    _guide_row(
+                        topic="it_service",
+                        title="웹메일 서비스",
+                        summary="웹메일 홈페이지로 접속하여 회원가입 메뉴를 통해 등록합니다.",
+                        steps=[
+                            "웹메일 홈페이지로 접속하여 회원가입 메뉴를 통해 등록합니다.",
+                            "Microsoft Office 365 Program",
+                        ],
+                    )
+                ),
             ],
         )
 
@@ -663,12 +750,18 @@ def test_campus_life_support_http_and_mcp_surfaces(client, app_env, monkeypatch)
         "/campus-life-support-guides",
         params={"topic": "career_counseling", "limit": 5},
     )
+    it_response = client.get(
+        "/campus-life-support-guides",
+        params={"topic": "it_service", "limit": 5},
+    )
     assert response.status_code == 200
     http_payload = response.json()
     assert http_payload[0]["topic"] == "parking"
     assert http_payload[0]["source_tag"] == "cuk_campus_life_support_guides"
     assert career_response.status_code == 200
     assert career_response.json()[0]["topic"] == "career_counseling"
+    assert it_response.status_code == 200
+    assert it_response.json()[0]["topic"] == "it_service"
 
     monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
     clear_settings_cache()
@@ -696,6 +789,7 @@ def test_campus_life_support_http_and_mcp_surfaces(client, app_env, monkeypatch)
     assert "songsim://campus-life-support-guide" in resource_uris
     assert "보건실" in tool_payloads["tool_list_campus_life_support_guides"]["description"]
     assert "진로/취업 상담" in tool_payloads["tool_list_campus_life_support_guides"]["description"]
+    assert "IT서비스" in tool_payloads["tool_list_campus_life_support_guides"]["description"]
     assert "parking" in (
         tool_payloads["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
             "description"
@@ -706,11 +800,17 @@ def test_campus_life_support_http_and_mcp_surfaces(client, app_env, monkeypatch)
             "description"
         ]
     )
+    assert "it_service" in (
+        tool_payloads["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
     assert tool_payload["topic"] == "health_center"
     assert tool_payload["guide_summary"].startswith("보건실은 학생과 교직원의 건강")
     assert {item["topic"] for item in resource_payload} == {
         "career_counseling",
         "health_center",
+        "it_service",
         "parking",
     }
 

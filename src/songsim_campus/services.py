@@ -33,14 +33,18 @@ from .ingest.about_resource_guides import (
     AcademicHandbookGuideSource,
     BudgetAccountGuideSource,
     CampusTourGuideSource,
+    CatholicEducationBrandGuideSource,
     ChurchLiteratureGuideSource,
+    EducationPhilosophyGuideSource,
     HistoryGuideSource,
+    PresidentOfficeStaticGuideSource,
     RuleGuideSource,
     UniversityBulletinGuideSource,
 )
 from .ingest.campus_life_support_guides import (
     FacilityRentalGuideSource,
     HealthCenterGuideSource,
+    ITServiceGuideSource,
     LostFoundGuideSource,
     MobilitySafetyGuideSource,
     ParkingGuideSource,
@@ -51,8 +55,10 @@ from .ingest.kakao_places import (
     KakaoPlaceDetailClient,
 )
 from .ingest.newsroom_posts import (
+    AlumniInterviewSource,
     PhotoNewsSource,
     PressSource,
+    PromoVideoSource,
 )
 from .ingest.official_sources import (
     AcademicCalendarSource,
@@ -208,6 +214,7 @@ STUDENT_RESERVIST_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/s
 HOSPITAL_USE_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/hospital1.do"
 MOBILITY_SAFETY_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/service/safety.do"
 FACILITY_RENTAL_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/rent_songsim.do"
+IT_SERVICE_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/itservice.do"
 CAREER_COUNSELING_GUIDE_SOURCE_URL = (
     "https://career.catholic.ac.kr/career/job/job_counseling.do"
 )
@@ -240,8 +247,11 @@ ABOUT_RESOURCE_GUIDE_SOURCE_URLS = {
     "academic_handbook": "https://www.catholic.ac.kr/ko/about/brochure_rule.do",
     "campus_tour": "https://www.catholic.ac.kr/ko/about/campus_tour.do",
     "history": "https://www.catholic.ac.kr/ko/about/history.do",
+    "education_philosophy": "https://www.catholic.ac.kr/ko/about/educational_philosophy.do",
+    "catholic_education_brand": "https://www.catholic.ac.kr/ko/about/educational_brand.do",
     "church_literature": "https://www.catholic.ac.kr/ko/about/church_literature2.do",
     "budget_account": "https://www.catholic.ac.kr/ko/about/budgetaccount.do",
+    "president_office_static": "https://www.catholic.ac.kr/ko/about/president_greeting.do",
 }
 SERVICE_POLICY_GUIDE_SOURCE_URLS = {
     "bidding": "https://www.catholic.ac.kr/ko/service/Bidding.do",
@@ -253,6 +263,8 @@ SERVICE_POLICY_GUIDE_SOURCE_URLS = {
 NEWSROOM_POST_SOURCE_URLS = {
     "photo_news": "https://www.catholic.ac.kr/ko/newsroom/photonews.do",
     "press": "https://www.catholic.ac.kr/ko/newsroom/press.do",
+    "alumni_interview": "https://www.catholic.ac.kr/ko/newsroom/interview.do",
+    "promo_video": "https://www.catholic.ac.kr/ko/newsroom/media.do",
 }
 RETURN_FROM_LEAVE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/return_from_leave_of_absence.do"
 DROPOUT_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/dropout.do"
@@ -305,6 +317,7 @@ CAMPUS_LIFE_SUPPORT_GUIDE_TOPICS = {
     "student_reservist",
     "hospital_use",
     "career_counseling",
+    "it_service",
 }
 StudentCounselingGuideSource = getattr(
     campus_life_support_guides_ingest,
@@ -559,8 +572,11 @@ ABOUT_RESOURCE_GUIDE_TOPICS = {
     "academic_handbook",
     "campus_tour",
     "history",
+    "education_philosophy",
+    "catholic_education_brand",
     "church_literature",
     "budget_account",
+    "president_office_static",
 }
 SERVICE_POLICY_GUIDE_TOPICS = {
     "bidding",
@@ -569,7 +585,7 @@ SERVICE_POLICY_GUIDE_TOPICS = {
     "cctv_policy",
     "anti_graft",
 }
-NEWSROOM_POST_TOPICS = {"photo_news", "press"}
+NEWSROOM_POST_TOPICS = {"photo_news", "press", "alumni_interview", "promo_video"}
 DORMITORY_GUIDE_TOPICS = {"hall_info", "quick_links", "latest_notices", "fees"}
 AFFILIATED_NOTICE_TOPICS = {
     "international_studies",
@@ -3199,7 +3215,8 @@ def list_about_resource_guides(
     if normalized_topic and normalized_topic not in ABOUT_RESOURCE_GUIDE_TOPICS:
         raise InvalidRequestError(
             "topic must be one of rules, university_bulletin, academic_handbook, "
-            "campus_tour, history, church_literature, budget_account."
+            "campus_tour, history, education_philosophy, catholic_education_brand, "
+            "church_literature, budget_account, president_office_static."
         )
     return [
         AboutResourceGuide.model_validate(item)
@@ -3226,8 +3243,17 @@ def refresh_about_resource_guides_from_source(
             AcademicHandbookGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["academic_handbook"]),
             CampusTourGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["campus_tour"]),
             HistoryGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["history"]),
+            EducationPhilosophyGuideSource(
+                ABOUT_RESOURCE_GUIDE_SOURCE_URLS["education_philosophy"]
+            ),
+            CatholicEducationBrandGuideSource(
+                ABOUT_RESOURCE_GUIDE_SOURCE_URLS["catholic_education_brand"]
+            ),
             ChurchLiteratureGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["church_literature"]),
             BudgetAccountGuideSource(ABOUT_RESOURCE_GUIDE_SOURCE_URLS["budget_account"]),
+            PresidentOfficeStaticGuideSource(
+                ABOUT_RESOURCE_GUIDE_SOURCE_URLS["president_office_static"]
+            ),
         ]
     synced_at = fetched_at or _now_iso()
     rows: list[dict[str, Any]] = []
@@ -3299,7 +3325,8 @@ def list_newsroom_posts(
     normalized_topic = topic.strip() if topic else None
     normalized_query = query.strip() if query else None
     if normalized_topic and normalized_topic not in NEWSROOM_POST_TOPICS:
-        raise InvalidRequestError("topic must be one of photo_news, press.")
+        allowed_topics = ", ".join(sorted(NEWSROOM_POST_TOPICS))
+        raise InvalidRequestError(f"topic must be one of {allowed_topics}.")
     return [
         NewsroomPost.model_validate(item)
         for item in repo.list_newsroom_posts(
@@ -3322,6 +3349,8 @@ def refresh_newsroom_posts_from_source(
         sources = [
             PhotoNewsSource(NEWSROOM_POST_SOURCE_URLS["photo_news"]),
             PressSource(NEWSROOM_POST_SOURCE_URLS["press"]),
+            AlumniInterviewSource(NEWSROOM_POST_SOURCE_URLS["alumni_interview"]),
+            PromoVideoSource(NEWSROOM_POST_SOURCE_URLS["promo_video"]),
         ]
     synced_at = fetched_at or _now_iso()
     rows: list[dict[str, Any]] = []
@@ -3550,7 +3579,7 @@ def list_campus_life_support_guides(
         raise InvalidRequestError(
             "topic must be one of health_center, lost_found, parking, mobility_safety, "
             "facility_rental, student_counseling, disability_support, student_reservist, "
-            "hospital_use, career_counseling."
+            "hospital_use, career_counseling, it_service."
         )
     return [
         CampusLifeSupportGuide.model_validate(item)
@@ -5620,6 +5649,7 @@ def refresh_campus_life_support_guides_from_source(
         ParkingGuideSource(CAMPUS_PARKING_GUIDE_SOURCE_URL),
         MobilitySafetyGuideSource(MOBILITY_SAFETY_GUIDE_SOURCE_URL),
         FacilityRentalGuideSource(FACILITY_RENTAL_GUIDE_SOURCE_URL),
+        ITServiceGuideSource(IT_SERVICE_GUIDE_SOURCE_URL),
         *[
             source_cls(url)
             for source_cls, url in [
