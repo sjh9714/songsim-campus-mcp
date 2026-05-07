@@ -1144,6 +1144,8 @@ def register_shared_tools(
         description=(
             (
                 "캠퍼스 출발지 기준으로 주변 식당을 찾을 때 사용합니다. "
+                "Kakao Local 외부 공개 API 기반 편의 기능이며, 학교 공식 1차 "
+                "source coverage와 별도 범주입니다. "
                 "origin, 예산(budget_max), open_now, walk_minutes를 함께 줄 수 있습니다. "
                 "origin은 slug, 대표 이름, alias(예: 중도, 학생식당)를 받을 수 있습니다. "
                 "출발지가 모호하면 tool_search_places를 먼저 사용합니다. budget_max를 "
@@ -1224,6 +1226,8 @@ def register_shared_tools(
         description=(
             (
                 "브랜드나 상호를 직접 검색할 때 사용합니다. "
+                "Kakao Local 외부 공개 API 기반 편의 기능이며, 학교 공식 1차 "
+                "source coverage와 별도 범주입니다. "
                 "매머드커피, 메가커피, 이디야, 스타벅스처럼 nearby 추천이 아니라 "
                 "이름으로 특정 매장을 찾고 싶을 때 적합합니다."
             )

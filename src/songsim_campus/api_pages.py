@@ -583,8 +583,16 @@ def render_landing_page(
               <code>/classrooms/empty</code> official realtime classrooms first,
               estimated fallback
             </li>
-            <li><code>/restaurants/nearby</code> walkable food recommendations</li>
-            <li><code>/restaurants/search</code> direct cafe and brand lookup</li>
+            <li>
+              <code>/restaurants/nearby</code> walkable food recommendations
+              via Kakao Local external public API, separate from official
+              first-party university source coverage
+            </li>
+            <li>
+              <code>/restaurants/search</code> direct cafe and brand lookup
+              via Kakao Local external public API, separate from official
+              first-party university source coverage
+            </li>
             <li><code>/notices</code> latest public campus notices</li>
             <li><code>/transport</code> Songsim transit guides</li>
           </ul>

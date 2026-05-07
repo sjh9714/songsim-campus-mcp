@@ -1,6 +1,6 @@
 # songsim-campus-mcp
 
-`songsim-campus-mcp`는 가톨릭대학교 성심교정 학생이 자주 묻는 학사·생활 정보를 **공식 source 기반 Remote MCP + HTTP API**로 제공하는 캠퍼스 도우미 서버입니다. 공지, 학사일정, 건물/연락처, 강의, 도서관 좌석, 식당, Wi-Fi, IT서비스, 기숙사와 생활지원 정보를 LLM 클라이언트에서 읽기 전용으로 조회할 수 있게 구성했습니다.
+`songsim-campus-mcp`는 가톨릭대학교 성심교정 학생이 자주 묻는 학사·생활 정보를 **공식 source 중심 Remote MCP + HTTP API**로 제공하는 캠퍼스 도우미 서버입니다. 공지, 학사일정, 건물/연락처, 강의, 도서관 좌석, 식당, Wi-Fi, IT서비스, 기숙사와 생활지원 정보를 LLM 클라이언트에서 읽기 전용으로 조회할 수 있게 구성했습니다. 주변 식당 검색은 학교 공식 1차 source가 아니라 Kakao Local 외부 공개 API 기반 편의 기능으로 분리해 표시합니다.
 
 ## 문제의식
 
@@ -92,6 +92,7 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 
 - 학교 공식 source에 없는 값은 만들지 않습니다.
 - 없거나 불확실한 값은 `null`, 빈 결과, 또는 명시적인 fallback 상태로 반환합니다.
+- 주변 식당/브랜드 검색은 Kakao Local 외부 공개 API 기반 편의 surface이며, 학교 공식 1차 source coverage와 별도 범주로 봅니다.
 - 도서관 좌석은 live fetch 후 stale fallback을 사용할 수 있습니다.
 - 예상 빈 강의실은 realtime source를 먼저 시도하고, 없으면 시간표 기준 예상 공실로 폴백합니다.
 - 기본 공개 surface는 profile 개인화, 내부 admin, observability, GPT Actions packaging layer를 중심 기능으로 두지 않습니다.

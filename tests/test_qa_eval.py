@@ -2876,3 +2876,25 @@ def test_release_docs_track_completion_loop_topics_without_goal_surface() -> Non
     assert "GET " + slash + goal not in combined_docs
     assert "songsim:" + slash + slash + goal not in combined_docs
     assert "Goal" + "Snapshot" not in combined_docs
+
+
+def test_release_docs_keep_kakao_restaurants_as_external_convenience_surface() -> None:
+    root = DEFAULT_CORPUS_PATH.parents[2]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    source_registry = (root / "docs" / "source_registry.md").read_text(encoding="utf-8")
+    smoke_doc = (root / "docs" / "qa" / "public-synthetic-smoke.md").read_text(
+        encoding="utf-8"
+    )
+    audit_doc = (
+        root / "docs" / "qa" / "main-site-coverage-audit-2026-03-17.md"
+    ).read_text(encoding="utf-8")
+    combined_docs = "\n".join([readme, source_registry, smoke_doc, audit_doc])
+
+    assert "/restaurants/nearby" in combined_docs
+    assert "/restaurants/search" in combined_docs
+    assert "Kakao Local 외부 공개 API" in combined_docs
+    assert "학교 공식 1차 source가 아닌 학생 편의 기능" in source_registry
+    assert "공식 1차 source coverage와 별도 범주" in combined_docs
+    assert "Kakao Local 외부 공개 API 기반 편의" in readme
+    assert "Kakao Local 외부 공개 API 기반 편의" in smoke_doc
+    assert "Kakao Local 외부 공개 API 기반 편의" in audit_doc

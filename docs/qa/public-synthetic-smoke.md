@@ -301,6 +301,9 @@ curl -fsS "$PUBLIC_HTTP_URL/phone-book?query=%EB%B3%B4%EA%B1%B4%EC%8B%A4&limit=1
 
 ## 8. Nearby restaurants HTTP smoke
 
+이 smoke는 학교 공식 1차 source가 아니라 Kakao Local 외부 공개 API 기반 편의
+surface를 확인합니다. 공식 학식/시설 source coverage와 별도로 해석합니다.
+
 ```bash
 curl -fsS "$PUBLIC_HTTP_URL/restaurants/nearby?origin=%EC%A4%91%EB%8F%84&limit=3"
 curl -fsS "$PUBLIC_HTTP_URL/restaurants/nearby?origin=%ED%95%99%EC%83%9D%EC%8B%9D%EB%8B%B9&open_now=true&category=cafe&limit=3"

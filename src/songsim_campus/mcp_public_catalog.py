@@ -156,6 +156,10 @@ def public_usage_guide_text() -> str:
                 "tool_search_pc_software for food and campus computing resources."
             ),
             (
+                "Restaurant nearby/brand search is a Kakao Local external public API "
+                "convenience surface, separate from first-party university source coverage."
+            ),
+            (
                 "Library seats are best-effort live lookups with stale fallback. Empty "
                 "classrooms prefer 공식 실시간 data and fall back to timetable-based "
                 "예상 공실 results."

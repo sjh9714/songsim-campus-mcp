@@ -39,8 +39,8 @@
 | cuk_academic_support_guides | 공식 | https://www.catholic.ac.kr/ko/support/academic_contact_information.do | 중간 | implemented | 학사지원팀 업무안내 표를 `academic_support_guides` current snapshot으로 정규화 |
 | cuk_wifi_guides | 공식 | https://www.catholic.ac.kr/ko/campuslife/wifi.do | 중간 | implemented | 무선랜서비스 HTML 표를 `wifi_guides` current snapshot으로 정규화 |
 | cuk_academic_calendar | 공식 | https://www.catholic.ac.kr/ko/support/calendar2024_list.do | 중간 | implemented | 공개 JSON feed(`mode=getCalendarData`)를 `academic_calendar` current snapshot으로 정규화 |
-| kakao_local | 외부 API | https://developers.kakao.com/docs/latest/ko/local/common | 높음 | implemented | API 키가 있으면 `/restaurants/nearby`와 개인화 식사 추천에서 lazy cache 기반 실시간 장소 검색 사용 |
-| kakao_place_detail | 외부 웹 | https://place.map.kakao.com/ | 중간 | implemented | Kakao place detail `panel3` 공개 흐름에서 영업시간을 best-effort로 가져와 `restaurant_hours_cache`에 lazy cache 저장 |
+| kakao_local | 외부 공개 API | https://developers.kakao.com/docs/latest/ko/local/common | 높음 | implemented | 학교 공식 1차 source가 아닌 학생 편의 기능입니다. API 키가 있으면 `/restaurants/nearby`, `/restaurants/search`, 개인화 식사 추천에서 lazy cache 기반 실시간 장소 검색을 사용하며, 공식 source coverage와 별도 범주로 표시합니다. |
+| kakao_place_detail | 외부 공개 웹 | https://place.map.kakao.com/ | 중간 | implemented | 학교 공식 1차 source가 아닌 학생 편의 기능입니다. Kakao place detail `panel3` 공개 흐름에서 영업시간을 best-effort로 가져와 `restaurant_hours_cache`에 lazy cache 저장 |
 
 ## 실시간 강의실 조사 메모
 

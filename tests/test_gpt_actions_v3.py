@@ -114,6 +114,15 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         payload["paths"]["/about-resource-guides"]["get"]["operationId"]
         == "listAboutResourceGuides"
     )
+    nearby_restaurant_description = payload["paths"]["/gpt/restaurants/nearby"]["get"][
+        "description"
+    ]
+    restaurant_search_description = payload["paths"]["/gpt/restaurants/search"]["get"][
+        "description"
+    ]
+    assert "Kakao Local external public API" in nearby_restaurant_description
+    assert "Kakao Local external public API" in restaurant_search_description
+    assert "first-party university source coverage" in restaurant_search_description
     assert (
         payload["paths"]["/gpt/notice-categories"]["get"]["operationId"]
         == "listNoticeCategoriesForGpt"

@@ -104,14 +104,19 @@ GPT_ACTION_PATHS: dict[str, dict[str, str]] = {
     "/restaurants/nearby": {
         "operationId": "findNearbyRestaurants",
         "summary": "Find nearby restaurants",
-        "description": ("Find walkable restaurants near a Songsim campus building or landmark."),
+        "description": (
+            "Find walkable restaurants near a Songsim campus building or landmark using "
+            "the Kakao Local external public API convenience surface."
+        ),
     },
     "/restaurants/search": {
         "operationId": "searchRestaurants",
         "summary": "Search restaurant brands or venue names",
         "description": (
             "Search nearby restaurant or cafe brands directly by venue name. "
-            "Use this for questions like 매머드커피 어디 있어 or 이디야 있나."
+            "This is a Kakao Local external public API convenience surface, separate "
+            "from first-party university source coverage. Use this for questions like "
+            "매머드커피 어디 있어 or 이디야 있나."
         ),
     },
     "/transport": {
@@ -176,6 +181,8 @@ GPT_ACTION_V2_PATHS: dict[str, dict[str, str]] = {
         "summary": "Find nearby restaurants with concise hints",
         "description": (
             "Use when the user asks for nearby food around a Songsim campus location. "
+            "This is a Kakao Local external public API convenience surface, separate "
+            "from first-party university source coverage. "
             "Returns concise distance, walk time, price, and location hints."
         ),
     },
@@ -184,6 +191,8 @@ GPT_ACTION_V2_PATHS: dict[str, dict[str, str]] = {
         "summary": "Search restaurant brands with concise hints",
         "description": (
             "Use when the user asks whether a specific brand or venue exists nearby. "
+            "This is a Kakao Local external public API convenience surface, separate "
+            "from first-party university source coverage. "
             "Returns concise distance, walk time, price, and location hints."
         ),
     },

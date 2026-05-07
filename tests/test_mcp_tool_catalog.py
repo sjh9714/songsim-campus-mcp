@@ -70,6 +70,7 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     assert "교내 입점명" in payloads["tool_search_places"]["description"]
     assert "브랜드" in payloads["tool_search_restaurants"]["description"]
     assert "매머드커피" in payloads["tool_search_restaurants"]["description"]
+    assert "Kakao Local 외부 공개 API" in payloads["tool_search_restaurants"]["description"]
     assert "실시간" in payloads["tool_list_estimated_empty_classrooms"]["description"]
     assert "예상 공실" in payloads["tool_list_estimated_empty_classrooms"]["description"]
     assert "등록금 고지서" in payloads["tool_list_registration_guides"]["description"]
@@ -154,6 +155,9 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
         payloads["tool_search_places"]["inputSchema"]["properties"]["query"]["description"]
     )
     assert "walk_minutes" in payloads["tool_find_nearby_restaurants"]["description"]
+    assert "Kakao Local 외부 공개 API" in (
+        payloads["tool_find_nearby_restaurants"]["description"]
+    )
     assert "payment_and_return" in (
         payloads["tool_list_registration_guides"]["inputSchema"]["properties"]["topic"]["description"]
     )
