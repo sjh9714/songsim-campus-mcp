@@ -87,7 +87,16 @@ def render_admin_sync_page(
         {"title": "seasonal_semester_guides", "fields": []},
         {"title": "academic_milestone_guides", "fields": []},
         {"title": "student_activity_guides", "fields": []},
-        {"title": "student_activity_notices", "fields": []},
+        {
+            "title": "student_activity_notices",
+            "fields": [
+                render_field(
+                    "notice_pages",
+                    "notice_pages",
+                    str(official_notice_pages),
+                )
+            ],
+        },
         {"title": "about_resource_guides", "fields": []},
         {"title": "service_policy_guides", "fields": []},
         {"title": "newsroom_posts", "fields": []},

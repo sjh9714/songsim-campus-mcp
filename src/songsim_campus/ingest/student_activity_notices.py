@@ -94,7 +94,10 @@ class StudentActivityNoticeSource:
             if anchor is None:
                 continue
             columns = item.find_all("td", recursive=False)
-            date_text = columns[-2].get_text() if len(columns) >= 2 else ""
+            date_text = columns[-3].get_text() if len(columns) >= 4 else ""
+            if not _normalize_date(date_text):
+                date_node = item.select_one(".b-date")
+                date_text = date_node.get_text() if date_node else ""
             href = unescape(str(anchor.get("href") or ""))
             article_no = str(anchor.get("data-article-no") or "") or _extract_article_no(href)
             title = _clean_text(anchor.get_text(" ", strip=True))

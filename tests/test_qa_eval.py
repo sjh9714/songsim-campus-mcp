@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from pathlib import Path
 
 import httpx
@@ -23,6 +24,7 @@ from songsim_campus.qa_eval import (
     EvalTruthRow,
     build_truth_rows,
     load_eval_rows,
+    load_truth_rows,
     render_validation_report,
     run_evaluation,
     run_row_evaluation,
@@ -1719,6 +1721,112 @@ def test_render_validation_report_includes_student_activity_guides_coverage() ->
     assert report.count("| student_activity_guides | 1 | 1 |") == 2
 
 
+def test_run_row_evaluation_summarizes_student_activity_notice_invariants() -> None:
+    row = EvalCorpusRow.model_validate(
+        {
+            "id": "SAN-0001",
+            "domain": "student_activity_notices",
+            "style": "normal",
+            "user_utterance": "동아리 모집 공지 알려줘",
+            "api_request": {
+                "path": "/student-activity-notices",
+                "params": {"topic": "club_recruitment", "limit": 5},
+            },
+            "expected_mcp_flow": "tool_list_student_activity_notices",
+            "truth_mode": "invariant_only",
+            "pass_rule": {
+                "summary_kind": "student_activity_notices_top5",
+                "allow_empty": True,
+            },
+            "watch_policy": "none",
+            "notes": "",
+        }
+    )
+
+    result = run_row_evaluation(
+        row,
+        actual_payload=[
+            {
+                "topic": "club_recruitment",
+                "article_no": "123",
+                "title": "중앙동아리 신입부원 모집",
+                "published_at": "2026-03-20",
+                "summary": "모집 안내",
+                "source_tag": "cuk_student_activity_notices",
+            }
+        ],
+        truth=None,
+        checked_at="2026-03-21T10:20:00+09:00",
+    )
+
+    assert result.verdict == "pass"
+    assert result.comparison == "invariants_hold"
+    assert result.actual_summary == [
+        {
+            "topic": "club_recruitment",
+            "title": "중앙동아리 신입부원 모집",
+            "published_at": "2026-03-20",
+        }
+    ]
+
+    empty_result = run_row_evaluation(
+        row,
+        actual_payload=[],
+        truth=None,
+        checked_at="2026-03-21T10:21:00+09:00",
+    )
+
+    assert empty_result.verdict == "pass"
+    assert empty_result.comparison == "invariants_hold"
+    assert empty_result.actual_summary == []
+
+
+def test_render_validation_report_includes_student_activity_notices_coverage() -> None:
+    rows = [
+        EvalCorpusRow.model_validate(
+            {
+                "id": "SAN-0001",
+                "domain": "student_activity_notices",
+                "style": "normal",
+                "user_utterance": "동아리 모집 공지 알려줘",
+                "api_request": {
+                    "path": "/student-activity-notices",
+                    "params": {"topic": "club_recruitment", "limit": 5},
+                },
+                "expected_mcp_flow": "tool_list_student_activity_notices",
+                "truth_mode": "invariant_only",
+                "pass_rule": {
+                    "summary_kind": "student_activity_notices_top5",
+                    "allow_empty": True,
+                },
+                "watch_policy": "none",
+                "notes": "",
+            }
+        )
+    ]
+    results = [
+        {
+            "id": "SAN-0001",
+            "status": "completed",
+            "verdict": "pass",
+            "actual_summary": [],
+            "comparison": "invariants_hold",
+            "truth_source": "database_snapshot",
+            "checked_at": "2026-03-21T10:20:00+09:00",
+        }
+    ]
+
+    report = render_validation_report(
+        rows=rows,
+        results=results,
+        checked_at="2026-03-21T10:20:00+09:00",
+        base_url="https://songsim-public-api.onrender.com",
+    )
+
+    assert "Guide-Domain Coverage" in report
+    assert report.count("| student_activity_notices | 1 | 1 |") == 2
+
+
 def test_render_validation_report_includes_phone_book_coverage() -> None:
     rows = [
         EvalCorpusRow.model_validate(
@@ -2266,14 +2374,18 @@ def test_load_actual_payload_retries_read_timeout_until_success(
 def test_default_eval_assets_match_distribution_plan() -> None:
     rows = load_eval_rows(DEFAULT_CORPUS_PATH)
     watchlist_rows = load_eval_rows(DEFAULT_WATCHLIST_PATH)
+    truth_rows = load_truth_rows(DEFAULT_CORPUS_PATH.with_name("public_api_eval_truth_1000.jsonl"))
 
     assert len(rows) == 1000
     assert len(watchlist_rows) == 5
+    assert len(truth_rows) == len(rows) + len(watchlist_rows)
     assert {row.domain for row in watchlist_rows} == {"courses"}
     assert {row.truth_mode for row in watchlist_rows} == {"watch_only"}
     assert {row.watch_policy for row in watchlist_rows} == {"course_source_gap"}
     assert len({row.id for row in rows}) == 1000
     assert len({row.user_utterance for row in rows}) == 1000
+    assert len({row.id for row in truth_rows}) == len(truth_rows)
+    assert {row.id for row in truth_rows} == {row.id for row in rows + watchlist_rows}
     assert {row.truth_mode for row in rows}.issubset(
         {"set_contains", "invariant_only", "exact_value"}
     )
@@ -2289,6 +2401,14 @@ def test_default_eval_assets_match_distribution_plan() -> None:
     assert by_domain == DOMAIN_QUOTAS
     assert by_style == STYLE_QUOTAS
     assert by_truth_mode == TRUTH_MODE_QUOTAS
+    assert DOMAIN_QUOTAS["student_activity_guides"] == 15
+    assert DOMAIN_QUOTAS["student_activity_notices"] == 5
+
+    truth_ids = {row.id for row in truth_rows}
+    assert Counter(row.domain for row in rows if row.id in truth_ids) == Counter(DOMAIN_QUOTAS)
+    assert Counter(row.truth_mode for row in rows if row.id in truth_ids) == Counter(
+        TRUTH_MODE_QUOTAS
+    )
 
     coarse_counts: dict[str, dict[tuple[str | None, str | None, str], int]] = {}
     for row in rows:
@@ -2392,6 +2512,36 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "campus_media",
         "social_volunteering",
         "rotc",
+    }
+    assert {
+        "총학생회 안내해줘",
+        "교내미디어 뭐 있어?",
+        "사회봉사 활동 알려줘",
+        "학생군사교육단 안내해줘",
+    }.issubset({row.user_utterance for row in student_activity_rows})
+
+    student_activity_notice_rows = [
+        row for row in rows if row.domain == "student_activity_notices"
+    ]
+
+    assert len(student_activity_notice_rows) == DOMAIN_QUOTAS["student_activity_notices"]
+    assert {row.api_request.path for row in student_activity_notice_rows} == {
+        "/student-activity-notices"
+    }
+    assert {row.expected_mcp_flow for row in student_activity_notice_rows} == {
+        "tool_list_student_activity_notices"
+    }
+    assert {row.truth_mode for row in student_activity_notice_rows} == {"invariant_only"}
+    assert {row.pass_rule["summary_kind"] for row in student_activity_notice_rows} == {
+        "student_activity_notices_top5"
+    }
+    assert {row.pass_rule["allow_empty"] for row in student_activity_notice_rows} == {True}
+    assert {row.api_request.params["topic"] for row in student_activity_notice_rows} == {
+        "club_recruitment",
+        "student_government",
+        "volunteering",
+        "rotc",
+        "campus_event",
     }
 
     service_policy_rows = [row for row in rows if row.domain == "service_policy_guides"]

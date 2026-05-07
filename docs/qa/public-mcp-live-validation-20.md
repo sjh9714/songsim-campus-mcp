@@ -1,5 +1,7 @@
 # Public MCP Live Validation 20
 
+> Historical/superseded: measured results below are preserved as the 2026-03-15 KST run. Current release-gate docs are superseded by `public-mcp-release-pack-50.md`, `public-mcp-live-validation-50.md`, and the `student_activity_notices` canary addendum; do not rewrite the verdicts in this historical report when adding new public surface coverage.
+
 배포된 공개 `read-only` surface를 2026-03-15 KST 기준으로 점검한 실측 검증 기록입니다.
 
 ## 실행 기준

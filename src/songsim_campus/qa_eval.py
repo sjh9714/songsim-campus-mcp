@@ -76,6 +76,7 @@ from .ingest.student_activity_guides import (
     SocialVolunteeringGuideSource,
     StudentGovernmentGuideSource,
 )
+from .ingest.student_activity_notices import StudentActivityNoticeSource
 
 try:
     from . import course_search_runtime as course_search_runtime
@@ -147,6 +148,7 @@ EvalDomain = Literal[
     "academic_milestone_guides",
     "student_exchange_guides",
     "student_activity_guides",
+    "student_activity_notices",
     "service_policy_guides",
     "student_exchange_partners",
     "campus_life_support_guides",
@@ -450,6 +452,16 @@ def _summarize_payload(payload: Any, *, summary_kind: str) -> Any:
                 "topic": item.get("topic"),
                 "title": item.get("title"),
                 "summary": item.get("summary"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "student_activity_notices_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "published_at": item.get("published_at"),
             }
             for item in rows[:5]
         ]
@@ -955,6 +967,14 @@ def _payload_from_db(conn: psycopg.Connection, row: EvalCorpusRow) -> Any:
     if path == "/student-exchange-partners":
         items = services.search_student_exchange_partners(
             conn,
+            query=row.api_request.params.get("query"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/student-activity-notices":
+        items = services.list_student_activity_notices(
+            conn,
+            topic=row.api_request.params.get("topic"),
             query=row.api_request.params.get("query"),
             limit=_limit_from_row(row, 20),
         )
@@ -1500,6 +1520,63 @@ def _payload_from_sources(
         rows = list(source_cache[cache_key])
         if topic := row.api_request.params.get("topic"):
             rows = [item for item in rows if item.get("topic") == topic]
+        return rows[:limit]
+    if path == "/student-activity-notices":
+        cache_key = "student_activity_notices"
+        if cache_key not in source_cache:
+            source = StudentActivityNoticeSource(services.NOTICE_SOURCE_URL)
+            rows: list[dict[str, Any]] = []
+            seen_articles: set[str] = set()
+            for page in range(3):
+                offset = page * 10
+                list_html = source.fetch_list(offset=offset, limit=10)
+                for item in source.parse_list(list_html):
+                    article_no = item.get("article_no")
+                    if not article_no or article_no in seen_articles:
+                        continue
+                    seen_articles.add(article_no)
+                    try:
+                        detail_html = source.fetch_detail(article_no, offset=offset, limit=10)
+                        detail = source.parse_detail(
+                            detail_html,
+                            default_title=item.get("title") or "",
+                            default_summary="",
+                            default_published_at=item.get("published_at"),
+                        )
+                    except httpx.HTTPError:
+                        detail = source.parse_detail(
+                            "",
+                            default_title=item.get("title") or "",
+                            default_summary="",
+                            default_published_at=item.get("published_at"),
+                        )
+                    topic = detail.get("topic")
+                    if topic not in services.STUDENT_ACTIVITY_NOTICE_TOPICS:
+                        continue
+                    rows.append(
+                        {
+                            "topic": topic,
+                            "article_no": article_no,
+                            "title": detail.get("title") or item.get("title"),
+                            "published_at": detail.get("published_at")
+                            or item.get("published_at"),
+                            "summary": detail.get("summary", ""),
+                            "source_url": item.get("source_url"),
+                            "source_tag": source.source_tag,
+                            "last_synced_at": captured_at,
+                        }
+                    )
+            source_cache[cache_key] = rows
+        rows = list(source_cache[cache_key])
+        if topic := row.api_request.params.get("topic"):
+            rows = [item for item in rows if item.get("topic") == topic]
+        if query := row.api_request.params.get("query"):
+            lowered = str(query).casefold()
+            rows = [
+                item
+                for item in rows
+                if lowered in f"{item.get('title', '')} {item.get('summary', '')}".casefold()
+            ]
         return rows[:limit]
     if path == "/student-exchange-partners":
         cache_key = "student_exchange_partners"
@@ -2172,6 +2249,7 @@ def render_validation_report(
         "seasonal_semester_guides",
         "academic_milestone_guides",
         "student_activity_guides",
+        "student_activity_notices",
         "phone_book",
         "scholarship_guides",
         "wifi_guides",

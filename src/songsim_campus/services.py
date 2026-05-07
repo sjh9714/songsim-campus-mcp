@@ -3640,7 +3640,7 @@ def _sync_run_params(
         params["year"] = year
     if target in {"snapshot", "courses"} and semester is not None:
         params["semester"] = semester
-    if target in {"snapshot", "notices"} and notice_pages is not None:
+    if target in {"snapshot", "notices", "student_activity_notices"} and notice_pages is not None:
         params["notice_pages"] = notice_pages
     return params
 
@@ -3733,7 +3733,12 @@ def _run_admin_sync_target(
         return {"student_activity_guides": len(refresh_student_activity_guides_from_source(conn))}
     if target == "student_activity_notices":
         return {
-            "student_activity_notices": len(refresh_student_activity_notices_from_source(conn))
+            "student_activity_notices": len(
+                refresh_student_activity_notices_from_source(
+                    conn,
+                    pages=notice_pages or settings.official_notice_pages,
+                )
+            )
         }
     if target == "about_resource_guides":
         return {"about_resource_guides": len(refresh_about_resource_guides_from_source(conn))}
@@ -5652,7 +5657,10 @@ def sync_official_snapshot(
     seasonal_semester_guides = refresh_seasonal_semester_guides_from_source(conn)
     academic_milestone_guides = refresh_academic_milestone_guides_from_source(conn)
     student_activity_guides = refresh_student_activity_guides_from_source(conn)
-    student_activity_notices = refresh_student_activity_notices_from_source(conn)
+    student_activity_notices = refresh_student_activity_notices_from_source(
+        conn,
+        pages=notice_pages or settings.official_notice_pages,
+    )
     about_resource_guides = refresh_about_resource_guides_from_source(conn)
     service_policy_guides = refresh_service_policy_guides_from_source(conn)
     newsroom_posts = refresh_newsroom_posts_from_source(conn)

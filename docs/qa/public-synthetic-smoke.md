@@ -425,6 +425,7 @@ curl -fsS "$PUBLIC_HTTP_URL/student-activity-guides?topic=campus_media&limit=2" 
 ## 14.1 Student activity notice family smoke
 
 학생활동 notice family는 공식 1차 게시판 `https://www.catholic.ac.kr/ko/campuslife/notice.do`만 사용합니다. SNS/Instagram, 동아리별 외부 게시물, 외부 홍보글은 스크랩하지 않습니다.
+Direct MCP smoke도 이 official notice board scope를 고정합니다. `tools/call`은 공식 게시판 topic filter가 열려 있는지 확인하고, `resources/read`는 resource payload가 같은 scope note와 source tag를 보존하는지 확인합니다.
 
 surface names:
 
@@ -461,6 +462,13 @@ curl -fsS "$PUBLIC_HTTP_URL/student-activity-notices?topic=campus_event&limit=3"
 ```bash
 curl -fsS "$PUBLIC_HTTP_URL/student-activity-notices?topic=club_recruitment&limit=3" \
   | jq '.[0] | {topic, title, published_at, source_tag}'
+```
+
+MCP payload examples:
+
+```json
+{"jsonrpc": "2.0", "id": 45, "method": "tools/call", "params": {"name": "tool_list_student_activity_notices", "arguments": {"topic": "club_recruitment", "limit": 3}}}
+{"jsonrpc": "2.0", "id": 46, "method": "resources/read", "params": {"uri": "songsim://student-activity-notices"}}
 ```
 
 ## 14.5 About resource guide family smoke
@@ -898,6 +906,39 @@ with httpx.Client(timeout=20.0) as client:
         student_exchange_partners_resource_read.status_code,
     )
 
+    student_activity_notices_tool_call = client.post(
+        base,
+        headers=call_headers,
+        json={
+            "jsonrpc": "2.0",
+            "id": 45,
+            "method": "tools/call",
+            "params": {
+                "name": "tool_list_student_activity_notices",
+                "arguments": {"topic": "club_recruitment", "limit": 3},
+            },
+        },
+    )
+    print(
+        "tool_list_student_activity_notices",
+        student_activity_notices_tool_call.status_code,
+    )
+
+    student_activity_notices_resource_read = client.post(
+        base,
+        headers=call_headers,
+        json={
+            "jsonrpc": "2.0",
+            "id": 46,
+            "method": "resources/read",
+            "params": {"uri": "songsim://student-activity-notices"},
+        },
+    )
+    print(
+        "student activity notices resource",
+        student_activity_notices_resource_read.status_code,
+    )
+
     affiliated_notices_resource_read = client.post(
         base,
         headers=call_headers,
@@ -962,6 +1003,7 @@ PY
 - `tool_search_pc_software 200`
 - `tool_list_student_exchange_guides 200`
 - `tool_search_student_exchange_partners 200`
+- `tool_list_student_activity_notices 200`
 - `tool_list_service_policy_guides 200`
 - `tool_search_phone_book 200`
 - `tool_list_campus_life_notices 200`
@@ -977,6 +1019,7 @@ PY
 - `pc software resource 200`
 - `student exchange resource 200`
 - `student exchange partners resource 200`
+- `student activity notices resource 200`
 - `service policy resource 200`
 - `phone book resource 200`
 - `campus life notices resource 200`
@@ -993,6 +1036,7 @@ PY
 - `tool_search_pc_software` payload가 빈 결과가 아니고 `SPSS` 또는 `Photoshop` 항목을 포함함
 - `tool_list_student_exchange_guides` payload가 빈 결과가 아니고 `exchange_student` 또는 `domestic_partner_universities` 항목을 포함함
 - `tool_search_student_exchange_partners` payload가 빈 결과가 아니고 `네덜란드` 또는 `Utrecht University` 항목을 포함함
+- `tool_list_student_activity_notices` payload가 공식 게시판 결과를 반환하면 `club_recruitment`, `student_government`, `volunteering`, `rotc`, 또는 `campus_event` topic과 `source_tag=cuk_student_activity_notices`를 포함하고, 해당 topic 결과가 없으면 빈 배열로 안정 응답함
 - `tool_list_service_policy_guides` payload가 빈 결과가 아니고 `privacy_policy`, `cctv_policy`, 또는 `anti_graft` 항목을 포함함
 - `tool_search_phone_book` payload가 빈 결과가 아니고 `보건실` 항목을 포함함
 - `tool_list_campus_life_notices` payload가 빈 결과가 아니고 `outside_agencies` 또는 `events` 항목을 포함함
@@ -1009,6 +1053,7 @@ PY
 - `pc software` resource 결과의 첫 항목에 `source_tag=cuk_pc_software`가 포함됨
 - `student exchange` resource 결과의 첫 항목에 `source_tag=cuk_student_exchange_guides`가 포함됨
 - `student exchange partners` resource 결과의 첫 항목에 `source_tag=cuk_student_exchange_partners`가 포함됨
+- `student activity notices` resource 결과의 첫 항목에 `source_tag=cuk_student_activity_notices`가 포함되거나, 공식 게시판 결과가 비어 있으면 빈 payload와 official notice board scope note가 유지됨
 - `phone book` resource 결과의 첫 항목에 `source_tag=cuk_phone_book`가 포함됨
 - `campus life notices` resource 결과의 첫 항목에 `source_tag=cuk_campus_life_notices`가 포함됨
 - `newsroom posts` resource 결과의 첫 항목에 `source_tag=cuk_newsroom_posts`가 포함됨

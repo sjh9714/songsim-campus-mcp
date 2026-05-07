@@ -55,6 +55,12 @@ def test_student_activity_notice_source_filters_official_notice_rows() -> None:
     assert source.source_tag == "cuk_student_activity_notices"
     assert source.url.endswith("/campuslife/notice.do")
     assert list_rows[0]["article_no"] == "501"
+    assert [row["published_at"] for row in list_rows] == [
+        "2026-03-22",
+        "2026-03-21",
+        "2026-03-20",
+        "2026-03-19",
+    ]
     assert club_detail["topic"] == "club_recruitment"
     assert club_detail["summary"].startswith("중앙동아리연합회")
     assert volunteer_detail["topic"] == "volunteering"
@@ -69,6 +75,7 @@ def test_student_activity_notices_refresh_replace_and_list(app_env) -> None:
             "501": "student_activity_notice_club_detail.html",
             "502": "student_activity_notice_volunteer_detail.html",
             "503": "student_activity_notice_scholarship_detail.html",
+            "504": "student_activity_notice_event_detail.html",
         }
 
         def fetch_list(self, *, offset: int = 0, limit: int = 10) -> str:
@@ -100,7 +107,11 @@ def test_student_activity_notices_refresh_replace_and_list(app_env) -> None:
         )
         replaced = list_student_activity_notices(conn, limit=20)
 
-    assert [notice.topic for notice in all_notices] == ["club_recruitment", "volunteering"]
+    assert [notice.topic for notice in all_notices] == [
+        "club_recruitment",
+        "volunteering",
+        "campus_event",
+    ]
     assert [notice.title for notice in filtered] == ["[학생지원팀] 중앙동아리 신입부원 모집 안내"]
     assert replaced == []
 
@@ -115,7 +126,7 @@ def test_student_activity_notices_sync_contract(app_env, monkeypatch) -> None:
 
     monkeypatch.setattr(
         "songsim_campus.services.refresh_student_activity_notices_from_source",
-        lambda conn: [],
+        lambda conn, pages=None: [],
     )
 
     run = run_admin_sync(target="student_activity_notices")

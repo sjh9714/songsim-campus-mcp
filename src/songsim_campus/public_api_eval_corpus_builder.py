@@ -31,6 +31,7 @@ EvalDomain = Literal[
     "academic_milestone_guides",
     "student_exchange_guides",
     "student_activity_guides",
+    "student_activity_notices",
     "service_policy_guides",
     "student_exchange_partners",
     "campus_life_support_guides",
@@ -71,6 +72,7 @@ DOMAIN_ORDER: tuple[EvalDomain, ...] = (
     "student_exchange_guides",
     "student_exchange_partners",
     "student_activity_guides",
+    "student_activity_notices",
     "service_policy_guides",
     "out_of_scope",
 )
@@ -109,7 +111,8 @@ DOMAIN_QUOTAS: dict[EvalDomain, int] = {
     "pc_software_entries": 20,
     "student_exchange_guides": 25,
     "student_exchange_partners": 32,
-    "student_activity_guides": 20,
+    "student_activity_guides": 15,
+    "student_activity_notices": 5,
     "service_policy_guides": 5,
     "out_of_scope": 20,
 }
@@ -154,7 +157,8 @@ DOMAIN_TRUTH_COUNTS: dict[EvalDomain, dict[TruthMode, int]] = {
     "pc_software_entries": {"invariant_only": 20},
     "student_exchange_guides": {"set_contains": 23, "invariant_only": 2},
     "student_exchange_partners": {"set_contains": 32},
-    "student_activity_guides": {"invariant_only": 20},
+    "student_activity_guides": {"invariant_only": 15},
+    "student_activity_notices": {"invariant_only": 5},
     "service_policy_guides": {"invariant_only": 5},
     "out_of_scope": {"invariant_only": 20},
 }
@@ -185,6 +189,7 @@ ID_PREFIXES: dict[EvalDomain, str] = {
     "student_exchange_guides": "SEX-",
     "student_exchange_partners": "SEP-",
     "student_activity_guides": "SAV-",
+    "student_activity_notices": "SAN-",
     "service_policy_guides": "SPG-",
     "out_of_scope": "OOS-",
 }
@@ -273,6 +278,13 @@ COARSE_CAP_ENFORCED_DOMAINS: tuple[EvalDomain, ...] = (
     "student_exchange_partners",
 )
 COARSE_CAP_MAX = 4
+
+STUDENT_ACTIVITY_GUIDE_CANARY_UTTERANCES: dict[str, str] = {
+    "campus_media": "교내미디어 뭐 있어?",
+    "rotc": "학생군사교육단 안내해줘",
+    "social_volunteering": "사회봉사 활동 알려줘",
+    "student_government": "총학생회 안내해줘",
+}
 
 STYLE_PRIORITY: dict[str, int] = {
     "normal": 0,
@@ -671,6 +683,17 @@ def _service_policy_seed(topic: str, utterance: str, *, notes: str) -> RequestSe
     )
 
 
+def _student_activity_notice_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "student_activity_notices",
+        utterance,
+        {"path": "/student-activity-notices", "params": {"topic": topic, "limit": 5}},
+        "tool_list_student_activity_notices",
+        {"summary_kind": "student_activity_notices_top5", "allow_empty": True},
+        notes,
+    )
+
+
 def _manual_extra_seeds() -> list[RequestSeed]:
     return [
         _place_seed("남문", "남문 어디야?", notes="south-gate"),
@@ -870,6 +893,31 @@ def _manual_extra_seeds() -> list[RequestSeed]:
         _partner_seed(
             "National Taiwan University", "National Taiwan University 있어?", notes="university-ntu"
         ),
+        _student_activity_notice_seed(
+            "club_recruitment",
+            "동아리 모집 공지 알려줘",
+            notes="club_recruitment-current-snapshot",
+        ),
+        _student_activity_notice_seed(
+            "student_government",
+            "학생회 공지 알려줘",
+            notes="student_government-current-snapshot",
+        ),
+        _student_activity_notice_seed(
+            "volunteering",
+            "봉사활동 공지 알려줘",
+            notes="volunteering-current-snapshot",
+        ),
+        _student_activity_notice_seed(
+            "rotc",
+            "학군단 공지 알려줘",
+            notes="rotc-current-snapshot",
+        ),
+        _student_activity_notice_seed(
+            "campus_event",
+            "학생 행사 공지 알려줘",
+            notes="campus_event-current-snapshot",
+        ),
         _service_policy_seed("bidding", "입찰공고 어디서 확인해?", notes="bidding"),
         _service_policy_seed("job_posting", "채용공고 알려줘", notes="job-posting"),
         _service_policy_seed(
@@ -963,6 +1011,22 @@ def _build_seed_catalog(
 
     for domain in catalog:
         catalog[domain].sort(key=_seed_sort_key)
+
+    student_activity_seeds = catalog.get("student_activity_guides", [])
+    catalog["student_activity_guides"] = [
+        RequestSeed(
+            domain=seed.domain,
+            canonical_utterance=STUDENT_ACTIVITY_GUIDE_CANARY_UTTERANCES.get(
+                str(seed.api_request.get("params", {}).get("topic") or ""),
+                seed.canonical_utterance,
+            ),
+            api_request=seed.api_request,
+            expected_mcp_flow=seed.expected_mcp_flow,
+            pass_rule=seed.pass_rule,
+            notes=seed.notes,
+        )
+        for seed in student_activity_seeds
+    ]
     return catalog
 
 

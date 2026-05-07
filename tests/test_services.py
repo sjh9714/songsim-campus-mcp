@@ -5916,7 +5916,7 @@ def test_sync_official_snapshot_runs_opening_hours_before_courses_and_transport(
     )
     monkeypatch.setattr(
         'songsim_campus.services.refresh_student_activity_notices_from_source',
-        lambda conn: call_order.append('student_activity_notices') or [],
+        lambda conn, pages=None: call_order.append('student_activity_notices') or [],
     )
     monkeypatch.setattr(
         'songsim_campus.services.refresh_about_resource_guides_from_source',

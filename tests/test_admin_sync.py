@@ -168,8 +168,14 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
         seen["academic_milestone_guides"] = {"fetched_at": fetched_at}
         return []
 
-    def fake_student_activity_notices(conn, *, fetched_at: str | None = None, source=None):
-        seen["student_activity_notices"] = {"fetched_at": fetched_at}
+    def fake_student_activity_notices(
+        conn,
+        *,
+        pages: int = 1,
+        fetched_at: str | None = None,
+        source=None,
+    ):
+        seen["student_activity_notices"] = {"pages": pages, "fetched_at": fetched_at}
         return []
 
     def fake_about_resource_guides(conn, *, fetched_at: str | None = None, sources=None):
@@ -361,7 +367,7 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     assert seen["class_guides"] == {"fetched_at": None}
     assert seen["seasonal_semester_guides"] == {"fetched_at": None}
     assert seen["academic_milestone_guides"] == {"fetched_at": None}
-    assert seen["student_activity_notices"] == {"fetched_at": None}
+    assert seen["student_activity_notices"] == {"pages": 3, "fetched_at": None}
     assert seen["about_resource_guides"] == {"fetched_at": None}
     assert seen["service_policy_guides"] == {"fetched_at": None}
     assert seen["newsroom_posts"] == {"fetched_at": None}
@@ -376,6 +382,26 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     assert seen["library_seat_status"] == {"fetched_at": None}
     assert seen["courses"] == {"year": 2026, "semester": 1, "fetched_at": None}
     assert seen["notices"] == {"pages": 3, "fetched_at": None}
+
+
+def test_run_admin_sync_student_activity_notices_uses_notice_pages(app_env, monkeypatch):
+    init_db()
+    seen: dict[str, object] = {}
+
+    def fake_student_activity_notices(conn, *, pages: int = 1, source=None):
+        seen["student_activity_notices"] = {"pages": pages, "source": source}
+        return []
+
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_student_activity_notices_from_source",
+        fake_student_activity_notices,
+    )
+
+    run = run_admin_sync(target="student_activity_notices", notice_pages=4)
+
+    assert run.summary == {"student_activity_notices": 0}
+    assert run.params == {"notice_pages": 4}
+    assert seen["student_activity_notices"] == {"pages": 4, "source": None}
 
 
 def test_run_admin_sync_rolls_back_failed_target_and_records_failure(app_env, monkeypatch):

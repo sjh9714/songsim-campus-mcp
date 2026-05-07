@@ -318,6 +318,14 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
             "central clubs, institutional clubs, media, volunteering, and ROTC."
         ),
     },
+    "/student-activity-notices": {
+        "operationId": "listStudentActivityNotices",
+        "summary": "List student activity notices",
+        "description": (
+            "List current official notice-board posts related to student activity, "
+            "club recruitment, student government, volunteering, ROTC, and campus events."
+        ),
+    },
     "/about-resource-guides": {
         "operationId": "listAboutResourceGuides",
         "summary": "List about resource guides",

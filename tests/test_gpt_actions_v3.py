@@ -54,6 +54,7 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         "/scholarship-guides",
         "/seasonal-semester-guides",
         "/student-activity-guides",
+        "/student-activity-notices",
         "/student-exchange-guides",
         "/student-exchange-partners",
         "/transport",
@@ -79,6 +80,10 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
     assert (
         payload["paths"]["/student-activity-guides"]["get"]["operationId"]
         == "listStudentActivityGuides"
+    )
+    assert (
+        payload["paths"]["/student-activity-notices"]["get"]["operationId"]
+        == "listStudentActivityNotices"
     )
     assert (
         payload["paths"]["/about-resource-guides"]["get"]["operationId"]
