@@ -2604,6 +2604,23 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "dorm_francis_general",
         "dorm_francis_checkin_out",
     }
+    assert {
+        (
+            row.api_request.params.get("topic"),
+            row.api_request.params.get("query"),
+        )
+        for row in affiliated_rows
+        if row.api_request.params.get("query")
+    } >= {
+        ("dorm_k_a_checkin_out", "OT"),
+        ("dorm_francis_checkin_out", "입퇴사"),
+        ("dorm_k_a_general", "장학"),
+    }
+    assert "dorm_k_a_general-body-search" in {row.notes for row in affiliated_rows}
+    body_search_row = next(
+        row for row in affiliated_rows if row.notes == "dorm_k_a_general-body-search"
+    )
+    assert body_search_row.api_request.params["query"] == "점호"
 
     campus_life_notice_rows = [row for row in rows if row.domain == "campus_life_notices"]
 
@@ -2650,3 +2667,20 @@ def test_default_eval_corpus_snapshot_matches_builder() -> None:
     committed_rows = qa_eval._read_jsonl(DEFAULT_CORPUS_PATH)
 
     assert build_public_api_eval_corpus(seed_rows=committed_rows) == committed_rows
+
+
+def test_public_synthetic_smoke_documents_dormitory_affiliated_body_search() -> None:
+    root = DEFAULT_CORPUS_PATH.parents[2]
+    smoke_doc = (root / "docs" / "qa" / "public-synthetic-smoke.md").read_text(
+        encoding="utf-8"
+    )
+    audit_doc = (
+        root / "docs" / "qa" / "main-site-coverage-audit-2026-03-17.md"
+    ).read_text(encoding="utf-8")
+
+    assert "/affiliated-notices?topic=dorm_k_a_general&query=점호&limit=3" in smoke_doc
+    assert "/affiliated-notices?topic=dorm_francis_general&query=점호&limit=3" in smoke_doc
+    assert "tool_list_affiliated_notices dorm body 200" in smoke_doc
+    assert "`body_text`" in smoke_doc
+    assert "기숙사 affiliated notice 제목/요약/본문 검색" in audit_doc
+    assert "`기숙사`의 상세 board / 본문 검색 확장" not in audit_doc

@@ -974,6 +974,80 @@ def test_public_readonly_affiliated_notices_deduplicate_titles(app_env, monkeypa
     assert len(titles) == len(set(titles)) == 2
 
 
+def test_affiliated_notices_api_returns_body_match_snippet(app_env, monkeypatch):
+    init_db()
+    monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
+    clear_settings_cache()
+
+    class DormitoryBodySearchSource:
+        topic = "dorm_k_a_general"
+        source_tag = "cuk_affiliated_notice_boards"
+
+        def fetch_list(self, offset: int = 0, limit: int = 10):
+            return "<list></list>"
+
+        def parse_list(self, _html: str):
+            return [
+                {
+                    "topic": self.topic,
+                    "article_no": "200",
+                    "title": "생활 안내",
+                    "published_at": "2026-03-12",
+                    "summary": "요약에는 검색어가 없습니다.",
+                    "source_url": "https://dorm.catholic.ac.kr/dormitory/board/comm_notice.do?mode=view&articleNo=200",
+                    "source_tag": self.source_tag,
+                }
+            ]
+
+        def fetch_detail(self, article_no: str, offset: int = 0, limit: int = 10):
+            return article_no
+
+        def parse_detail(
+            self,
+            article_no: str,
+            *,
+            default_title: str = "",
+            default_category: str = "",
+            default_summary: str = "",
+            default_published_at: str = "",
+            default_source_url: str | None = None,
+        ):
+            return {
+                "topic": self.topic,
+                "title": default_title,
+                "published_at": default_published_at,
+                "summary": default_summary,
+                "body_text": (
+                    "기숙사 생활 안내 본문입니다. 통금, 택배, 공용공간 안내 뒤에 "
+                    "심야 출입 절차와 점호 확인 방법이 포함되어 있습니다."
+                ),
+                "source_url": default_source_url,
+                "source_tag": self.source_tag,
+            }
+
+    with connection() as conn:
+        refresh_affiliated_notices_from_sources(
+            conn,
+            sources=[DormitoryBodySearchSource()],
+            fetched_at="2026-03-20T10:00:00+09:00",
+        )
+
+    app = create_app()
+    with TestClient(app) as public_client:
+        response = public_client.get(
+            "/affiliated-notices",
+            params={"topic": "dorm_k_a_general", "query": "심야 출입", "limit": 5},
+        )
+
+    clear_settings_cache()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["title"] for item in payload] == ["생활 안내"]
+    assert "심야 출입" in payload[0]["summary"]
+    assert "body_text" not in payload[0]
+
+
 def test_api_docs_helper_preserves_filtered_openapi_shape(app_env, monkeypatch):
     monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
     clear_settings_cache()

@@ -875,6 +875,12 @@ def _manual_extra_seeds() -> list[RequestSeed]:
             query="장학",
             notes="dorm_k_a_general-scholarship",
         ),
+        _affiliated_notice_seed(
+            "dorm_k_a_general",
+            "기숙사 점호 일반공지 알려줘",
+            query="점호",
+            notes="dorm_k_a_general-body-search",
+        ),
         _campus_life_notice_seed(
             "outside_agencies",
             "외부기관 모집 공지 있어?",

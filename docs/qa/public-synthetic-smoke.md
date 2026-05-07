@@ -14,7 +14,7 @@
 - `newsroom_posts`의 `photo_news`와 `press`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `pc_software_entries`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `dormitory_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
-- `affiliated_notices`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
+- `affiliated_notices`가 기숙사 공지 본문 검색 canary를 포함해 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `student_exchange_guides`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `student_exchange_partners`가 공개 HTTP와 MCP 양쪽에서 보이는지 확인
 - `student_activity_notices`가 공식 notice board 기반 topic과 함께 공개 HTTP와 MCP 양쪽에서 보이는지 확인
@@ -134,6 +134,7 @@ curl -fsS "$PUBLIC_HTTP_URL/notices?category=academic&limit=3" \
 ```bash
 curl -fsS "$PUBLIC_HTTP_URL/affiliated-notices?topic=international_studies&limit=3"
 curl -fsS "$PUBLIC_HTTP_URL/affiliated-notices?topic=dorm_k_a_checkin_out&query=입퇴사&limit=3"
+curl -fsS "$PUBLIC_HTTP_URL/affiliated-notices?topic=dorm_k_a_general&query=점호&limit=3"
 ```
 
 기대값:
@@ -142,6 +143,7 @@ curl -fsS "$PUBLIC_HTTP_URL/affiliated-notices?topic=dorm_k_a_checkin_out&query=
 - JSON array
 - 첫 결과 또는 상위 결과 안에 `"topic":"international_studies"` 또는 `"topic":"dorm_k_a_checkin_out"`
 - `"source_tag":"cuk_affiliated_notice_boards"`가 보임
+- `topic=dorm_k_a_general&query=점호`는 제목/요약/`body_text` 검색 canary입니다. 공식 게시글에 해당 본문어가 없으면 빈 배열이어도 되지만, 비어 있지 않다면 `topic=dorm_k_a_general`과 `source_tag=cuk_affiliated_notice_boards`를 포함해야 합니다.
 
 `jq` 예시:
 
@@ -168,6 +170,29 @@ curl -fsS "$PUBLIC_HTTP_URL/affiliated-notices?topic=international_studies&limit
 ```bash
 curl -fsS "$PUBLIC_HTTP_URL/affiliated-notices?topic=international_studies&limit=5" \
   | jq 'map(.title) as $titles | ($titles | length) == ($titles | unique | length)'
+```
+
+### 5.5.2 Dormitory affiliated notice body search
+
+```bash
+curl -fsS "$PUBLIC_HTTP_URL/affiliated-notices?topic=dorm_k_a_general&query=점호&limit=3"
+curl -fsS "$PUBLIC_HTTP_URL/affiliated-notices?topic=dorm_francis_general&query=점호&limit=3"
+```
+
+기대값:
+
+- HTTP `200`
+- JSON array
+- 검색어는 제목, 요약, 상세 본문 `body_text`에 대해 동작해야 합니다
+- 결과가 본문 전용 매치이면 공개 `summary`가 검색어 주변 스니펫을 포함해야 합니다
+- 공식 기숙사 board에 해당 본문어가 없는 시점에는 빈 배열이어도 release hard fail이 아닙니다
+- 결과가 있으면 모든 항목이 질의한 dorm topic과 `source_tag=cuk_affiliated_notice_boards`를 포함해야 합니다
+
+`jq` 예시:
+
+```bash
+curl -fsS "$PUBLIC_HTTP_URL/affiliated-notices?topic=dorm_k_a_general&query=점호&limit=3" \
+  | jq 'if length == 0 then true else all(.[]; .topic == "dorm_k_a_general" and .source_tag == "cuk_affiliated_notice_boards") end'
 ```
 
 ## 5.6 Campus life notices HTTP smoke
@@ -696,6 +721,24 @@ with httpx.Client(timeout=20.0) as client:
     )
     print("tool_list_affiliated_notices", affiliated_notices_call.status_code)
 
+    affiliated_notices_dorm_body_call = client.post(
+        base,
+        headers=call_headers,
+        json={
+            "jsonrpc": "2.0",
+            "id": 32,
+            "method": "tools/call",
+            "params": {
+                "name": "tool_list_affiliated_notices",
+                "arguments": {"topic": "dorm_k_a_general", "query": "점호", "limit": 3},
+            },
+        },
+    )
+    print(
+        "tool_list_affiliated_notices dorm body",
+        affiliated_notices_dorm_body_call.status_code,
+    )
+
     newsroom_posts_call = client.post(
         base,
         headers=call_headers,
@@ -1009,6 +1052,7 @@ PY
 - `tool_list_campus_life_notices 200`
 - `tool_list_newsroom_posts 200`
 - `tool_list_affiliated_notices 200`
+- `tool_list_affiliated_notices dorm body 200`
 - `tool_list_latest_notices 200`
 - `tool_find_nearby_restaurants 200`
 - `registration resource 200`
@@ -1042,6 +1086,7 @@ PY
 - `tool_list_campus_life_notices` payload가 빈 결과가 아니고 `outside_agencies` 또는 `events` 항목을 포함함
 - `tool_list_newsroom_posts` payload가 빈 결과가 아니고 `photo_news` 또는 `press` 항목을 포함함
 - `tool_list_affiliated_notices` payload가 빈 결과가 아니고 `international_studies` 또는 dorm topic 항목을 포함함
+- `tool_list_affiliated_notices dorm body` payload는 빈 배열이어도 안정 응답이어야 하며, 결과가 있으면 `dorm_k_a_general` topic과 `source_tag=cuk_affiliated_notice_boards`를 포함함
 - `tool_list_dormitory_guides` payload가 빈 결과가 아니고 `latest_notices`, `hall_info`, 또는 `fees` 항목을 포함함
 - `tool_list_latest_notices` payload가 빈 결과가 아니고 academic 항목을 포함함
 - `tool_find_nearby_restaurants` payload가 빈 결과가 아니고 nearby 식당 요약 payload를 반환함
@@ -1076,12 +1121,13 @@ PY
 - `/service-policy-guides`가 `bidding`, `job_posting`, `privacy_policy`, `cctv_policy`, 또는 `anti_graft` topic과 `cuk_service_policy_guides` source tag를 반환
 - `/phone-book`가 `보건실` 또는 질의한 부서의 `cuk_phone_book` source tag를 반환
 - `/affiliated-notices`가 `international_studies` 또는 질의한 dorm/topic의 `cuk_affiliated_notice_boards` source tag를 반환
+- `/affiliated-notices?topic=dorm_k_a_general&query=점호&limit=3`와 `/affiliated-notices?topic=dorm_francis_general&query=점호&limit=3`가 제목/요약/본문 검색 canary로 `200` 안정 응답하고, 빈 배열이 아니면 질의한 dorm topic과 `cuk_affiliated_notice_boards` source tag를 반환
 - `/newsroom-posts`가 `photo_news` 또는 `press` topic과 `cuk_newsroom_posts` source tag를 반환
 - `/notices?category=academic&limit=3`가 `academic` notice와 `cuk_campus_notices` source tag를 반환
 - `/restaurants/nearby?origin=중도`가 `central-library` origin으로 nearby 결과를 반환
 - `/restaurants/nearby?origin=학생식당&open_now=true&category=cafe&limit=3`가 `200`으로 안정 응답하고, 빈 배열이어도 `open_now` strict contract와 일치
 - `/courses?query=CSE301...`가 빈 배열이어도 좋으니 `200`으로 안정 응답
 - MCP initialize가 성공하고 `tool_list_registration_guides`, `tool_list_class_guides`, `tool_list_seasonal_semester_guides`, `tool_list_academic_milestone_guides`, `tool_list_campus_life_support_guides`, `tool_list_campus_life_notices`, `tool_list_newsroom_posts`, `tool_search_pc_software`, `tool_list_student_exchange_guides`, `tool_search_student_exchange_partners`, `tool_list_student_activity_notices`, `tool_list_about_resource_guides`, `tool_list_service_policy_guides`, `tool_search_phone_book`, `tool_list_affiliated_notices`, `tool_list_dormitory_guides`, `tool_list_latest_notices`, `tool_find_nearby_restaurants`, `songsim://registration-guide`, `songsim://class-guide`, `songsim://seasonal-semester-guide`, `songsim://academic-milestone-guide`, `songsim://campus-life-support-guide`, `songsim://campus-life-notices`, `songsim://newsroom-posts`, `songsim://pc-software`, `songsim://student-exchange-guide`, `songsim://student-exchange-partners`, `songsim://student-activity-notices`, `songsim://about-resource-guide`, `songsim://service-policy-guide`, `songsim://phone-book`, `songsim://affiliated-notices`, `songsim://dormitory-guide`가 모두 노출
-- MCP registration/exchange-partner/affiliated/nearby tool call이 에러 없이 응답
+- MCP registration/exchange-partner/affiliated/dorm-body-search/nearby tool call이 에러 없이 응답
 
 이 기준이 통과하면 class-guides + registration-guides + seasonal-semester-guides + academic-milestone-guides + 생활지원 core guides + campus life notices + newsroom posts + PC software + student-exchange + exchange partner search + about/service policy resources + phone-book + affiliated notices + dormitory + nearby restaurant 공개 smoke는 충분합니다.

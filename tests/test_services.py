@@ -5104,8 +5104,43 @@ def test_refresh_affiliated_notices_replaces_rows_and_orders_by_query_and_date(a
         "국제학부 일반 공지",
     ]
     assert [item.title for item in body_only] == ["생활 안내"]
+    assert "심야 출입" in body_only[0].summary
     assert all_notices[0].source_tag == "cuk_affiliated_notice_boards"
     assert all_notices[0].source_url == "https://dorm.catholic.ac.kr/dormitory/board/comm_notice.do?articleNo=3"
+
+
+def test_list_affiliated_notices_exposes_body_match_snippet(app_env):
+    init_db()
+
+    with connection() as conn:
+        repo.replace_affiliated_notices(
+            conn,
+            [
+                _affiliated_notice_row(
+                    topic="dorm_francis_checkin_out",
+                    title="프란치스코관 입사 안내",
+                    published_at="2026-03-20",
+                    summary="입사 일정 요약",
+                    body_text=(
+                        "입사 대상자는 지정된 기간에 절차를 확인합니다. "
+                        "개별 호실 배정과 납부 상태는 로그인 시스템에서 확인해야 합니다. "
+                        "공식 공지 본문에는 정기 점검 시간과 공용 공간 이용 안내가 함께 제공됩니다."
+                    ),
+                    source_url="https://dorm.catholic.ac.kr/dormitory/board/checkin-out_notice.do?articleNo=1",
+                )
+            ],
+        )
+        rows = list_affiliated_notices(
+            conn,
+            topic="dorm_francis_checkin_out",
+            query="정기 점검",
+            limit=5,
+        )
+
+    assert [row.title for row in rows] == ["프란치스코관 입사 안내"]
+    assert "정기 점검" in rows[0].summary
+    assert "공식 공지 본문에는" in rows[0].summary
+    assert len(rows[0].summary) <= 220
 
 
 def test_refresh_campus_life_notices_replaces_rows_and_orders_by_query_and_date(app_env):

@@ -2811,7 +2811,9 @@ def list_affiliated_notices(
         )
     normalized_query = query.strip() if query else None
     return [
-        AffiliatedNotice.model_validate(item)
+        AffiliatedNotice.model_validate(
+            _with_affiliated_notice_body_match_summary(item, query=normalized_query)
+        )
         for item in repo.list_affiliated_notices(
             conn,
             topic=normalized_topic,
@@ -2819,6 +2821,38 @@ def list_affiliated_notices(
             limit=normalized_limit,
         )
     ]
+
+
+def _with_affiliated_notice_body_match_summary(
+    item: dict[str, Any],
+    *,
+    query: str | None,
+) -> dict[str, Any]:
+    normalized_query = _collapse_whitespace(query) if query else None
+    if not normalized_query:
+        return item
+
+    summary = str(item.get("summary") or "")
+    title = str(item.get("title") or "")
+    public_text = f"{title} {summary}".casefold()
+    if normalized_query.casefold() in public_text:
+        return item
+
+    body_text = _collapse_whitespace(str(item.get("body_text") or ""))
+    match_index = body_text.casefold().find(normalized_query.casefold())
+    if match_index < 0:
+        return item
+
+    start = max(0, match_index - 60)
+    end = min(len(body_text), match_index + len(normalized_query) + 100)
+    snippet = body_text[start:end].strip()
+    if start > 0:
+        snippet = f"...{snippet}"
+    if end < len(body_text):
+        snippet = f"{snippet}..."
+    if not snippet:
+        return item
+    return {**item, "summary": snippet}
 
 
 def list_campus_life_notices(
@@ -3640,7 +3674,10 @@ def _sync_run_params(
         params["year"] = year
     if target in {"snapshot", "courses"} and semester is not None:
         params["semester"] = semester
-    if target in {"snapshot", "notices", "student_activity_notices"} and notice_pages is not None:
+    if (
+        target in {"snapshot", "notices", "affiliated_notices", "student_activity_notices"}
+        and notice_pages is not None
+    ):
         params["notice_pages"] = notice_pages
     return params
 
@@ -3704,7 +3741,10 @@ def _run_admin_sync_target(
     if target == "affiliated_notices":
         return {
             "affiliated_notices": len(
-                refresh_affiliated_notices_from_sources(conn)
+                refresh_affiliated_notices_from_sources(
+                    conn,
+                    pages=notice_pages or settings.official_notice_pages,
+                )
             )
         }
     if target == "campus_life_notices":

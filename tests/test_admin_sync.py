@@ -371,7 +371,7 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     assert seen["about_resource_guides"] == {"fetched_at": None}
     assert seen["service_policy_guides"] == {"fetched_at": None}
     assert seen["newsroom_posts"] == {"fetched_at": None}
-    assert seen["affiliated_notices"] == {"pages": 1, "fetched_at": None}
+    assert seen["affiliated_notices"] == {"pages": 3, "fetched_at": None}
     assert seen["campus_life_notices"] == {"pages": 1, "fetched_at": None}
     assert seen["dormitory_guides"] == {"fetched_at": None}
     assert seen["phone_book_entries"] == {"fetched_at": None}
@@ -402,6 +402,26 @@ def test_run_admin_sync_student_activity_notices_uses_notice_pages(app_env, monk
     assert run.summary == {"student_activity_notices": 0}
     assert run.params == {"notice_pages": 4}
     assert seen["student_activity_notices"] == {"pages": 4, "source": None}
+
+
+def test_run_admin_sync_affiliated_notices_uses_notice_pages(app_env, monkeypatch):
+    init_db()
+    seen: dict[str, object] = {}
+
+    def fake_affiliated_notices(conn, *, pages: int = 1, sources=None):
+        seen["affiliated_notices"] = {"pages": pages, "sources": sources}
+        return []
+
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_affiliated_notices_from_sources",
+        fake_affiliated_notices,
+    )
+
+    run = run_admin_sync(target="affiliated_notices", notice_pages=4)
+
+    assert run.summary == {"affiliated_notices": 0}
+    assert run.params == {"notice_pages": 4}
+    assert seen["affiliated_notices"] == {"pages": 4, "sources": None}
 
 
 def test_run_admin_sync_rolls_back_failed_target_and_records_failure(app_env, monkeypatch):
