@@ -112,6 +112,21 @@ jobs:
     timeout-minutes: 10
     needs: [lint, test]
 
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: songsim
+          POSTGRES_USER: songsim
+          POSTGRES_PASSWORD: songsim
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U songsim -d songsim"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 30
+
     steps:
       - uses: actions/checkout@v4
 
