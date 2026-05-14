@@ -24,9 +24,35 @@ on:
       - ".github/workflows/ci.yml"
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies from lockfile
+        run: uv sync --frozen --extra dev --extra mcp --extra scrape
+
+      - name: Lint
+        run: uv run ruff check .
+
   test:
+    name: Test shard ${{ matrix.shard_index }}/4
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard_index: [0, 1, 2, 3]
 
     services:
       postgres:
@@ -58,11 +84,48 @@ jobs:
       - name: Install dependencies from lockfile
         run: uv sync --frozen --extra dev --extra mcp --extra scrape
 
-      - name: Lint
-        run: uv run ruff check .
+      - name: Select test shard
+        run: |
+          python - <<'PY' > /tmp/songsim-test-files.txt
+          import os
+          from pathlib import Path
+
+          shard_index = int(os.environ["SONGSIM_TEST_SHARD_INDEX"])
+          shard_total = int(os.environ["SONGSIM_TEST_SHARD_TOTAL"])
+          files = sorted(str(path) for path in Path("tests").glob("test_*.py"))
+          selected = files[shard_index::shard_total]
+          if not selected:
+              raise SystemExit("No tests selected for this shard.")
+          print("\n".join(selected))
+          PY
+          echo "Selected test files:"
+          cat /tmp/songsim-test-files.txt
+        env:
+          SONGSIM_TEST_SHARD_INDEX: ${{ matrix.shard_index }}
+          SONGSIM_TEST_SHARD_TOTAL: 4
 
       - name: Test
-        run: uv run pytest
+        run: uv run pytest --durations=20 $(cat /tmp/songsim-test-files.txt)
+
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [lint, test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies from lockfile
+        run: uv sync --frozen --extra dev --extra mcp --extra scrape
 
       - name: API lightweight health
         run: |
