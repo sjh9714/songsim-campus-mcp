@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from datetime import date
 
+import pytest
+
 from songsim_campus import repo
-from songsim_campus.db import connection
+from songsim_campus.db import connection, init_db
 from songsim_campus.services import (
     campus_life_help,
     explain_academic_process,
@@ -16,7 +18,12 @@ from songsim_campus.services import (
 SYNCED_AT = "2026-05-14T09:10:00+09:00"
 
 
-def test_get_today_campus_updates_groups_notices_and_calendar(app_env):
+@pytest.fixture()
+def initialized_db(app_env):
+    init_db()
+
+
+def test_get_today_campus_updates_groups_notices_and_calendar(initialized_db):
     with connection() as conn:
         repo.replace_notices(
             conn,
@@ -61,7 +68,7 @@ def test_get_today_campus_updates_groups_notices_and_calendar(app_env):
     )
 
 
-def test_find_campus_place_wraps_place_search_with_next_steps(app_env):
+def test_find_campus_place_wraps_place_search_with_next_steps(initialized_db):
     with connection() as conn:
         repo.replace_places(
             conn,
@@ -90,7 +97,7 @@ def test_find_campus_place_wraps_place_search_with_next_steps(app_env):
     assert "tool_get_place" in " ".join(result.next_steps)
 
 
-def test_explain_academic_process_routes_across_official_guides(app_env):
+def test_explain_academic_process_routes_across_official_guides(initialized_db):
     with connection() as conn:
         repo.replace_registration_guides(
             conn,
@@ -131,7 +138,7 @@ def test_explain_academic_process_routes_across_official_guides(app_env):
     assert "uPortal" in " ".join(result.out_of_scope)
 
 
-def test_find_study_resource_combines_library_pc_wifi_and_optional_empty_rooms(app_env):
+def test_find_study_resource_combines_library_pc_wifi_and_optional_empty_rooms(initialized_db):
     with connection() as conn:
         repo.replace_pc_software_entries(
             conn,
@@ -173,7 +180,7 @@ def test_find_study_resource_combines_library_pc_wifi_and_optional_empty_rooms(a
     )
 
 
-def test_campus_life_help_combines_support_dormitory_and_activity_guides(app_env):
+def test_campus_life_help_combines_support_dormitory_and_activity_guides(initialized_db):
     with connection() as conn:
         repo.replace_campus_life_support_guides(
             conn,
