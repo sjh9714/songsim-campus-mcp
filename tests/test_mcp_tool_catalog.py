@@ -25,6 +25,11 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
     tool_names, payloads = asyncio.run(main())
 
     assert tool_names == {
+        "tool_today_campus_updates",
+        "tool_find_campus_place",
+        "tool_explain_academic_process",
+        "tool_find_study_resource",
+        "tool_campus_life_help",
         "tool_search_places",
         "tool_get_place",
         "tool_search_courses",
@@ -65,6 +70,12 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
         "tool_list_latest_notices",
         "tool_list_transport_guides",
     }
+    assert "오늘 할 일" in payloads["tool_today_campus_updates"]["description"]
+    assert "high-level" in payloads["tool_today_campus_updates"]["description"]
+    assert "어디/연락처" in payloads["tool_find_campus_place"]["description"]
+    assert "절차/제도" in payloads["tool_explain_academic_process"]["description"]
+    assert "공부공간/자원" in payloads["tool_find_study_resource"]["description"]
+    assert "특수 경로" in payloads["tool_campus_life_help"]["description"]
     assert "건물명" in payloads["tool_search_places"]["description"]
     assert "별칭" in payloads["tool_search_places"]["description"]
     assert "교내 입점명" in payloads["tool_search_places"]["description"]

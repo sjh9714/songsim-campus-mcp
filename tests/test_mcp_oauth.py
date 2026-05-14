@@ -113,12 +113,18 @@ def test_mcp_oauth_metadata_and_initialize_flow(app_env, monkeypatch):
     assert "research posts" in initialize.json()["result"]["instructions"]
     assert "anniversary guides" in initialize.json()["result"]["instructions"]
     assert "student activity notices" in initialize.json()["result"]["instructions"]
+    assert "student journey tools" in initialize.json()["result"]["instructions"]
     assert "phone book" in initialize.json()["result"]["instructions"]
     assert "affiliated notices" in initialize.json()["result"]["instructions"]
     assert "wifi guides" in initialize.json()["result"]["instructions"]
     assert session_id
     assert list_tools.status_code == 200
     assert {tool["name"] for tool in list_tools.json()["result"]["tools"]} == {
+        "tool_today_campus_updates",
+        "tool_find_campus_place",
+        "tool_explain_academic_process",
+        "tool_find_study_resource",
+        "tool_campus_life_help",
         "tool_search_places",
         "tool_get_place",
         "tool_search_courses",
@@ -195,10 +201,13 @@ def test_mcp_oauth_tool_calls_require_auth_after_initialize(app_env, monkeypatch
                 },
             },
         )
+        health = client.get("/healthz")
 
     clear_settings_cache()
 
     assert initialize.status_code == 200
+    assert health.status_code == 200
+    assert health.json() == {"ok": True}
     assert tool_call.status_code == 200
     payload = tool_call.json()["result"]
     assert payload["isError"] is True

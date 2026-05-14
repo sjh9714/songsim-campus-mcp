@@ -29,6 +29,7 @@ from .schemas import (
     Notice,
     PCSoftwareEntry,
     Place,
+    PublicJourneyResponse,
     RegistrationGuide,
     ResearchPost,
     RestaurantSearchResult,
@@ -86,6 +87,10 @@ def serialize_public_error(exc: Exception) -> dict[str, str]:
     error_type = "not_found" if exc.__class__.__name__ == "NotFoundError" else "invalid_request"
     message = str(exc)
     return McpToolError(error=message, type=error_type, message=message).model_dump()
+
+
+def serialize_public_journey_response(response: PublicJourneyResponse) -> dict[str, object]:
+    return response.model_dump(exclude_none=True)
 
 
 def serialize_public_place(place: Place) -> dict[str, object]:

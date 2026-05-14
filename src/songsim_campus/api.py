@@ -67,6 +67,7 @@ from .schemas import (
     ProfileInterests,
     ProfileNoticePreferences,
     ProfileUpdateRequest,
+    PublicStatusSnapshot,
     RegistrationGuide,
     ResearchPost,
     Restaurant,
@@ -98,6 +99,7 @@ from .services import (
     get_profile_interests,
     get_profile_meal_recommendations,
     get_profile_timetable,
+    get_public_status_snapshot,
     get_readiness_snapshot,
     get_sync_dashboard_state,
     list_about_resource_guides,
@@ -414,6 +416,10 @@ def create_app() -> FastAPI:
     @app.get("/readyz")
     def ready() -> dict[str, object]:
         return get_readiness_snapshot()
+
+    @app.get("/status", response_model=PublicStatusSnapshot)
+    def status() -> PublicStatusSnapshot:
+        return get_public_status_snapshot()
 
     @app.get("/gpt-actions-openapi.json")
     def gpt_actions_openapi(request: Request) -> JSONResponse:

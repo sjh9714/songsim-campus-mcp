@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "data/**"
+      - "docs/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "render.yaml"
+      - ".github/workflows/ci.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "data/**"
+      - "docs/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "render.yaml"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies from lockfile
+        run: uv sync --frozen --extra dev --extra mcp --extra scrape
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Test
+        run: uv run pytest
+
+      - name: API lightweight health
+        run: |
+          uv run python - <<'PY'
+          from fastapi.testclient import TestClient
+          from songsim_campus.api import create_app
+
+          with TestClient(create_app()) as client:
+              response = client.get("/healthz")
+              assert response.status_code == 200
+              assert response.json() == {"ok": True}
+          PY
+
+      - name: MCP lightweight health
+        run: |
+          uv run python - <<'PY'
+          from fastapi.testclient import TestClient
+          from songsim_campus.mcp_server import build_mcp
+
+          app = build_mcp().streamable_http_app()
+          with TestClient(app) as client:
+              response = client.get("/healthz")
+              assert response.status_code == 200
+              assert response.json() == {"ok": True}
+          PY

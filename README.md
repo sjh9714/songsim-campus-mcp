@@ -2,6 +2,32 @@
 
 `songsim-campus-mcp`는 가톨릭대학교 성심교정 학생이 자주 묻는 학사·생활 정보를 **공식 source 중심 Remote MCP + HTTP API**로 제공하는 캠퍼스 도우미 서버입니다. 공지, 학사일정, 건물/연락처, 강의, 도서관 좌석, 식당, Wi-Fi, IT서비스, 기숙사와 생활지원 정보를 LLM 클라이언트에서 읽기 전용으로 조회할 수 있게 구성했습니다. 주변 식당 검색은 학교 공식 1차 source가 아니라 Kakao Local 외부 공개 API 기반 편의 기능으로 분리해 표시합니다.
 
+## 지금 바로 써보기
+
+학생용 기본 입구는 Remote MCP입니다. ChatGPT나 Claude에서 공개 MCP URL을 연결한 뒤 `songsim://usage-guide`를 먼저 읽으면, 서버가 지원하는 질문 범위와 제한을 바로 확인할 수 있습니다. HTTP API는 같은 결과를 직접 검증하거나 외부 앱에서 붙이는 companion layer입니다.
+
+- ChatGPT 연결 문서: [docs/connect-chatgpt.md](docs/connect-chatgpt.md)
+- Public MCP URL: 운영 배포에서는 `SONGSIM_PUBLIC_MCP_URL` 값의 `/mcp`
+- API 상태 확인: `/healthz`, 학생용 데이터 신뢰 상태는 `/status`
+- MCP 상태 resource: `songsim://status`
+
+처음 연결했다면 아래처럼 물어보세요.
+
+- `최신 학사 공지 2개 보여줘`
+- `학생회관 어디야?`
+- `등록금 반환 기준 알려줘`
+- `중앙도서관 열람실 남은 좌석 알려줘`
+- `SPSS 설치된 컴퓨터실 어디야`
+
+공개 서버가 하지 않는 일도 명확합니다.
+
+- Trinity/uPortal, e-Cyber/LMS 같은 로그인 기반 개인 정보 조회
+- 개인 성적, 과제, 수강내역, 개별 등록금 고지서, 개인별 공지/메시지 조회
+- 공식 source로 확인되지 않은 값 추측
+- SNS/Instagram/외부 게시글 본문 수집
+
+답변에는 가능한 한 원문 source, `source_tag`, `last_synced_at`, stale/fallback 여부를 함께 남기는 것을 목표로 합니다.
+
 ## 문제의식
 
 학생이 필요한 정보는 학교 홈페이지, 공지 게시판, 학사 안내, 시설 안내에 흩어져 있습니다. 이 프로젝트는 "성심교정에서 지금 필요한 답"을 하나의 student-facing surface로 묶고, 공식 source에 없는 값은 만들지 않는 방식으로 신뢰 경계를 드러냅니다.
@@ -47,7 +73,10 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 
 대표 MCP resource/tool:
 
+아래 목록은 학생-facing 대표 entrypoint입니다. 전체 catalog와 추천 흐름은 `songsim://usage-guide`에서 확인합니다.
+
 - `songsim://usage-guide`
+- `songsim://status`
 - `songsim://academic-calendar`
 - `songsim://registration-guide`
 - `songsim://class-guide`
@@ -62,6 +91,11 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 - `songsim://anniversary-guide`
 - `songsim://phone-book`
 - `songsim://dormitory-guide`
+- `tool_today_campus_updates`
+- `tool_find_campus_place`
+- `tool_explain_academic_process`
+- `tool_find_study_resource`
+- `tool_campus_life_help`
 - `tool_search_places`
 - `tool_search_courses`
 - `tool_search_phone_book`
@@ -82,6 +116,7 @@ Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점
 
 대표 HTTP endpoint:
 
+- `/status`
 - `/places`
 - `/phone-book`
 - `/courses`

@@ -35,6 +35,8 @@ def test_public_usage_guide_text_contains_current_anchor_phrases():
     assert "tool_find_nearby_restaurants" in content
     assert "Kakao Local external public API convenience surface" in content
     assert "separate from first-party university source coverage" in content
+    assert "Best first questions" in content
+    assert "songsim://status" in content
     assert "예상 공실" in content
     assert "등록금 고지서 조회 방법" in content
     assert "수강신청 변경기간" in content
@@ -93,10 +95,12 @@ def test_register_public_resources_and_prompts_exposes_expected_catalog():
 
     assert resource_uris == {
         "songsim://usage-guide",
+        "songsim://status",
         "songsim://place-categories",
         "songsim://notice-categories",
         "songsim://class-periods",
     }
+    assert "songsim://go" + "al" not in resource_uris
     assert prompt_names == {
         "prompt_find_place",
         "prompt_search_courses",

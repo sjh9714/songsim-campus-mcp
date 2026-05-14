@@ -194,6 +194,10 @@ from .schemas import (
     ProfileInterests,
     ProfileNoticePreferences,
     ProfileUpdateRequest,
+    PublicDatasetStatus,
+    PublicJourneyResponse,
+    PublicJourneySection,
+    PublicStatusSnapshot,
     RegistrationGuide,
     ResearchPost,
     Restaurant,
@@ -483,6 +487,42 @@ PUBLIC_READY_DATASET_POLICIES = {
         else "optional"
     )
     for table in SYNC_DATASET_TABLES
+}
+PUBLIC_DATASET_SOURCE_TAGS = {
+    "places": "cuk_campus_map",
+    "campus_facilities": "cuk_campus_facilities",
+    "campus_dining_menus": "cuk_campus_dining_menus",
+    "courses": "cuk_courses",
+    "notices": "cuk_notices",
+    "affiliated_notices": "cuk_affiliated_notices",
+    "campus_life_notices": "cuk_campus_life_notices",
+    "academic_calendar": "cuk_academic_calendar",
+    "certificate_guides": "cuk_certificate_guides",
+    "leave_of_absence_guides": "cuk_leave_of_absence_guides",
+    "academic_status_guides": "cuk_academic_status_guides",
+    "registration_guides": "cuk_registration_guides",
+    "class_guides": "cuk_class_guides",
+    "seasonal_semester_guides": "cuk_seasonal_semester_guides",
+    "academic_milestone_guides": "cuk_academic_milestone_guides",
+    "student_activity_guides": "cuk_student_activity_guides",
+    "student_activity_notices": "cuk_student_activity_notices",
+    "about_resource_guides": "cuk_about_resource_guides",
+    "service_policy_guides": "cuk_service_policy_guides",
+    "service_policy_posts": "cuk_service_policy_posts",
+    "newsroom_posts": "cuk_newsroom_posts",
+    "research_posts": "cuk_research_posts",
+    "newsroom_resource_guides": "cuk_newsroom_resource_guides",
+    "anniversary_guides": "cuk_anniversary_guides",
+    "student_exchange_guides": "cuk_student_exchange_guides",
+    "student_exchange_partners": "cuk_student_exchange_partners",
+    "dormitory_guides": "cuk_dormitory_guides",
+    "phone_book_entries": "cuk_phone_book",
+    "campus_life_support_guides": "cuk_campus_life_support_guides",
+    "pc_software_entries": "cuk_pc_software",
+    "scholarship_guides": "cuk_scholarship_guides",
+    "wifi_guides": "cuk_wifi_guides",
+    "academic_support_guides": "cuk_academic_support_guides",
+    "transport_guides": "cuk_transport",
 }
 ADMIN_SYNC_TARGETS = {
     "snapshot",
@@ -1164,6 +1204,396 @@ def get_readiness_snapshot() -> dict[str, Any]:
             settings,
             background=False,
         )
+    )
+
+
+PUBLIC_STATUS_NOTES = [
+    (
+        "Public read-only student information status. No secrets, admin state, "
+        "or personal data are exposed."
+    ),
+    "Best-effort datasets may be stale, empty, or temporarily unavailable.",
+    (
+        "Out of scope: authentication-only systems, personal academic records, grades, "
+        "assignments, tuition bill personal screens, and private notices."
+    ),
+]
+
+PUBLIC_JOURNEY_OUT_OF_SCOPE = [
+    "uPortal/Trinity/e-Cyber/LMS 로그인 기반 개인 상태는 공개 read-only 범위 밖입니다.",
+    "개인 성적, 과제, 수강내역, 등록금 고지서 개인 화면, 개인별 메시지는 조회하지 않습니다.",
+    "SNS/Instagram/외부 게시글 본문은 공식 1차 source 커버리지에 포함하지 않습니다.",
+]
+
+
+def _public_dataset_status(table: str, state: dict[str, Any]) -> PublicDatasetStatus:
+    policy = state.get("policy") or PUBLIC_READY_DATASET_POLICIES.get(table, "optional")
+    row_count = state.get("row_count")
+    last_synced_at = state.get("last_synced_at")
+    if state.get("error"):
+        status = "error"
+    elif not row_count or last_synced_at is None:
+        status = "empty"
+    else:
+        status = "ready"
+
+    note = None
+    if policy == "best_effort":
+        note = "best_effort: may be empty or temporarily unavailable"
+    elif policy == "optional":
+        note = "optional public dataset"
+    elif status == "empty":
+        note = "core public dataset is empty or not synced"
+
+    return PublicDatasetStatus(
+        name=table,
+        status=status,
+        policy=policy,
+        row_count=row_count,
+        source_tag=PUBLIC_DATASET_SOURCE_TAGS.get(table),
+        last_synced_at=last_synced_at,
+        note=note,
+    )
+
+
+def get_public_status_snapshot() -> PublicStatusSnapshot:
+    readiness = get_readiness_snapshot()
+    raw_tables = readiness.get("tables", {})
+    datasets: list[PublicDatasetStatus] = []
+    if isinstance(raw_tables, dict):
+        for table in SYNC_DATASET_TABLES:
+            state = raw_tables.get(table)
+            if isinstance(state, dict):
+                datasets.append(_public_dataset_status(table, state))
+    ok = bool(datasets) and not any(
+        item.policy == "core" and item.status != "ready" for item in datasets
+    )
+    return PublicStatusSnapshot(ok=ok, datasets=datasets, notes=PUBLIC_STATUS_NOTES)
+
+
+def _public_limit(limit: int, *, maximum: int = 20) -> int:
+    return max(1, min(limit, maximum))
+
+
+def _public_item_dump(item: Any) -> dict[str, Any]:
+    if hasattr(item, "model_dump"):
+        return item.model_dump(exclude_none=True)
+    return dict(item)
+
+
+def _public_items(items: list[Any], *, limit: int) -> list[dict[str, Any]]:
+    return [_public_item_dump(item) for item in items[:limit]]
+
+
+def _public_section(
+    name: str,
+    title: str,
+    items: list[Any],
+    *,
+    limit: int,
+    note: str | None = None,
+) -> PublicJourneySection | None:
+    payload = _public_items(items, limit=limit)
+    if not payload and note is None:
+        return None
+    return PublicJourneySection(name=name, title=title, items=payload, note=note)
+
+
+def _public_text_matches(payload: dict[str, Any], query: str | None) -> bool:
+    normalized_query, compact_query = _normalized_query_variants(query)
+    if normalized_query is None:
+        return True
+    haystack = json.dumps(payload, ensure_ascii=False).casefold()
+    compact_haystack = _compact_text(haystack).casefold()
+    tokens = [token.casefold() for token in normalized_query.split() if token.strip()]
+    if tokens and all(token in haystack for token in tokens):
+        return True
+    return normalized_query.casefold() in haystack or (
+        compact_query is not None and compact_query.casefold() in compact_haystack
+    )
+
+
+def _filter_public_items(items: list[Any], query: str | None, *, limit: int) -> list[Any]:
+    if _normalize_optional_text(query) is None:
+        return items[:limit]
+    matched: list[Any] = []
+    for item in items:
+        if _public_text_matches(_public_item_dump(item), query):
+            matched.append(item)
+        if len(matched) >= limit:
+            break
+    return matched
+
+
+def get_today_campus_updates(
+    conn: DBConnection,
+    *,
+    at: date | None = None,
+    limit: int = 10,
+) -> PublicJourneyResponse:
+    normalized_limit = _public_limit(limit)
+    basis = at or _now().date()
+    sections: list[PublicJourneySection] = []
+    candidates = [
+        _public_section(
+            "latest_notices",
+            "최신 공지",
+            list_latest_notices(conn, limit=normalized_limit),
+            limit=normalized_limit,
+        ),
+        _public_section(
+            "campus_life_notices",
+            "대학생활 공지",
+            list_campus_life_notices(conn, limit=normalized_limit),
+            limit=normalized_limit,
+            note="best_effort: official board may be empty for this topic",
+        ),
+        _public_section(
+            "student_activity_notices",
+            "학생활동 공지",
+            list_student_activity_notices(conn, limit=normalized_limit),
+            limit=normalized_limit,
+            note="best_effort: official notice board may not always contain matching posts",
+        ),
+        _public_section(
+            "academic_calendar",
+            "이번 달 학사일정",
+            list_academic_calendar(
+                conn,
+                academic_year=_current_academic_year(basis),
+                month=basis.month,
+                limit=normalized_limit,
+            ),
+            limit=normalized_limit,
+        ),
+    ]
+    sections.extend(section for section in candidates if section is not None)
+    return PublicJourneyResponse(
+        journey="today_campus_updates",
+        sections=sections,
+        next_steps=[
+            "세부 공지는 tool_list_latest_notices 또는 /notices로 확인하세요.",
+            "학사일정은 tool_list_academic_calendar 또는 /academic-calendar로 월별 확인하세요.",
+        ],
+        out_of_scope=PUBLIC_JOURNEY_OUT_OF_SCOPE,
+    )
+
+
+def find_campus_place(
+    conn: DBConnection,
+    *,
+    query: str,
+    intent: str | None = None,
+    limit: int = 5,
+) -> PublicJourneyResponse:
+    normalized_query = _normalize_optional_text(query)
+    if normalized_query is None:
+        raise InvalidRequestError("query is required.")
+    normalized_limit = _public_limit(limit, maximum=10)
+    places = search_places(conn, query=normalized_query, limit=normalized_limit)
+    sections = [
+        section
+        for section in [
+            _public_section(
+                "places",
+                "장소 후보",
+                places,
+                limit=normalized_limit,
+                note=intent.strip() if intent else None,
+            )
+        ]
+        if section is not None
+    ]
+    return PublicJourneyResponse(
+        journey="find_campus_place",
+        query=normalized_query,
+        sections=sections,
+        next_steps=[
+            "후보가 하나로 좁혀지면 slug로 tool_get_place를 호출해 세부 정보를 확인하세요.",
+            (
+                "전화번호는 tool_search_phone_book, 교통은 tool_list_transport_guides를 "
+                "함께 사용하세요."
+            ),
+        ],
+        out_of_scope=PUBLIC_JOURNEY_OUT_OF_SCOPE,
+    )
+
+
+def explain_academic_process(
+    conn: DBConnection,
+    *,
+    query: str,
+    topic: str | None = None,
+    limit: int = 10,
+) -> PublicJourneyResponse:
+    normalized_query = _normalize_optional_text(query)
+    if normalized_query is None:
+        raise InvalidRequestError("query is required.")
+    normalized_limit = _public_limit(limit)
+    section_specs: list[tuple[str, str, list[Any]]] = [
+        ("registration_guides", "등록 안내", list_registration_guides(conn, limit=50)),
+        ("class_guides", "수업 안내", list_class_guides(conn, limit=50)),
+        (
+            "seasonal_semester_guides",
+            "계절학기 안내",
+            list_seasonal_semester_guides(conn, limit=50),
+        ),
+        (
+            "academic_milestone_guides",
+            "성적·졸업 안내",
+            list_academic_milestone_guides(conn, limit=50),
+        ),
+        ("academic_status_guides", "학적변동 안내", list_academic_status_guides(conn, limit=50)),
+        ("leave_of_absence_guides", "휴학 안내", list_leave_of_absence_guides(conn, limit=50)),
+        ("certificate_guides", "증명서 안내", list_certificate_guides(conn, limit=50)),
+        ("scholarship_guides", "장학 안내", list_scholarship_guides(conn, limit=50)),
+        (
+            "academic_support_guides",
+            "학사지원팀 문의",
+            list_academic_support_guides(conn, limit=50),
+        ),
+    ]
+    sections: list[PublicJourneySection] = []
+    for name, title, items in section_specs:
+        filtered = _filter_public_items(items, topic or normalized_query, limit=normalized_limit)
+        section = _public_section(name, title, filtered, limit=normalized_limit)
+        if section is not None:
+            sections.append(section)
+    return PublicJourneyResponse(
+        journey="explain_academic_process",
+        query=normalized_query,
+        sections=sections,
+        next_steps=[
+            "절차 원문은 각 item의 source_url에서 확인하세요.",
+            "담당 부서 연락처가 필요하면 tool_search_phone_book을 함께 사용하세요.",
+        ],
+        out_of_scope=PUBLIC_JOURNEY_OUT_OF_SCOPE,
+    )
+
+
+def find_study_resource(
+    conn: DBConnection,
+    *,
+    query: str | None = None,
+    at: datetime | None = None,
+    building: str | None = None,
+    limit: int = 10,
+) -> PublicJourneyResponse:
+    normalized_limit = _public_limit(limit)
+    normalized_query = _normalize_optional_text(query)
+    sections: list[PublicJourneySection] = []
+    pc_items = search_pc_software_entries(conn, query=normalized_query, limit=normalized_limit)
+    wifi_items = list_wifi_guides(conn, limit=normalized_limit)
+    for section in [
+        _public_section("pc_software", "PC 소프트웨어", pc_items, limit=normalized_limit),
+        _public_section("wifi_guides", "Wi-Fi 안내", wifi_items, limit=normalized_limit),
+    ]:
+        if section is not None:
+            sections.append(section)
+
+    if building:
+        try:
+            empty_rooms = list_estimated_empty_classrooms(
+                conn,
+                building=building,
+                at=at,
+                limit=normalized_limit,
+            )
+            sections.append(
+                PublicJourneySection(
+                    name="estimated_empty_classrooms",
+                    title="예상 빈 강의실",
+                    items=[empty_rooms.model_dump(exclude_none=True)],
+                    note="실시간 source가 없으면 시간표 기준 예상 공실입니다.",
+                )
+            )
+        except (InvalidRequestError, NotFoundError):
+            sections.append(
+                PublicJourneySection(
+                    name="estimated_empty_classrooms",
+                    title="예상 빈 강의실",
+                    items=[],
+                    note="해당 건물의 공실 정보를 확인하지 못했습니다.",
+                )
+            )
+
+    if normalized_query and any(
+        token in normalized_query for token in ("좌석", "열람실", "도서관")
+    ):
+        sections.append(
+            PublicJourneySection(
+                name="library_seat_status",
+                title="중앙도서관 좌석",
+                items=[get_library_seat_status(conn, query=normalized_query).model_dump()],
+                note="best_effort live lookup with stale fallback",
+            )
+        )
+
+    return PublicJourneyResponse(
+        journey="find_study_resource",
+        query=normalized_query,
+        sections=sections,
+        next_steps=[
+            "도서관 좌석은 tool_get_library_seat_status로 확인하세요.",
+            (
+                "건물별 공실은 building을 지정해 tool_find_study_resource 또는 "
+                "tool_list_estimated_empty_classrooms를 사용하세요."
+            ),
+        ],
+        out_of_scope=PUBLIC_JOURNEY_OUT_OF_SCOPE,
+    )
+
+
+def campus_life_help(
+    conn: DBConnection,
+    *,
+    query: str,
+    topic: str | None = None,
+    limit: int = 10,
+) -> PublicJourneyResponse:
+    normalized_query = _normalize_optional_text(query)
+    if normalized_query is None:
+        raise InvalidRequestError("query is required.")
+    normalized_limit = _public_limit(limit)
+    section_specs: list[tuple[str, str, list[Any]]] = [
+        (
+            "campus_life_support_guides",
+            "생활지원 안내",
+            list_campus_life_support_guides(conn, limit=50),
+        ),
+        ("dormitory_guides", "기숙사 안내", list_dormitory_guides(conn, limit=50)),
+        (
+            "student_activity_guides",
+            "학생활동 안내",
+            list_student_activity_guides(conn, limit=50),
+        ),
+        (
+            "student_activity_notices",
+            "학생활동 공지",
+            list_student_activity_notices(conn, limit=50),
+        ),
+        ("transport_guides", "교통 안내", list_transport_guides(conn, limit=50)),
+        (
+            "campus_dining_menus",
+            "교내 식당 메뉴",
+            search_campus_dining_menus(conn, query=normalized_query, limit=normalized_limit),
+        ),
+    ]
+    sections: list[PublicJourneySection] = []
+    for name, title, items in section_specs:
+        filtered = _filter_public_items(items, topic or normalized_query, limit=normalized_limit)
+        section = _public_section(name, title, filtered, limit=normalized_limit)
+        if section is not None:
+            sections.append(section)
+    return PublicJourneyResponse(
+        journey="campus_life_help",
+        query=normalized_query,
+        sections=sections,
+        next_steps=[
+            "기숙사 최신 공지는 tool_list_affiliated_notices의 dormitory topic을 함께 확인하세요.",
+            "주변 식당은 Kakao Local 외부 공개 API 기반 편의 기능입니다.",
+        ],
+        out_of_scope=PUBLIC_JOURNEY_OUT_OF_SCOPE,
     )
 
 

@@ -6,9 +6,13 @@ services:
     buildFilter:
       paths:
         - src/**
+        - data/**
+        - docs/**
         - pyproject.toml
-    buildCommand: pip install -e .
-    startCommand: bash -lc 'SONGSIM_APP_HOST=0.0.0.0 SONGSIM_APP_PORT=$PORT songsim-api'
+        - uv.lock
+        - render.yaml
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: bash -lc 'SONGSIM_APP_HOST=0.0.0.0 SONGSIM_APP_PORT=$PORT uv run --frozen songsim-api'
     healthCheckPath: /healthz
     envVars:
       - key: SONGSIM_DATABASE_URL
@@ -41,9 +45,14 @@ services:
     buildFilter:
       paths:
         - src/**
+        - data/**
+        - docs/**
         - pyproject.toml
-    buildCommand: pip install -e '.[mcp]'
-    startCommand: bash -lc 'SONGSIM_APP_HOST=0.0.0.0 SONGSIM_APP_PORT=$PORT songsim-mcp --transport streamable-http'
+        - uv.lock
+        - render.yaml
+    buildCommand: pip install uv && uv sync --frozen --no-dev --extra mcp
+    startCommand: bash -lc 'SONGSIM_APP_HOST=0.0.0.0 SONGSIM_APP_PORT=$PORT uv run --frozen songsim-mcp --transport streamable-http'
+    healthCheckPath: /healthz
     envVars:
       - key: SONGSIM_DATABASE_URL
         sync: false

@@ -9,6 +9,7 @@ from pydantic import Field
 from .services import (
     get_class_periods,
     get_notice_categories,
+    get_public_status_snapshot,
     list_about_resource_guides,
     list_academic_calendar,
     list_academic_milestone_guides,
@@ -55,6 +56,22 @@ def public_usage_guide_text() -> str:
             "",
             "This server is read-only.",
             "",
+            "Best first questions:",
+            "- 최신 학사 공지 2개 보여줘",
+            "- 학생회관 어디야?",
+            "- 중앙도서관 열람실 남은 좌석 알려줘",
+            "- 등록금 반환 기준 알려줘",
+            "- SPSS 설치된 컴퓨터실 어디야",
+            "",
+            "What I can't do:",
+            "- 내 시간표 저장해줘, 개인 성적 보여줘, 등록금 고지서 열어줘 같은 개인/로그인 작업",
+            "- 공식 source로 확인되지 않은 값을 추측해서 만들기",
+            "",
+            (
+                "When data is uncertain, expect null, empty results, stale cache, "
+                "or fallback notes instead of guesses."
+            ),
+            "",
             "Out of scope (unsupported):",
             "- Authentication / 로그인 기반 시스템 (Trinity/uPortal, e-Cyber/LMS 등)",
             "- 개인정보/개별 고지 (등록금 고지서 개인 화면, 개인별 공지/메시지 등)",
@@ -76,6 +93,12 @@ def public_usage_guide_text() -> str:
             (
                 "2. Pick the student journey that matches the question: 오늘 할 일, "
                 "어디/연락처, 절차/제도, 공부공간/자원, 특수 경로."
+            ),
+            (
+                "For a simpler first pass, use the high-level journey tools: "
+                "tool_today_campus_updates, tool_find_campus_place, "
+                "tool_explain_academic_process, tool_find_study_resource, "
+                "and tool_campus_life_help."
             ),
             (
                 "3. Call the matching prompt, resource, or tool first. Use HTTP only when "
@@ -200,6 +223,7 @@ def public_usage_guide_text() -> str:
             ),
             "",
             "Helper resources:",
+            "- songsim://status",
             "- songsim://place-categories",
             "- songsim://notice-categories",
             "- songsim://class-periods",
@@ -523,6 +547,15 @@ def register_public_resources(mcp: Any, connection_factory: Any) -> None:
     def usage_guide_resource() -> str:
         """Return the public MCP usage guide."""
         return public_usage_guide_text()
+
+    @mcp.resource("songsim://status")
+    def status_resource() -> str:
+        """Return public dataset freshness/status as JSON."""
+        return json.dumps(
+            get_public_status_snapshot().model_dump(),
+            ensure_ascii=False,
+            indent=2,
+        )
 
     @mcp.resource("songsim://place-categories")
     def place_categories_resource() -> str:

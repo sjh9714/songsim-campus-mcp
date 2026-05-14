@@ -221,6 +221,40 @@ def _tool_payloads(result) -> list[dict[str, object]]:
     return [json.loads(item.text) for item in result]
 
 
+def test_mcp_public_journey_tools_return_service_backed_payloads(app_env, monkeypatch):
+    pytest.importorskip('mcp.server.fastmcp')
+    init_db()
+    seed_demo(force=True)
+    monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
+    clear_settings_cache()
+
+    async def main():
+        mcp = build_mcp()
+        today = await mcp.call_tool("tool_today_campus_updates", {"limit": 3})
+        place = await mcp.call_tool("tool_find_campus_place", {"query": "학생회관", "limit": 3})
+        academic = await mcp.call_tool(
+            "tool_explain_academic_process",
+            {"query": "등록금", "limit": 3},
+        )
+        study = await mcp.call_tool("tool_find_study_resource", {"query": "SPSS", "limit": 3})
+        life = await mcp.call_tool("tool_campus_life_help", {"query": "기숙사", "limit": 3})
+        status = await mcp.read_resource("songsim://status")
+        return today, place, academic, study, life, list(status)
+
+    today, place, academic, study, life, status = asyncio.run(main())
+
+    assert json.loads(today[0].text)["journey"] == "today_campus_updates"
+    assert json.loads(place[0].text)["journey"] == "find_campus_place"
+    assert json.loads(academic[0].text)["journey"] == "explain_academic_process"
+    assert json.loads(study[0].text)["journey"] == "find_study_resource"
+    assert json.loads(life[0].text)["journey"] == "campus_life_help"
+    status_payload = json.loads(status[0].content)
+    assert "datasets" in status_payload
+    assert "sync_runs" not in {item["name"] for item in status_payload["datasets"]}
+
+    clear_settings_cache()
+
+
 def test_mcp_transport_tool_and_resource_share_service_data(app_env):
     pytest.importorskip('mcp.server.fastmcp')
     init_db()
@@ -1042,6 +1076,11 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     tool_names, resource_uris = asyncio.run(main())
 
     assert set(tool_names) == {
+        "tool_today_campus_updates",
+        "tool_find_campus_place",
+        "tool_explain_academic_process",
+        "tool_find_study_resource",
+        "tool_campus_life_help",
         "tool_search_places",
         "tool_get_place",
         "tool_search_courses",
@@ -1085,6 +1124,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     assert "tool_create_profile" not in tool_names
     assert "tool_get_profile_notices" not in tool_names
     assert "songsim://source-registry" in resource_uris
+    assert "songsim://status" in resource_uris
     assert "songsim://academic-calendar" in resource_uris
     assert "songsim://academic-support-guide" in resource_uris
     assert "songsim://academic-status-guide" in resource_uris
@@ -1665,6 +1705,12 @@ def test_mcp_public_usage_and_class_period_resources_are_readable(app_env, monke
     assert "read-only" in usage_content
     assert "tool_search_places" in usage_content
     assert "tool_search_restaurants" in usage_content
+    assert "tool_today_campus_updates" in usage_content
+    assert "tool_find_campus_place" in usage_content
+    assert "tool_explain_academic_process" in usage_content
+    assert "tool_find_study_resource" in usage_content
+    assert "tool_campus_life_help" in usage_content
+    assert "songsim://status" in usage_content
     assert "tool_list_academic_calendar" in usage_content
     assert "tool_list_academic_support_guides" in usage_content
     assert "tool_list_academic_status_guides" in usage_content

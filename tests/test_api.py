@@ -67,6 +67,22 @@ def test_readyz_reports_database_and_table_status(client):
     assert payload["tables"]["sync_runs"]["ok"] is True
 
 
+def test_status_exposes_public_dataset_freshness_without_operational_details(client):
+    response = client.get("/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert {"ok", "datasets", "notes"} <= set(payload)
+    assert payload["datasets"]
+    first = payload["datasets"][0]
+    assert {"name", "status", "policy", "row_count", "source_tag", "last_synced_at"} <= set(first)
+    assert "database" not in payload
+    assert "sync_runs" not in {item["name"] for item in payload["datasets"]}
+    assert "automation" not in payload
+    assert "cache" not in payload
+    assert any("No secrets" in note for note in payload["notes"])
+
+
 def test_readyz_marks_empty_required_public_dataset_as_not_ready(app_env, monkeypatch):
     monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
     clear_settings_cache()

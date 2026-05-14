@@ -431,6 +431,37 @@ class AcademicCalendarEvent(BaseModel):
     last_synced_at: str
 
 
+class PublicJourneySection(BaseModel):
+    name: str
+    title: str
+    items: list[dict[str, Any]] = Field(default_factory=list)
+    note: str | None = None
+
+
+class PublicJourneyResponse(BaseModel):
+    journey: str
+    query: str | None = None
+    sections: list[PublicJourneySection] = Field(default_factory=list)
+    next_steps: list[str] = Field(default_factory=list)
+    out_of_scope: list[str] = Field(default_factory=list)
+
+
+class PublicDatasetStatus(BaseModel):
+    name: str
+    status: Literal["ready", "empty", "error"]
+    policy: Literal["core", "best_effort", "optional"]
+    row_count: int | None = None
+    source_tag: str | None = None
+    last_synced_at: str | None = None
+    note: str | None = None
+
+
+class PublicStatusSnapshot(BaseModel):
+    ok: bool
+    datasets: list[PublicDatasetStatus]
+    notes: list[str] = Field(default_factory=list)
+
+
 class McpCoordinates(BaseModel):
     latitude: float
     longitude: float

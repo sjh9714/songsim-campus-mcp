@@ -53,7 +53,8 @@ def build_mcp():
         "Songsim Campus MCP",
         instructions=(
             "Use this read-only Songsim campus info server to answer student questions "
-            "about places, courses, academic calendar, academic support, academic status, "
+            "with student journey tools first, then detailed source-backed tools as needed. "
+            "It covers places, courses, academic calendar, academic support, academic status, "
             "registration, class, seasonal semester, academic milestone, phone book, "
             "dormitory, notices, affiliated notices, certificate, leave-of-absence, "
             "scholarship guides, about resource guides, service policy guides, "
@@ -69,6 +70,11 @@ def build_mcp():
     )
 
     protected_resource_metadata = build_protected_resource_metadata(settings)
+
+    @mcp.custom_route("/healthz", methods=["GET"])
+    async def healthz(_request):
+        return JSONResponse({"ok": True})
+
     if protected_resource_metadata is not None:
         @mcp.custom_route("/.well-known/oauth-protected-resource", methods=["GET"])
         async def oauth_protected_resource_alias(_request):
