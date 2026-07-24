@@ -29,14 +29,19 @@ const LIVE_TIMEOUT_MS = Number(process.env.SONGSIM_API_LIVE_TIMEOUT_MS ?? 15000)
  * 캐시 수명(초). 데이터가 실제로 얼마나 자주 변하는지에 맞춘다.
  * Render 무료 플랜 백엔드는 15분 무요청이면 잠들기 때문에,
  * 학생이 잠든 백엔드를 기다리는 일이 없도록 넉넉히 잡는다.
+ *
+ * 다만 상한을 1시간으로 둔다. 백엔드가 동기화 사고 등으로 "성공적으로 빈 배열"을
+ * 돌려주면 그 빈 결과도 그대로 캐시되기 때문이다. 건물 목록처럼 거의 변하지 않는
+ * 데이터라도 하루씩 잡아두면 잘못된 빈 화면이 하루 동안 굳는다.
+ * 콜드 스타트를 막는 데는 몇 분이면 충분하므로 길게 잡을 이유가 없다.
  */
 export const TTL = {
   dining: 3600,
   notices: 600,
-  places: 86400,
-  phoneBook: 86400,
+  places: 3600,
+  phoneBook: 3600,
   courses: 3600,
-  pcSoftware: 86400,
+  pcSoftware: 3600,
   librarySeats: 60,
   classrooms: 300,
 } as const;

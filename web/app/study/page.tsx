@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { Suspense } from 'react';
 
+import BuildingPicker from '@/components/BuildingPicker';
 import CardSkeleton from '@/components/CardSkeleton';
 import EmptyState from '@/components/EmptyState';
 import LibrarySeatsCard from '@/components/LibrarySeatsCard';
@@ -41,18 +41,11 @@ export default async function StudyPage({
           <EmptyState degraded={buildings.degraded} message="등록된 건물이 없어요." />
         ) : (
           <>
-            <div className="chips">
-              {buildings.data.map((place) => (
-                <Link
-                  key={place.slug}
-                  className="chip"
-                  href={`/study?building=${encodeURIComponent(place.slug)}`}
-                  aria-pressed={place.slug === selected}
-                >
-                  {place.name}
-                </Link>
-              ))}
-            </div>
+            <BuildingPicker
+              buildings={buildings.data.map((place) => ({ slug: place.slug, name: place.name }))}
+              selected={selected}
+              hasExplicitSelection={Boolean(building)}
+            />
 
             {classrooms?.data ? (
               classrooms.data.items.length > 0 ? (
