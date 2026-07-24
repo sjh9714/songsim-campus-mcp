@@ -5,6 +5,12 @@ services:
       POSTGRES_DB: songsim
       POSTGRES_USER: songsim
       POSTGRES_PASSWORD: songsim
+      # 한글 가나다순은 유니코드 코드포인트 순서와 같으므로 C 콜레이션이 맞다.
+      # en_US.utf8 로 두면 부서명이 "보건실 → 학사지원팀 → 기숙사운영팀" 처럼 섞인다.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+      # timestamptz 는 세션 타임존으로 렌더된다. 학사 일정은 전부 KST 기준이다.
+      TZ: Asia/Seoul
+      PGTZ: Asia/Seoul
     ports:
       - "55432:5432"
     healthcheck:

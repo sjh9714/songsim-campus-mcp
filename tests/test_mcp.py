@@ -2307,8 +2307,11 @@ def test_mcp_public_search_places_returns_matched_facility_metadata(app_env, mon
 
 
 def test_mcp_places_tool_populates_generic_facility_metadata_when_place_alias_matches(
+    app_env,
     monkeypatch,
 ):
+    pytest.importorskip('mcp.server.fastmcp')
+    init_db()
     with connection() as conn:
         replace_places(
             conn,
