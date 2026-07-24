@@ -1,0 +1,338 @@
+:root {
+  color-scheme: light dark;
+
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-2: #f0efec;
+  --ink: #171a1c;
+  --muted: #626b70;
+  --line: #e0dedb;
+  --accent: #17527d;
+  --accent-ink: #ffffff;
+  --warn-bg: #fdf3e3;
+  --warn-ink: #7a5320;
+  --radius: 14px;
+  --tabbar-h: 60px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171a;
+    --surface: #1d2124;
+    --surface-2: #262b2f;
+    --ink: #eef1f2;
+    --muted: #9aa4aa;
+    --line: #2f353a;
+    --accent: #7cb6e6;
+    --accent-ink: #0e1417;
+    --warn-bg: #33291a;
+    --warn-ink: #e6c489;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard',
+    'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* --- 셸 ------------------------------------------------------------- */
+
+.shell {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 16px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  padding: 14px 0 10px;
+}
+
+.topbar__title {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.topbar__title small {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
+/* --- 검색창 --------------------------------------------------------- */
+
+.searchbar {
+  display: flex;
+  gap: 8px;
+}
+
+.searchbar input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.searchbar input::placeholder {
+  color: var(--muted);
+}
+
+.searchbar button {
+  flex: 0 0 auto;
+  padding: 0 18px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* --- 카드 ----------------------------------------------------------- */
+
+.card {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.card__more {
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.card__note {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* --- 리스트 --------------------------------------------------------- */
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list > li + li {
+  margin-top: 1px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.list > li + li.row--plain {
+  padding-top: 10px;
+}
+
+.row__title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.row__sub {
+  margin-top: 2px;
+  font-size: 0.83rem;
+  color: var(--muted);
+}
+
+.row__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.row--split {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* --- 상태 표시 ------------------------------------------------------ */
+
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.badge--warn {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+.empty {
+  padding: 18px 4px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.empty__hint {
+  margin-top: 6px;
+  font-size: 0.82rem;
+}
+
+/* --- 청크 / 섹션 ---------------------------------------------------- */
+
+.section__title {
+  margin: 22px 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.chip {
+  padding: 7px 13px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.menu-text {
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.linkout {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* --- 하단 탭 -------------------------------------------------------- */
+
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tabbar a {
+  flex: 1;
+  height: var(--tabbar-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tabbar a[aria-current='page'] {
+  color: var(--accent);
+}
+
+.tabbar__icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+/* --- 버튼 ----------------------------------------------------------- */
+
+.btn-refresh {
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--surface-2);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
