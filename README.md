@@ -1,22 +1,39 @@
-# Songsim Campus MCP
+# 성심교정 도우미
 
-가톨릭대학교 성심교정 학생이 학기 중 실제로 자주 묻는 질문을  
-**공식 source 기반 Remote MCP + HTTP API**로 연결하는 캠퍼스 전용 MCP 서버입니다.
+가톨릭대학교 성심교정 학생이 **학교에서 헤매지 않도록** 만든 캠퍼스 안내 서비스입니다.  
+학식, 도서관 좌석, 빈 강의실, 공지, 건물과 전화번호를 공식 source 기준으로 한 곳에 모았습니다.
 
-[![Remote MCP](https://img.shields.io/badge/Remote%20MCP-student--facing-8B5CF6)](https://modelcontextprotocol.io/)
-[![HTTP API](https://img.shields.io/badge/HTTP%20API-companion-009688)](https://songsim-public-api.onrender.com)
 [![Official Source](https://img.shields.io/badge/Source-official%20first-2563EB)](docs/source_registry.md)
 [![Public QA](https://img.shields.io/badge/Public%20QA-hard%20fail%200-brightgreen)](docs/qa/public-api-live-validation-1000.md)
 
-> 공개 배포에서는 **read-only Remote MCP**가 학생용 기본 입구이고,  
-> **HTTP API**는 같은 결과를 직접 확인하거나 외부 앱에서 연동할 때 쓰는 companion layer입니다.
+---
 
-**바로가기**  
-[웹 ChatGPT GPT 바로가기](https://chatgpt.com/g/g-69b526a162c48191843a6a7f469f5030-gatolrigdae-seongsimgyojeong-doumi) · [Public API](https://songsim-public-api.onrender.com) · [Connect ChatGPT](docs/connect-chatgpt.md) · [Connect Codex](docs/connect-codex.md) · [Connect Claude](docs/connect-claude.md) · [Source Registry](docs/source_registry.md) · [Public API QA](docs/qa/public-api-live-validation-1000.md) · [Public MCP QA](docs/qa/public-mcp-live-validation-summary.md)
+## 학생이라면 — 이것만 열면 됩니다
+
+**설치도, 로그인도, AI 계정도 필요 없습니다.** 폰 브라우저에서 주소만 열면 끝입니다.
+
+> 배포 주소는 준비되는 대로 여기에 적습니다. 아직 호스팅 전이라면
+> [학생용 웹 배포 가이드](docs/deploy-web.md)를 따라 올리면 됩니다.
+
+열면 바로 보이는 것
+
+| | |
+|---|---|
+| 🍚 **학식** | 오늘 교내 식당에 뭐 나오는지 |
+| 📚 **공부할 곳** | 도서관 남은 좌석, 지금 빈 강의실 |
+| 📢 **공지** | 학사·장학·행사 공지 모아보기 |
+| 🔎 **찾기** | "복사실 어디야?", "보건실 몇 번이야?" |
+
+홈 화면에 추가하면 앱처럼 열립니다.
 
 ---
 
-## AI 앱에서 바로 연결하기
+## 개발자·AI 앱 연동
+
+학생용 웹 말고 **직접 연동**하려는 경우에만 필요한 내용입니다.
+
+<details>
+<summary>Remote MCP / HTTP API / ChatGPT GPT 연결하기</summary>
 
 ### ChatGPT
 
@@ -43,6 +60,11 @@
 ### Claude
 
 - 가이드: [docs/connect-claude.md](docs/connect-claude.md)
+
+</details>
+
+**문서 바로가기**  
+[학생용 웹 배포](docs/deploy-web.md) · [Render 배포](docs/deploy-render.md) · [Connect ChatGPT](docs/connect-chatgpt.md) · [Connect Codex](docs/connect-codex.md) · [Connect Claude](docs/connect-claude.md) · [Source Registry](docs/source_registry.md)
 
 ---
 
@@ -139,9 +161,18 @@ SPSS 설치된 컴퓨터실 어디야?
 
 ## Student-facing Surface
 
+### 모바일 웹 (`web/`)
+
+학생이 실제로 쓰는 **primary surface**입니다. Next.js로 만들었고 백엔드 HTTP API를 그대로 씁니다.
+
+- 카드 홈: 학식 / 도서관 좌석 / 최신 공지 / 장소·연락처
+- 통합 검색: 장소, 부서 전화번호, 과목, PC 소프트웨어
+- 무로그인 개인화: 마지막으로 본 건물을 브라우저에만 기억
+- 백엔드가 잠들어 있어도 캐시로 즉시 화면을 보여주고, 못 받아온 값은 만들어내지 않습니다
+
 ### Remote MCP
 
-학생이 LLM 클라이언트에서 직접 쓰는 **primary surface**입니다.
+학생이 LLM 클라이언트에서 직접 쓰는 surface입니다.
 
 대표 resource / tool
 
@@ -326,7 +357,19 @@ uv run songsim-api
 - shared GPT schema v2: `http://127.0.0.1:8000/gpt-actions-openapi-v2.json`
 - legacy schema v1: `http://127.0.0.1:8000/gpt-actions-openapi.json`
 
-### 6. Run MCP Server
+### 6. Run Student Web
+
+```bash
+cd web
+npm install
+cp .env.example .env.local   # SONGSIM_API_BASE 를 위에서 띄운 API 주소로
+npm run dev
+```
+
+- 웹: `http://localhost:3000`
+- 배포 방법은 [학생용 웹 배포 가이드](docs/deploy-web.md) 참고
+
+### 7. Run MCP Server
 
 stdio
 
@@ -390,4 +433,4 @@ curl 'http://127.0.0.1:8000/wifi-guides'
 
 ## 한 줄 요약
 
-**Songsim Campus MCP는 성심교정 학생이 자주 묻는 질문을 공식 데이터 기반으로 연결하는 student-facing Remote MCP + HTTP API 프로젝트입니다.**
+**성심교정 도우미는 학생이 링크 하나만 열면 학교에서 헤매지 않도록, 공식 데이터를 모바일 웹·Remote MCP·HTTP API로 제공하는 프로젝트입니다.**
