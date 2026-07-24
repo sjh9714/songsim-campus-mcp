@@ -303,6 +303,7 @@ def render_landing_page(
     oauth_enabled: bool,
     admin_link_html: str,
     gpt_actions_links_html: str,
+    student_web_url: str | None = None,
 ) -> str:
     docs_url = f"{public_http_url}/docs"
     privacy_url = f"{public_http_url}/privacy"
@@ -349,6 +350,20 @@ def render_landing_page(
     ]
     product_mode = "Public Read-only" if public_readonly else "Local Full"
     examples_html = "".join(f"<li>{html.escape(prompt)}</li>" for prompt in example_prompts)
+    # 이 페이지는 개발자용 문서다. 학생은 여기서 헤매면 안 되므로 맨 위에서 바로 보낸다.
+    student_banner_html = (
+        f"""
+      <section class="student-banner">
+        <div>
+          <strong>학생이신가요?</strong>
+          <span>설치도 로그인도 없이 바로 쓸 수 있어요.</span>
+        </div>
+        <a class="pill primary" href="{html.escape(student_web_url)}">성심교정 도우미 열기</a>
+      </section>
+"""
+        if student_web_url
+        else ""
+    )
     return f"""
 <!doctype html>
 <html lang="en">
@@ -424,10 +439,24 @@ def render_landing_page(
       @media (max-width: 800px) {{
         .hero {{ grid-template-columns: 1fr; }}
       }}
+      .student-banner {{
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 0 24px;
+        padding: 16px 18px;
+        background: var(--surface);
+        border: 2px solid var(--accent-2);
+        border-radius: 18px;
+      }}
+      .student-banner strong {{ display: block; font-size: 1.05rem; }}
+      .student-banner span {{ color: var(--muted); font-size: 0.92rem; }}
     </style>
   </head>
   <body>
-    <main>
+    <main>{student_banner_html}
       <h1>Songsim Campus MCP</h1>
       <p class="lead">
         Verified Catholic University Songsim campus data server for places, courses,

@@ -161,8 +161,13 @@ async def lifespan(_: FastAPI):
     stop_event = asyncio.Event()
     automation_task: asyncio.Task[None] | None = None
     if settings.startup_sync_enabled:
-        with connection() as conn:
-            sync_official_snapshot(conn)
+        # 학교 페이지 주소는 예고 없이 바뀐다. 동기화 실패로 서버가 아예 뜨지 않으면
+        # 이미 받아둔 데이터까지 학생에게 못 보여주게 되므로, 실패해도 기동은 계속한다.
+        try:
+            with connection() as conn:
+                sync_official_snapshot(conn)
+        except Exception:
+            logger.exception("event=startup_sync_failed")
     elif settings.seed_demo_on_start:
         seed_demo(force=False)
     if settings.automation_runtime_enabled:
@@ -387,6 +392,7 @@ def create_app() -> FastAPI:
                 oauth_enabled=oauth_enabled,
                 admin_link_html=admin_link,
                 gpt_actions_links_html=gpt_actions_links,
+                student_web_url=settings.student_web_url,
             )
         )
 
