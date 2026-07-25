@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import EmptyState from '@/components/EmptyState';
+import FreshnessBadge, { FRESHNESS_LIMIT } from '@/components/FreshnessBadge';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import { getNoticeCategories, getNotices } from '@/lib/api';
@@ -50,6 +51,13 @@ export default async function NoticesPage({
           </h2>
           <StaleBadge state={notices} />
         </div>
+
+        {notices.data[0] ? (
+          <FreshnessBadge
+            syncedAt={notices.data[0].last_synced_at}
+            maxAgeHours={FRESHNESS_LIMIT.notices}
+          />
+        ) : null}
 
         {notices.data.length === 0 ? (
           <EmptyState

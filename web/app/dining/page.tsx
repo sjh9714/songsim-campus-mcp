@@ -1,8 +1,8 @@
 import EmptyState from '@/components/EmptyState';
+import FreshnessBadge, { FRESHNESS_LIMIT } from '@/components/FreshnessBadge';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import { getDiningMenus } from '@/lib/api';
-import { formatAgo } from '@/lib/format';
 
 export const revalidate = 3600;
 
@@ -24,6 +24,7 @@ export default async function DiningPage() {
               <h2 className="card__title">{menu.venue_name}</h2>
               <StaleBadge state={dining} />
             </div>
+            <FreshnessBadge syncedAt={menu.last_synced_at} maxAgeHours={FRESHNESS_LIMIT.dining} />
 
             {menu.week_label ? <div className="row__sub">{menu.week_label}</div> : null}
 
@@ -41,7 +42,6 @@ export default async function DiningPage() {
               </a>
             ) : null}
 
-            <p className="card__note">{formatAgo(menu.last_synced_at)} 갱신</p>
           </section>
         ))
       )}

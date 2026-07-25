@@ -252,6 +252,22 @@ npm run dev
 - `http://127.0.0.1:8000/docs`
 - `http://127.0.0.1:8000/gpt-actions-openapi-v3.json`
 
+## 데이터 갱신
+
+프로덕션은 `SONGSIM_APP_MODE=public_readonly`라 **스스로 공식 데이터를 갱신하지 않습니다.** 공개 read-only 서비스가 쓰기를 하지 않게 하려는 의도이고, Render 무료 플랜은 15분이면 잠들어 서버 안의 스케줄러가 돌 수도 없습니다.
+
+정기 갱신은 [`.github/workflows/sync.yml`](.github/workflows/sync.yml)이 바깥에서 6시간 간격으로 담당합니다. 학기는 실행 시점 날짜로 계산하므로 학기마다 손댈 필요가 없습니다.
+
+- 수동 실행: Actions 탭 → `Sync official data` → `Run workflow`
+- 필요한 Secret: `SONGSIM_DATABASE_URL`
+- source 하나라도 실패하면 워크플로가 **빨간색으로 실패**합니다. 조용히 낡는 것을 막기 위한 것이고, 부분 성공을 허용하려면 `--allow-partial`을 씁니다.
+
+직접 돌릴 때:
+
+```bash
+uv run songsim-sync --year 2026 --semester 1 --notice-pages 3
+```
+
 ## 검증
 
 ```bash

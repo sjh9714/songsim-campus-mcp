@@ -45,5 +45,12 @@
 - [x] 무로그인 개인화 (마지막 건물 기억)
 - [x] PWA manifest / 홈 화면 추가
 - [x] 랜딩 페이지 학생용 배너 (`SONGSIM_STUDENT_WEB_URL`)
-- [ ] Vercel 배포 및 공유용 짧은 주소 + QR
+- [x] Vercel 배포 (https://songsim-web.vercel.app)
+- [ ] 공유용 짧은 주소 + QR
 - [ ] 학과 선택 기반 공지 필터
+
+## Phase 7 - Keeping it alive
+- [x] GitHub Actions 정기 동기화 (`.github/workflows/sync.yml`)
+- [x] source 실패를 종료 코드로 노출 (`songsim-sync`)
+- [x] 학생 화면 데이터 신선도 배지
+- [ ] Supabase 최소 권한 역할로 동기화 접속정보 분리

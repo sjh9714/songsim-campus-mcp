@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import Card from '@/components/Card';
 import CardSkeleton from '@/components/CardSkeleton';
 import EmptyState from '@/components/EmptyState';
+import FreshnessBadge, { FRESHNESS_LIMIT } from '@/components/FreshnessBadge';
 import LibrarySeatsCard from '@/components/LibrarySeatsCard';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
@@ -24,7 +25,15 @@ export default async function HomePage() {
       <TopBar title="성심교정 도우미" subtitle="학교에서 헤매지 않게" />
 
       {/* --- 오늘의 학식 --- */}
-      <Card title="오늘의 학식" href="/dining">
+      <Card
+        title="오늘의 학식"
+        href="/dining"
+        note={
+          topMenu ? (
+            <FreshnessBadge syncedAt={topMenu.last_synced_at} maxAgeHours={FRESHNESS_LIMIT.dining} />
+          ) : null
+        }
+      >
         {topMenu ? (
           <>
             <div className="row__title">{topMenu.venue_name}</div>
@@ -47,7 +56,17 @@ export default async function HomePage() {
       <Card
         title="최신 공지"
         href="/notices"
-        action={<StaleBadge state={notices} />}
+        note={
+          <>
+            <StaleBadge state={notices} />{' '}
+            {notices.data[0] ? (
+              <FreshnessBadge
+                syncedAt={notices.data[0].last_synced_at}
+                maxAgeHours={FRESHNESS_LIMIT.notices}
+              />
+            ) : null}
+          </>
+        }
       >
         {notices.data.length > 0 ? (
           <ul className="list">
