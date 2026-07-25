@@ -3,6 +3,7 @@
 가톨릭대학교 성심교정 학생이 **학교에서 헤매지 않도록** 만든 캠퍼스 안내 서비스입니다.  
 학식, 도서관 좌석, 빈 강의실, 공지, 건물과 전화번호를 공식 source 기준으로 한 곳에 모았습니다.
 
+[![학생용 웹](https://img.shields.io/badge/학생용%20웹-바로%20열기-16a34a)](https://songsim-web.vercel.app)
 [![Official Source](https://img.shields.io/badge/Source-official%20first-2563EB)](docs/source_registry.md)
 [![Public QA](https://img.shields.io/badge/Public%20QA-hard%20fail%200-brightgreen)](docs/qa/public-api-live-validation-1000.md)
 
@@ -10,10 +11,9 @@
 
 ## 학생이라면 — 이것만 열면 됩니다
 
-**설치도, 로그인도, AI 계정도 필요 없습니다.** 폰 브라우저에서 주소만 열면 끝입니다.
+### 👉 [songsim-web.vercel.app](https://songsim-web.vercel.app)
 
-> 배포 주소는 준비되는 대로 여기에 적습니다. 아직 호스팅 전이라면
-> [학생용 웹 배포 가이드](docs/deploy-web.md)를 따라 올리면 됩니다.
+**설치도, 로그인도, AI 계정도 필요 없습니다.** 폰 브라우저에서 주소만 열면 끝입니다.
 
 열면 바로 보이는 것
 
