@@ -112,6 +112,10 @@ def app_env(postgres_server, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("SONGSIM_MCP_OAUTH_AUDIENCE", "")
     monkeypatch.setenv("SONGSIM_MCP_OAUTH_SCOPES", "songsim.read")
     monkeypatch.setenv("SONGSIM_KAKAO_REST_API_KEY", "")
+    # Settings 는 개발자의 .env 도 읽는다. 여기서 고정하지 않으면 각자의 로컬 값에
+    # 따라 결과가 갈려서, CI 에서는 통과하는 테스트가 로컬에서만 깨진다.
+    monkeypatch.setenv("SONGSIM_OFFICIAL_CAMPUS_ID", "1")
+    monkeypatch.setenv("SONGSIM_OFFICIAL_NOTICE_PAGES", "3")
     clear_settings_cache()
     yield database_url
     clear_settings_cache()
@@ -128,6 +132,8 @@ def app_env(postgres_server, monkeypatch: pytest.MonkeyPatch):
     os.environ.pop("SONGSIM_MCP_OAUTH_AUDIENCE", None)
     os.environ.pop("SONGSIM_MCP_OAUTH_SCOPES", None)
     os.environ.pop("SONGSIM_KAKAO_REST_API_KEY", None)
+    os.environ.pop("SONGSIM_OFFICIAL_CAMPUS_ID", None)
+    os.environ.pop("SONGSIM_OFFICIAL_NOTICE_PAGES", None)
     os.environ.pop("SONGSIM_DATABASE_PATH", None)
 
 
