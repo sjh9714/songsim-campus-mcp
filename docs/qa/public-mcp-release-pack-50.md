@@ -2,6 +2,8 @@
 
 매 배포 때 우선 확인하는 운영 기준 질문 50개입니다. 전체 500문장 코퍼스에서 대표 happy path, alias, 복합 조건, 회귀 포인트, read-only 거절 시나리오만 골랐습니다.
 
+2026-05 Worker C note: 아래 핵심 50문장 측정 기준은 보존하되, `student_activity_notices` 공개 surface가 추가된 뒤에는 본문 하단의 Student activity notice release canary addendum 4문장도 함께 release gate로 실행합니다.
+
 ## 구성
 
 | Domain | Count |
@@ -74,6 +76,17 @@
 | RX01 | OS001 | out_of_scope | 내 프로필 만들고 저장해줘 | read-only 거절 | `songsim://usage-guide` | 공개 read-only 범위를 분명히 설명한다 |
 | RX02 | OS002 | out_of_scope | 시간표 저장해줘 | read-only 거절 | `songsim://usage-guide` | timetable mutation 미지원을 분명히 설명한다 |
 | RX03 | OS003 | out_of_scope | 관리자 sync 돌려줘 | admin 거절 | `songsim://usage-guide` | admin 기능 미지원을 분명히 설명한다 |
+
+## Student activity notice release canary addendum
+
+이 addendum은 기존 50문장 측정값을 다시 쓰지 않고, `student_activity_notices` public surface의 release gate gap만 보강합니다. 공식 1차 게시판 `https://www.catholic.ac.kr/ko/campuslife/notice.do` 기반 결과만 합격으로 보며, SNS/Instagram과 동아리별 외부 게시물은 out_of_scope로 남깁니다.
+
+| Release ID | Corpus ID | Domain | User utterance | Why included | Expected MCP flow | Release pass criteria |
+| --- | --- | --- | --- | --- | --- | --- |
+| SRN01 | SAN001 | student_activity_notices | 동아리 모집 공지 보여줘 | club recruitment canary | `tool_list_student_activity_notices(topic=club_recruitment, limit=3)` | 공식 notice board 결과가 있으면 `club_recruitment`와 `source_tag=cuk_student_activity_notices`를 반환하고, 없으면 빈 배열로 안정 응답한다 |
+| SRN02 | SAN002 | student_activity_notices | 봉사활동 모집 공지 있어? | volunteering canary | `tool_list_student_activity_notices(topic=volunteering, limit=3)` | 공식 notice board 결과가 있으면 `volunteering`과 공식 source URL을 반환하고, 없으면 결과를 만들지 않는다 |
+| SRN03 | SAN003 | student_activity_notices | 총학생회 공지 최근 거 알려줘 | student government canary | `tool_list_student_activity_notices(topic=student_government, limit=3)` | 공식 notice board 결과가 있으면 `student_government` topic을 보존하고, 공식 게시판에 없으면 빈 결과가 정답이다 |
+| SRN04 | SAN004 | out_of_scope | 학생활동 SNS/Instagram 모집글 긁어서 보여줘 | SNS/Instagram scope guard | `songsim://student-activity-notices` 또는 `songsim://usage-guide` | SNS/Instagram, 동아리별 외부 게시물, 외부 홍보글은 out_of_scope라고 설명하고 스크랩하거나 생성하지 않는다 |
 
 ## Shared GPT 샘플 확인용 추천 12문장
 

@@ -31,6 +31,12 @@ EvalDomain = Literal[
     "academic_milestone_guides",
     "student_exchange_guides",
     "student_activity_guides",
+    "student_activity_notices",
+    "service_policy_guides",
+    "service_policy_posts",
+    "research_posts",
+    "newsroom_resource_guides",
+    "anniversary_guides",
     "student_exchange_partners",
     "campus_life_support_guides",
     "pc_software_entries",
@@ -70,6 +76,12 @@ DOMAIN_ORDER: tuple[EvalDomain, ...] = (
     "student_exchange_guides",
     "student_exchange_partners",
     "student_activity_guides",
+    "student_activity_notices",
+    "service_policy_guides",
+    "service_policy_posts",
+    "research_posts",
+    "newsroom_resource_guides",
+    "anniversary_guides",
     "out_of_scope",
 )
 STYLE_ORDER: tuple[EvalStyle, ...] = (
@@ -107,7 +119,13 @@ DOMAIN_QUOTAS: dict[EvalDomain, int] = {
     "pc_software_entries": 20,
     "student_exchange_guides": 25,
     "student_exchange_partners": 32,
-    "student_activity_guides": 25,
+    "student_activity_guides": 11,
+    "student_activity_notices": 5,
+    "service_policy_guides": 5,
+    "service_policy_posts": 1,
+    "research_posts": 1,
+    "newsroom_resource_guides": 1,
+    "anniversary_guides": 1,
     "out_of_scope": 20,
 }
 
@@ -151,7 +169,13 @@ DOMAIN_TRUTH_COUNTS: dict[EvalDomain, dict[TruthMode, int]] = {
     "pc_software_entries": {"invariant_only": 20},
     "student_exchange_guides": {"set_contains": 23, "invariant_only": 2},
     "student_exchange_partners": {"set_contains": 32},
-    "student_activity_guides": {"invariant_only": 25},
+    "student_activity_guides": {"invariant_only": 11},
+    "student_activity_notices": {"invariant_only": 5},
+    "service_policy_guides": {"invariant_only": 5},
+    "service_policy_posts": {"invariant_only": 1},
+    "research_posts": {"invariant_only": 1},
+    "newsroom_resource_guides": {"invariant_only": 1},
+    "anniversary_guides": {"invariant_only": 1},
     "out_of_scope": {"invariant_only": 20},
 }
 
@@ -181,6 +205,12 @@ ID_PREFIXES: dict[EvalDomain, str] = {
     "student_exchange_guides": "SEX-",
     "student_exchange_partners": "SEP-",
     "student_activity_guides": "SAV-",
+    "student_activity_notices": "SAN-",
+    "service_policy_guides": "SPG-",
+    "service_policy_posts": "SPP-",
+    "research_posts": "RSP-",
+    "newsroom_resource_guides": "NRG-",
+    "anniversary_guides": "ANG-",
     "out_of_scope": "OOS-",
 }
 
@@ -268,6 +298,15 @@ COARSE_CAP_ENFORCED_DOMAINS: tuple[EvalDomain, ...] = (
     "student_exchange_partners",
 )
 COARSE_CAP_MAX = 4
+
+STUDENT_ACTIVITY_GUIDE_CANARY_UTTERANCES: dict[str, str] = {
+    "campus_media": "교내미디어 뭐 있어?",
+    "cat_cert": "CAT-CERT 뭐야?",
+    "rotc": "학생군사교육단 안내해줘",
+    "social_volunteering": "사회봉사 활동 알려줘",
+    "student_government": "총학생회 안내해줘",
+    "student_innovation_supporters": "학생혁신 서포터즈 알려줘",
+}
 
 STYLE_PRIORITY: dict[str, int] = {
     "normal": 0,
@@ -655,6 +694,83 @@ def _partner_seed(query: str, utterance: str, *, notes: str) -> RequestSeed:
     )
 
 
+def _service_policy_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "service_policy_guides",
+        utterance,
+        {"path": "/service-policy-guides", "params": {"topic": topic, "limit": 5}},
+        "tool_list_service_policy_guides",
+        {"summary_kind": "service_policy_guides_top5"},
+        notes,
+    )
+
+
+def _student_activity_guide_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "student_activity_guides",
+        utterance,
+        {"path": "/student-activity-guides", "params": {"topic": topic, "limit": 5}},
+        "tool_list_student_activity_guides",
+        {"summary_kind": "student_activity_guides_top5"},
+        notes,
+    )
+
+
+def _service_policy_post_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "service_policy_posts",
+        utterance,
+        {"path": "/service-policy-posts", "params": {"topic": topic, "limit": 5}},
+        "tool_list_service_policy_posts",
+        {"summary_kind": "service_policy_posts_top5", "allow_empty": True},
+        notes,
+    )
+
+
+def _research_post_seed(utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "research_posts",
+        utterance,
+        {"path": "/research-posts", "params": {"topic": "research_result", "limit": 5}},
+        "tool_list_research_posts",
+        {"summary_kind": "research_posts_top5", "allow_empty": True},
+        notes,
+    )
+
+
+def _newsroom_resource_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "newsroom_resource_guides",
+        utterance,
+        {"path": "/newsroom-resource-guides", "params": {"topic": topic, "limit": 5}},
+        "tool_list_newsroom_resource_guides",
+        {"summary_kind": "newsroom_resource_guides_top5"},
+        notes,
+    )
+
+
+def _anniversary_guide_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "anniversary_guides",
+        utterance,
+        {"path": "/anniversary-guides", "params": {"topic": topic, "limit": 5}},
+        "tool_list_anniversary_guides",
+        {"summary_kind": "anniversary_guides_top5"},
+        notes,
+    )
+
+
+def _student_activity_notice_seed(topic: str, utterance: str, *, notes: str) -> RequestSeed:
+    return _seed(
+        "student_activity_notices",
+        utterance,
+        {"path": "/student-activity-notices", "params": {"topic": topic, "limit": 5}},
+        "tool_list_student_activity_notices",
+        {"summary_kind": "student_activity_notices_top5", "allow_empty": True},
+        notes,
+    )
+
+
 def _manual_extra_seeds() -> list[RequestSeed]:
     return [
         _place_seed("남문", "남문 어디야?", notes="south-gate"),
@@ -836,6 +952,12 @@ def _manual_extra_seeds() -> list[RequestSeed]:
             query="장학",
             notes="dorm_k_a_general-scholarship",
         ),
+        _affiliated_notice_seed(
+            "dorm_k_a_general",
+            "기숙사 점호 일반공지 알려줘",
+            query="점호",
+            notes="dorm_k_a_general-body-search",
+        ),
         _campus_life_notice_seed(
             "outside_agencies",
             "외부기관 모집 공지 있어?",
@@ -853,6 +975,70 @@ def _manual_extra_seeds() -> list[RequestSeed]:
         _partner_seed("ASIA", "아시아 협정대학 알려줘", notes="continent-asia"),
         _partner_seed(
             "National Taiwan University", "National Taiwan University 있어?", notes="university-ntu"
+        ),
+        _student_activity_notice_seed(
+            "club_recruitment",
+            "동아리 모집 공지 알려줘",
+            notes="club_recruitment-current-snapshot",
+        ),
+        _student_activity_notice_seed(
+            "student_government",
+            "학생회 공지 알려줘",
+            notes="student_government-current-snapshot",
+        ),
+        _student_activity_notice_seed(
+            "volunteering",
+            "봉사활동 공지 알려줘",
+            notes="volunteering-current-snapshot",
+        ),
+        _student_activity_notice_seed(
+            "rotc",
+            "학군단 공지 알려줘",
+            notes="rotc-current-snapshot",
+        ),
+        _student_activity_notice_seed(
+            "campus_event",
+            "학생 행사 공지 알려줘",
+            notes="campus_event-current-snapshot",
+        ),
+        _student_activity_guide_seed(
+            "student_innovation_supporters",
+            "학생혁신 서포터즈 알려줘",
+            notes="student_innovation_supporters-current-snapshot",
+        ),
+        _student_activity_guide_seed(
+            "cat_cert",
+            "CAT-CERT 뭐야?",
+            notes="cat_cert-current-snapshot",
+        ),
+        _service_policy_seed("bidding", "입찰공고 어디서 확인해?", notes="bidding"),
+        _service_policy_seed("job_posting", "채용공고 알려줘", notes="job-posting"),
+        _service_policy_seed(
+            "privacy_policy",
+            "개인정보처리방침 어디서 봐?",
+            notes="privacy-policy",
+        ),
+        _service_policy_seed(
+            "cctv_policy",
+            "영상정보처리기기 방침 어디서 봐?",
+            notes="cctv-policy",
+        ),
+        _service_policy_seed("anti_graft", "청탁금지법 문의 어디야?", notes="anti-graft"),
+        _service_policy_post_seed(
+            "bidding",
+            "입찰공고 게시글 검색해줘",
+            notes="bidding-posts-current-snapshot",
+        ),
+        _research_post_seed("연구성과 최근 글 알려줘", notes="research-result-current-snapshot"),
+        _newsroom_resource_seed(
+            "brochure",
+            "학교 브로슈어 어디서 봐?",
+            notes="brochure-current-snapshot",
+        ),
+        _anniversary_guide_seed(
+            "president_message",
+            "170주년 총장 축사글 알려줘",
+            notes="anniversary-president-message",
         ),
     ]
 
@@ -934,6 +1120,22 @@ def _build_seed_catalog(
 
     for domain in catalog:
         catalog[domain].sort(key=_seed_sort_key)
+
+    student_activity_seeds = catalog.get("student_activity_guides", [])
+    catalog["student_activity_guides"] = [
+        RequestSeed(
+            domain=seed.domain,
+            canonical_utterance=STUDENT_ACTIVITY_GUIDE_CANARY_UTTERANCES.get(
+                str(seed.api_request.get("params", {}).get("topic") or ""),
+                seed.canonical_utterance,
+            ),
+            api_request=seed.api_request,
+            expected_mcp_flow=seed.expected_mcp_flow,
+            pass_rule=seed.pass_rule,
+            notes=seed.notes,
+        )
+        for seed in student_activity_seeds
+    ]
     return catalog
 
 

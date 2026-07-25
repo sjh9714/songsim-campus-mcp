@@ -5,9 +5,11 @@ from typing import Annotated, Any
 from pydantic import Field
 
 from .mcp_public_serializers import (
+    serialize_public_about_resource_guide,
     serialize_public_academic_milestone_guide,
     serialize_public_academic_status_guide,
     serialize_public_academic_support_guide,
+    serialize_public_anniversary_guide,
     serialize_public_campus_life_notice,
     serialize_public_campus_life_support_guide,
     serialize_public_certificate_guide,
@@ -16,16 +18,23 @@ from .mcp_public_serializers import (
     serialize_public_dining_menu,
     serialize_public_dormitory_guide,
     serialize_public_error,
+    serialize_public_journey_response,
     serialize_public_leave_of_absence_guide,
     serialize_public_nearby_restaurant,
+    serialize_public_newsroom_post,
+    serialize_public_newsroom_resource_guide,
     serialize_public_notice,
     serialize_public_pc_software_entry,
     serialize_public_place,
     serialize_public_registration_guide,
+    serialize_public_research_post,
     serialize_public_restaurant_search,
     serialize_public_scholarship_guide,
     serialize_public_seasonal_semester_guide,
+    serialize_public_service_policy_guide,
+    serialize_public_service_policy_post,
     serialize_public_student_activity_guide,
+    serialize_public_student_activity_notice,
     serialize_public_student_exchange_guide,
     serialize_public_transport_guide,
     serialize_public_wifi_guide,
@@ -39,8 +48,12 @@ from .schemas import (
 from .services import (
     InvalidRequestError,
     NotFoundError,
+    campus_life_help,
     create_profile,
+    explain_academic_process,
+    find_campus_place,
     find_nearby_restaurants,
+    find_study_resource,
     get_class_periods,
     get_library_seat_status,
     get_place,
@@ -48,10 +61,13 @@ from .services import (
     get_profile_interests,
     get_profile_meal_recommendations,
     get_profile_timetable,
+    get_today_campus_updates,
+    list_about_resource_guides,
     list_academic_calendar,
     list_academic_milestone_guides,
     list_academic_status_guides,
     list_academic_support_guides,
+    list_anniversary_guides,
     list_campus_life_notices,
     list_campus_life_support_guides,
     list_certificate_guides,
@@ -60,11 +76,17 @@ from .services import (
     list_estimated_empty_classrooms,
     list_latest_notices,
     list_leave_of_absence_guides,
+    list_newsroom_posts,
+    list_newsroom_resource_guides,
     list_profile_notices,
     list_registration_guides,
+    list_research_posts,
     list_scholarship_guides,
     list_seasonal_semester_guides,
+    list_service_policy_guides,
+    list_service_policy_posts,
     list_student_activity_guides,
+    list_student_activity_notices,
     list_student_exchange_guides,
     list_transport_guides,
     list_wifi_guides,
@@ -89,6 +111,191 @@ def register_shared_tools(
     public_readonly: bool,
     tool_meta: Any,
 ) -> None:
+    @mcp.tool(
+        description=(
+            "high-level public journey tool: 오늘 할 일 질문에 먼저 사용합니다. "
+            "최신 공지, 학생활동/대학생활 공지, 이번 달 학사일정을 한 번에 묶어 "
+            "학생이 바로 확인할 업데이트로 돌려줍니다."
+            if public_readonly
+            else "오늘 할 일 journey 요약을 current snapshot으로 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_today_campus_updates(
+        at: Annotated[
+            str | None,
+            Field(description="기준 날짜 YYYY-MM-DD. 없으면 현재 날짜를 사용합니다."),
+        ] = None,
+        limit: Annotated[int, Field(description="섹션별 최대 결과 수. 기본값은 10입니다.")] = 10,
+    ):
+        from datetime import date
+
+        with connection_factory() as conn:
+            try:
+                parsed_at = date.fromisoformat(at) if at else None
+                payload = get_today_campus_updates(conn, at=parsed_at, limit=limit)
+                if public_readonly:
+                    return serialize_public_journey_response(payload)
+                return payload.model_dump(exclude_none=True)
+            except (InvalidRequestError, ValueError) as exc:
+                wrapped = (
+                    InvalidRequestError("Invalid 'at' date. Use YYYY-MM-DD.")
+                    if isinstance(exc, ValueError)
+                    else exc
+                )
+                if public_readonly:
+                    return serialize_public_error(wrapped)
+                return {"error": str(wrapped)}
+
+    @mcp.tool(
+        description=(
+            "high-level public journey tool: 어디/연락처 질문에 먼저 사용합니다. "
+            "건물, 별칭, 편의시설, 교내 입점명 검색을 묶고 단일 후보가 보이면 "
+            "tool_get_place 다음 단계로 안내합니다."
+            if public_readonly
+            else "어디/연락처 journey 장소 후보를 current snapshot으로 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_find_campus_place(
+        query: Annotated[
+            str,
+            Field(description="장소, 건물, 별칭, 시설명. 예: 학생회관, K관, 보건실, 헬스장"),
+        ],
+        intent: Annotated[
+            str | None,
+            Field(description="선택적 의도 힌트. 예: 위치, 운영시간, 전화번호"),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 후보 수. 기본값은 5입니다.")] = 5,
+    ):
+        with connection_factory() as conn:
+            try:
+                payload = find_campus_place(conn, query=query, intent=intent, limit=limit)
+                if public_readonly:
+                    return serialize_public_journey_response(payload)
+                return payload.model_dump(exclude_none=True)
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            "high-level public journey tool: 절차/제도 질문에 먼저 사용합니다. "
+            "등록, 수업, 계절학기, 성적/졸업, 학적변동, 휴학, 증명, 장학, "
+            "학사지원팀 안내를 공식 공개 guide에서 결정론적으로 모읍니다."
+            if public_readonly
+            else "절차/제도 journey 안내를 current snapshot으로 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_explain_academic_process(
+        query: Annotated[
+            str,
+            Field(description="절차/제도 질문. 예: 등록금 반환 기준, 공결 신청, 졸업요건"),
+        ],
+        topic: Annotated[
+            str | None,
+            Field(description="선택적 topic 힌트. 예: payment_and_return, excused_absence"),
+        ] = None,
+        limit: Annotated[int, Field(description="섹션별 최대 결과 수. 기본값은 10입니다.")] = 10,
+    ):
+        with connection_factory() as conn:
+            try:
+                payload = explain_academic_process(conn, query=query, topic=topic, limit=limit)
+                if public_readonly:
+                    return serialize_public_journey_response(payload)
+                return payload.model_dump(exclude_none=True)
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            "high-level public journey tool: 공부공간/자원 질문에 먼저 사용합니다. "
+            "PC 소프트웨어, Wi-Fi, 도서관 좌석, 건물별 예상 빈 강의실을 "
+            "공식 공개 source와 best-effort fallback 경계와 함께 묶습니다."
+            if public_readonly
+            else "공부공간/자원 journey 안내를 current snapshot으로 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_find_study_resource(
+        query: Annotated[
+            str | None,
+            Field(description="공부공간/자원 질의. 예: SPSS, 열람실 좌석, Wi-Fi"),
+        ] = None,
+        building: Annotated[
+            str | None,
+            Field(description="예상 빈 강의실을 확인할 건물. 예: K관, 니콜스관"),
+        ] = None,
+        at: Annotated[
+            str | None,
+            Field(description="공실 기준 시각 ISO 8601 문자열. 없으면 현재 시각입니다."),
+        ] = None,
+        limit: Annotated[int, Field(description="섹션별 최대 결과 수. 기본값은 10입니다.")] = 10,
+    ):
+        from datetime import datetime
+
+        with connection_factory() as conn:
+            try:
+                parsed_at = datetime.fromisoformat(at) if at else None
+                payload = find_study_resource(
+                    conn,
+                    query=query,
+                    building=building,
+                    at=parsed_at,
+                    limit=limit,
+                )
+                if public_readonly:
+                    return serialize_public_journey_response(payload)
+                return payload.model_dump(exclude_none=True)
+            except (InvalidRequestError, ValueError) as exc:
+                wrapped = (
+                    InvalidRequestError(
+                        "Invalid 'at' timestamp. Use ISO 8601, for example "
+                        "2026-03-16T10:15:00+09:00."
+                    )
+                    if isinstance(exc, ValueError)
+                    else exc
+                )
+                if public_readonly:
+                    return serialize_public_error(wrapped)
+                return {"error": str(wrapped)}
+
+    @mcp.tool(
+        description=(
+            "high-level public journey tool: 특수 경로 질문에 먼저 사용합니다. "
+            "기숙사, 생활지원, 학생활동, 교통, 교내 식당 안내를 공식 공개 "
+            "guide/current snapshot에서 묶고, SNS/개인정보 범위 밖을 명시합니다."
+            if public_readonly
+            else "특수 경로 journey 안내를 current snapshot으로 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_campus_life_help(
+        query: Annotated[
+            str,
+            Field(description="생활/기숙사/학생활동/교통/식당 질문. 예: 기숙사, 진로 상담"),
+        ],
+        topic: Annotated[
+            str | None,
+            Field(description="선택적 topic 힌트. 예: career_counseling, fees"),
+        ] = None,
+        limit: Annotated[int, Field(description="섹션별 최대 결과 수. 기본값은 10입니다.")] = 10,
+    ):
+        with connection_factory() as conn:
+            try:
+                payload = campus_life_help(conn, query=query, topic=topic, limit=limit)
+                if public_readonly:
+                    return serialize_public_journey_response(payload)
+                return payload.model_dump(exclude_none=True)
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
     @mcp.tool(
         description=(
             "성심교정 학사일정을 읽을 때 사용합니다. academic_year, month, query로 "
@@ -289,8 +496,8 @@ def register_shared_tools(
             (
                 "생활지원 안내를 읽을 때 사용합니다. 보건실, 유실물, 성심교정 주차요금, "
                 "학생상담, 장애학생지원센터, 예비군, 부속병원, 대관안내, "
-                "개인형 이동장치 안전교육처럼 학생이 바로 행동에 옮길 수 있는 정적 "
-                "안내를 current snapshot으로 돌려줍니다."
+                "개인형 이동장치 안전교육, 진로/취업 상담, IT서비스처럼 학생이 바로 행동에 "
+                "옮길 수 있는 정적 안내를 current snapshot으로 돌려줍니다."
             )
             if public_readonly
             else "학교 생활지원 안내 current snapshot을 가져옵니다."
@@ -304,8 +511,8 @@ def register_shared_tools(
                 description=(
                     "생활지원 안내 유형 필터. health_center, lost_found, parking, "
                     "mobility_safety, facility_rental, student_counseling, "
-                    "disability_support, student_reservist, hospital_use 중 하나를 "
-                    "사용합니다."
+                    "disability_support, student_reservist, hospital_use, "
+                    "career_counseling, it_service 중 하나를 사용합니다."
                 )
             ),
         ] = None,
@@ -355,7 +562,8 @@ def register_shared_tools(
             (
                 "학교 기숙사 안내를 읽을 때 사용합니다. 스테파노관, 안드레아관, "
                 "프란치스코관 정보와 기숙사운영팀 연락처, 입사·퇴사 안내, 생활안내, "
-                "그리고 홈에 노출된 최신 공지 카드를 current snapshot으로 돌려줍니다."
+                "기숙사비, 그리고 홈에 노출된 최신 공지 카드를 current snapshot으로 "
+                "돌려줍니다."
             )
             if public_readonly
             else "학교 기숙사 안내 current snapshot을 가져옵니다."
@@ -367,7 +575,7 @@ def register_shared_tools(
             str | None,
             Field(
                 description=(
-                    "기숙사 안내 유형 필터. hall_info, quick_links, latest_notices "
+                    "기숙사 안내 유형 필터. hall_info, quick_links, latest_notices, fees "
                     "중 하나를 사용합니다."
                 )
             ),
@@ -500,8 +708,9 @@ def register_shared_tools(
         description=(
             (
                 "학생활동 안내를 읽을 때 사용합니다. 학생회, 교지/언론, "
-                "사회봉사, ROTC 같은 학생활동 유형별 정적 안내를 current snapshot으로 "
-                "돌려줍니다."
+                "중앙동아리, 기관동아리, 학생혁신서포터즈, CAT-CERT, "
+                "사회봉사, ROTC 같은 학생활동 유형별 정적 안내를 "
+                "current snapshot으로 돌려줍니다."
             )
             if public_readonly
             else "학교 학생활동 안내 current snapshot을 가져옵니다."
@@ -514,7 +723,8 @@ def register_shared_tools(
             Field(
                 description=(
                     "학생활동 안내 유형 필터. student_government, campus_media, "
-                    "social_volunteering, rotc 중 하나를 사용합니다."
+                    "social_volunteering, rotc, central_clubs, institutional_clubs, "
+                    "student_innovation_supporters, cat_cert 중 하나를 사용합니다."
                 )
             ),
         ] = None,
@@ -525,6 +735,301 @@ def register_shared_tools(
             if public_readonly:
                 return [serialize_public_student_activity_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
+
+    @mcp.tool(
+        description=(
+            (
+                "공식 공지사항 중 학생활동 공지와 모집성 student activity notices "
+                "게시글을 읽을 때 사용합니다. "
+                "학생지원팀 공지를 포함해 중앙동아리 모집, 총학생회/학생자치, 사회봉사, "
+                "ROTC, 교내 축제/행사 관련 글을 current snapshot으로 돌려줍니다. "
+                "SNS/Instagram 글은 "
+                "수집하지 않습니다."
+            )
+            if public_readonly
+            else "학교 학생활동 공지 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_student_activity_notices(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "학생활동 공지 유형 필터. club_recruitment, student_government, "
+                    "volunteering, rotc, campus_event 중 하나를 사용합니다."
+                )
+            ),
+        ] = None,
+        query: Annotated[
+            str | None,
+            Field(description="제목, 요약, 본문 검색어. 예: 동아리, 봉사단, 축제"),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                notices = list_student_activity_notices(
+                    conn,
+                    topic=topic,
+                    query=query,
+                    limit=limit,
+                )
+                if public_readonly:
+                    return [serialize_public_student_activity_notice(item) for item in notices]
+                return [item.model_dump() for item in notices]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "가대소개 주요 정적 안내 자료를 읽을 때 사용합니다. 규정, 요람, "
+                "학사제도안내책자, 캠퍼스투어, 연혁, 교육이념, 가톨릭교육브랜드, "
+                "교회문헌, 예결산공고, 총장실처럼 공식 링크와 접근 안내가 필요한 "
+                "about resource를 current snapshot으로 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 가대소개 주요 정적 안내 자료 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_about_resource_guides(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "가대소개 정적 안내 유형 필터. rules, university_bulletin, "
+                    "academic_handbook, campus_tour, history, church_literature, "
+                    "budget_account, education_philosophy, catholic_education_brand, "
+                    "president_office_static 중 하나를 사용합니다."
+                )
+            ),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                guides = list_about_resource_guides(conn, topic=topic, limit=limit)
+                if public_readonly:
+                    return [serialize_public_about_resource_guide(item) for item in guides]
+                return [item.model_dump() for item in guides]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "서비스/정책 안내를 읽을 때 사용합니다. 입찰공고, 채용공고, "
+                "개인정보처리방침, 영상정보처리기기 방침, 청탁금지법 안내처럼 "
+                "공식 1차 서비스 페이지의 링크와 접근 안내를 current snapshot으로 "
+                "돌려줍니다."
+            )
+            if public_readonly
+            else "학교 서비스/정책 안내 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_service_policy_guides(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "서비스/정책 안내 유형 필터. bidding, job_posting, privacy_policy, "
+                    "cctv_policy, anti_graft 중 하나를 사용합니다."
+                )
+            ),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                guides = list_service_policy_guides(conn, topic=topic, limit=limit)
+                if public_readonly:
+                    return [serialize_public_service_policy_guide(item) for item in guides]
+                return [item.model_dump() for item in guides]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "서비스/정책 공식 게시글을 검색할 때 사용합니다. 입찰공고와 채용공고 "
+                "게시판의 제목, 날짜, 요약, 본문 검색용 current snapshot을 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 서비스/정책 게시글 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_service_policy_posts(
+        topic: Annotated[
+            str | None,
+            Field(description="서비스/정책 게시글 유형 필터. bidding, job_posting 중 하나입니다."),
+        ] = None,
+        query: Annotated[
+            str | None,
+            Field(description="제목, 요약, 본문 검색어. 예: 입찰, 채용, 현장설명회"),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                posts = list_service_policy_posts(conn, topic=topic, query=query, limit=limit)
+                if public_readonly:
+                    return [serialize_public_service_policy_post(item) for item in posts]
+                return [item.model_dump() for item in posts]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "공식 뉴스룸 게시물을 읽을 때 사용합니다. 포토뉴스와 보도자료의 "
+                "공식 제목, 날짜, 요약, 썸네일, 외부 언론 링크와 동문 인터뷰, 홍보영상 "
+                "공식 페이지 링크를 current snapshot으로 돌려줍니다. 외부 언론 본문, "
+                "외부 영상 본문, SNS 본문은 수집하지 않습니다."
+            )
+            if public_readonly
+            else "학교 뉴스룸 게시물 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_newsroom_posts(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "뉴스룸 유형 필터. photo_news, press, alumni_interview, "
+                    "promo_video 중 하나를 사용합니다."
+                )
+            ),
+        ] = None,
+        query: Annotated[
+            str | None,
+            Field(description="제목 또는 요약 검색어. 예: 총장, 연구, 보도자료"),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                posts = list_newsroom_posts(conn, topic=topic, query=query, limit=limit)
+                if public_readonly:
+                    return [serialize_public_newsroom_post(item) for item in posts]
+                return [item.model_dump() for item in posts]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "연구ㆍ산학 주요연구성과 게시글을 검색할 때 사용합니다. 학교 공식 "
+                "연구성과 게시판의 제목, 날짜, 요약, 본문 검색용 current snapshot을 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 연구성과 게시글 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_research_posts(
+        topic: Annotated[
+            str | None,
+            Field(description="연구 게시글 유형 필터. research_result 하나를 사용합니다."),
+        ] = None,
+        query: Annotated[
+            str | None,
+            Field(description="제목, 요약, 본문 검색어. 예: 연구성과, 하이드로겔, 교수팀"),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                posts = list_research_posts(conn, topic=topic, query=query, limit=limit)
+                if public_readonly:
+                    return [serialize_public_research_post(item) for item in posts]
+                return [item.model_dump() for item in posts]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "CUK홍보 자료 안내를 읽을 때 사용합니다. 공식브로슈어, 가대이야기, "
+                "홍보자료실처럼 학교 공식 페이지의 링크와 접근 안내를 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 CUK홍보 자료 안내 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_newsroom_resource_guides(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "CUK홍보 자료 유형 필터. brochure, cuk_story, gallery 중 하나입니다."
+                )
+            ),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                guides = list_newsroom_resource_guides(conn, topic=topic, limit=limit)
+                if public_readonly:
+                    return [serialize_public_newsroom_resource_guide(item) for item in guides]
+                return [item.model_dump() for item in guides]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
+
+    @mcp.tool(
+        description=(
+            (
+                "170주년 기념사업 안내를 읽을 때 사용합니다. 총장 축사글, 연혁, 슬로건, "
+                "홍보영상, 온라인 역사관, 기념사업 일정, 기부 안내를 공식 링크와 "
+                "요약으로 돌려줍니다."
+            )
+            if public_readonly
+            else "학교 170주년 기념사업 안내 current snapshot을 가져옵니다."
+        ),
+        meta=tool_meta,
+    )
+    def tool_list_anniversary_guides(
+        topic: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "170주년 안내 유형 필터. president_message, milestone, slogan, promo_video, "
+                    "online_museum, event_schedule, donation_info 중 하나입니다."
+                )
+            ),
+        ] = None,
+        limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
+    ):
+        with connection_factory() as conn:
+            try:
+                guides = list_anniversary_guides(conn, topic=topic, limit=limit)
+                if public_readonly:
+                    return [serialize_public_anniversary_guide(item) for item in guides]
+                return [item.model_dump() for item in guides]
+            except InvalidRequestError as exc:
+                if public_readonly:
+                    return serialize_public_error(exc)
+                return {"error": str(exc)}
 
     @mcp.tool(
         description=(
@@ -830,6 +1335,8 @@ def register_shared_tools(
         description=(
             (
                 "캠퍼스 출발지 기준으로 주변 식당을 찾을 때 사용합니다. "
+                "Kakao Local 외부 공개 API 기반 편의 기능이며, 학교 공식 1차 "
+                "source coverage와 별도 범주입니다. "
                 "origin, 예산(budget_max), open_now, walk_minutes를 함께 줄 수 있습니다. "
                 "origin은 slug, 대표 이름, alias(예: 중도, 학생식당)를 받을 수 있습니다. "
                 "출발지가 모호하면 tool_search_places를 먼저 사용합니다. budget_max를 "
@@ -910,6 +1417,8 @@ def register_shared_tools(
         description=(
             (
                 "브랜드나 상호를 직접 검색할 때 사용합니다. "
+                "Kakao Local 외부 공개 API 기반 편의 기능이며, 학교 공식 1차 "
+                "source coverage와 별도 범주입니다. "
                 "매머드커피, 메가커피, 이디야, 스타벅스처럼 nearby 추천이 아니라 "
                 "이름으로 특정 매장을 찾고 싶을 때 적합합니다."
             )
@@ -1018,7 +1527,7 @@ def register_shared_tools(
         ] = None,
         query: Annotated[
             str | None,
-            Field(description="제목 또는 요약 검색어. 예: 공결, 입퇴사, OT"),
+            Field(description="제목, 요약 또는 본문 검색어. 예: 공결, 입퇴사, OT"),
         ] = None,
         limit: Annotated[int, Field(description="최대 결과 수. 기본값은 20입니다.")] = 20,
     ):

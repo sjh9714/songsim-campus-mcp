@@ -9,6 +9,7 @@ import pytest
 from songsim_campus.db import connection, init_db
 from songsim_campus.mcp_server import build_mcp
 from songsim_campus.repo import (
+    replace_about_resource_guides,
     replace_campus_dining_menus,
     replace_campus_facilities,
     replace_courses,
@@ -218,6 +219,40 @@ class McpAcademicStatusSource:
 
 def _tool_payloads(result) -> list[dict[str, object]]:
     return [json.loads(item.text) for item in result]
+
+
+def test_mcp_public_journey_tools_return_service_backed_payloads(app_env, monkeypatch):
+    pytest.importorskip('mcp.server.fastmcp')
+    init_db()
+    seed_demo(force=True)
+    monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
+    clear_settings_cache()
+
+    async def main():
+        mcp = build_mcp()
+        today = await mcp.call_tool("tool_today_campus_updates", {"limit": 3})
+        place = await mcp.call_tool("tool_find_campus_place", {"query": "학생회관", "limit": 3})
+        academic = await mcp.call_tool(
+            "tool_explain_academic_process",
+            {"query": "등록금", "limit": 3},
+        )
+        study = await mcp.call_tool("tool_find_study_resource", {"query": "SPSS", "limit": 3})
+        life = await mcp.call_tool("tool_campus_life_help", {"query": "기숙사", "limit": 3})
+        status = await mcp.read_resource("songsim://status")
+        return today, place, academic, study, life, list(status)
+
+    today, place, academic, study, life, status = asyncio.run(main())
+
+    assert json.loads(today[0].text)["journey"] == "today_campus_updates"
+    assert json.loads(place[0].text)["journey"] == "find_campus_place"
+    assert json.loads(academic[0].text)["journey"] == "explain_academic_process"
+    assert json.loads(study[0].text)["journey"] == "find_study_resource"
+    assert json.loads(life[0].text)["journey"] == "campus_life_help"
+    status_payload = json.loads(status[0].content)
+    assert "datasets" in status_payload
+    assert "sync_runs" not in {item["name"] for item in status_payload["datasets"]}
+
+    clear_settings_cache()
 
 
 def test_mcp_transport_tool_and_resource_share_service_data(app_env):
@@ -524,6 +559,51 @@ def test_mcp_student_activity_tool_and_resource_share_service_data(app_env):
     assert tool_payload["title"] == "총학생회"
     assert tool_payload["topic"] == "student_government"
     assert resource_payload[0]["source_tag"] == "cuk_student_activity_guides"
+
+
+def test_mcp_about_resource_tool_and_resource_share_service_data(app_env):
+    pytest.importorskip("mcp.server.fastmcp")
+    init_db()
+    seed_demo(force=True)
+    with connection() as conn:
+        replace_about_resource_guides(
+            conn,
+            [
+                {
+                    "topic": "rules",
+                    "title": "규정",
+                    "summary": "규정정보시스템 안내",
+                    "steps": ["공식 규정정보시스템에서 원문을 확인합니다."],
+                    "links": [
+                        {
+                            "label": "규정정보시스템 바로가기",
+                            "url": "http://rule.catholic.ac.kr:8080/lmxsrv/main/main.srv",
+                        }
+                    ],
+                    "source_url": "https://www.catholic.ac.kr/ko/about/rule.do",
+                    "source_tag": "cuk_about_resource_guides",
+                    "last_synced_at": "2026-03-20T10:00:00+09:00",
+                }
+            ],
+        )
+
+    async def main():
+        mcp = build_mcp()
+        tool_result = await mcp.call_tool(
+            "tool_list_about_resource_guides",
+            {"topic": "rules", "limit": 10},
+        )
+        resource_result = await mcp.read_resource("songsim://about-resource-guide")
+        return tool_result, list(resource_result)
+
+    tool_result, resource_result = asyncio.run(main())
+
+    tool_payload = json.loads(tool_result[0].text)
+    resource_payload = json.loads(resource_result[0].content)
+
+    assert tool_payload["title"] == "규정"
+    assert tool_payload["topic"] == "rules"
+    assert resource_payload[0]["source_tag"] == "cuk_about_resource_guides"
 
 
 def test_mcp_student_exchange_tool_and_resource_share_service_data(app_env):
@@ -996,6 +1076,11 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     tool_names, resource_uris = asyncio.run(main())
 
     assert set(tool_names) == {
+        "tool_today_campus_updates",
+        "tool_find_campus_place",
+        "tool_explain_academic_process",
+        "tool_find_study_resource",
+        "tool_campus_life_help",
         "tool_search_places",
         "tool_get_place",
         "tool_search_courses",
@@ -1007,6 +1092,14 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
         "tool_list_seasonal_semester_guides",
         "tool_list_academic_milestone_guides",
         "tool_list_student_activity_guides",
+        "tool_list_student_activity_notices",
+        "tool_list_about_resource_guides",
+        "tool_list_service_policy_guides",
+        "tool_list_service_policy_posts",
+        "tool_list_newsroom_posts",
+        "tool_list_research_posts",
+        "tool_list_newsroom_resource_guides",
+        "tool_list_anniversary_guides",
         "tool_list_student_exchange_guides",
         "tool_search_student_exchange_partners",
         "tool_search_phone_book",
@@ -1031,6 +1124,7 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     assert "tool_create_profile" not in tool_names
     assert "tool_get_profile_notices" not in tool_names
     assert "songsim://source-registry" in resource_uris
+    assert "songsim://status" in resource_uris
     assert "songsim://academic-calendar" in resource_uris
     assert "songsim://academic-support-guide" in resource_uris
     assert "songsim://academic-status-guide" in resource_uris
@@ -1039,6 +1133,14 @@ def test_mcp_public_readonly_mode_registers_only_read_only_tools(app_env, monkey
     assert "songsim://seasonal-semester-guide" in resource_uris
     assert "songsim://academic-milestone-guide" in resource_uris
     assert "songsim://student-activity-guide" in resource_uris
+    assert "songsim://student-activity-notices" in resource_uris
+    assert "songsim://about-resource-guide" in resource_uris
+    assert "songsim://service-policy-guide" in resource_uris
+    assert "songsim://service-policy-posts" in resource_uris
+    assert "songsim://newsroom-posts" in resource_uris
+    assert "songsim://research-posts" in resource_uris
+    assert "songsim://newsroom-resource-guide" in resource_uris
+    assert "songsim://anniversary-guide" in resource_uris
     assert "songsim://student-exchange-guide" in resource_uris
     assert "songsim://student-exchange-partners" in resource_uris
     assert "songsim://phone-book" in resource_uris
@@ -1093,6 +1195,9 @@ def test_mcp_public_readonly_mode_registers_prompts_and_extended_resources(app_e
         "songsim://seasonal-semester-guide",
         "songsim://academic-milestone-guide",
         "songsim://student-activity-guide",
+        "songsim://student-activity-notices",
+        "songsim://about-resource-guide",
+        "songsim://newsroom-posts",
         "songsim://student-exchange-guide",
         "songsim://student-exchange-partners",
         "songsim://phone-book",
@@ -1167,9 +1272,98 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "성적평가" in tools["tool_list_academic_milestone_guides"]["description"]
     assert "졸업요건" in tools["tool_list_academic_milestone_guides"]["description"]
     assert "학생회" in tools["tool_list_student_activity_guides"]["description"]
+    assert "중앙동아리" in tools["tool_list_student_activity_guides"]["description"]
+    assert "기관동아리" in tools["tool_list_student_activity_guides"]["description"]
     assert "사회봉사" in tools["tool_list_student_activity_guides"]["description"]
     assert "student_government" in (
         tools["tool_list_student_activity_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "central_clubs" in (
+        tools["tool_list_student_activity_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "규정" in tools["tool_list_about_resource_guides"]["description"]
+    assert "요람" in tools["tool_list_about_resource_guides"]["description"]
+    assert "학사제도안내책자" in tools["tool_list_about_resource_guides"]["description"]
+    assert "캠퍼스투어" in tools["tool_list_about_resource_guides"]["description"]
+    assert "교육이념" in tools["tool_list_about_resource_guides"]["description"]
+    assert "총장실" in tools["tool_list_about_resource_guides"]["description"]
+    assert "rules" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "academic_handbook" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "campus_tour" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "history" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "church_literature" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "budget_account" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "education_philosophy" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "president_office_static" in (
+        tools["tool_list_about_resource_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "개인정보처리방침" in tools["tool_list_service_policy_guides"]["description"]
+    assert "청탁금지법" in tools["tool_list_service_policy_guides"]["description"]
+    assert "privacy_policy" in (
+        tools["tool_list_service_policy_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "anti_graft" in (
+        tools["tool_list_service_policy_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "포토뉴스" in tools["tool_list_newsroom_posts"]["description"]
+    assert "보도자료" in tools["tool_list_newsroom_posts"]["description"]
+    assert "동문 인터뷰" in tools["tool_list_newsroom_posts"]["description"]
+    assert "홍보영상" in tools["tool_list_newsroom_posts"]["description"]
+    assert "photo_news" in (
+        tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "press" in (
+        tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "alumni_interview" in (
+        tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "promo_video" in (
+        tools["tool_list_newsroom_posts"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
     )
@@ -1188,6 +1382,8 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "예비군" in tools["tool_list_campus_life_support_guides"]["description"]
     assert "부속병원" in tools["tool_list_campus_life_support_guides"]["description"]
     assert "대관안내" in tools["tool_list_campus_life_support_guides"]["description"]
+    assert "진로/취업 상담" in tools["tool_list_campus_life_support_guides"]["description"]
+    assert "IT서비스" in tools["tool_list_campus_life_support_guides"]["description"]
     assert "개인형 이동장치 안전교육" in (
         tools["tool_list_campus_life_support_guides"]["description"]
     )
@@ -1195,6 +1391,7 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "Visual Studio" in tools["tool_search_pc_software"]["description"]
     assert "기숙사" in tools["tool_list_dormitory_guides"]["description"]
     assert "스테파노관" in tools["tool_list_dormitory_guides"]["description"]
+    assert "기숙사비" in tools["tool_list_dormitory_guides"]["description"]
     assert "장학제도" in tools["tool_list_scholarship_guides"]["description"]
     assert "공식 문서" in tools["tool_list_scholarship_guides"]["description"]
     assert "무선랜" in tools["tool_list_wifi_guides"]["description"]
@@ -1291,6 +1488,9 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
     assert "latest_notices" in (
         tools["tool_list_dormitory_guides"]["inputSchema"]["properties"]["topic"]["description"]
     )
+    assert "fees" in (
+        tools["tool_list_dormitory_guides"]["inputSchema"]["properties"]["topic"]["description"]
+    )
     assert "유실물" in (
         tools["tool_search_phone_book"]["inputSchema"]["properties"]["query"]["description"]
     )
@@ -1320,6 +1520,11 @@ def test_mcp_public_readonly_mode_exposes_agent_friendly_tool_metadata(app_env, 
         ]
     )
     assert "hospital_use" in (
+        tools["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
+            "description"
+        ]
+    )
+    assert "career_counseling" in (
         tools["tool_list_campus_life_support_guides"]["inputSchema"]["properties"]["topic"][
             "description"
         ]
@@ -1500,6 +1705,12 @@ def test_mcp_public_usage_and_class_period_resources_are_readable(app_env, monke
     assert "read-only" in usage_content
     assert "tool_search_places" in usage_content
     assert "tool_search_restaurants" in usage_content
+    assert "tool_today_campus_updates" in usage_content
+    assert "tool_find_campus_place" in usage_content
+    assert "tool_explain_academic_process" in usage_content
+    assert "tool_find_study_resource" in usage_content
+    assert "tool_campus_life_help" in usage_content
+    assert "songsim://status" in usage_content
     assert "tool_list_academic_calendar" in usage_content
     assert "tool_list_academic_support_guides" in usage_content
     assert "tool_list_academic_status_guides" in usage_content
@@ -1508,6 +1719,9 @@ def test_mcp_public_usage_and_class_period_resources_are_readable(app_env, monke
     assert "tool_list_seasonal_semester_guides" in usage_content
     assert "tool_list_academic_milestone_guides" in usage_content
     assert "tool_list_student_activity_guides" in usage_content
+    assert "tool_list_about_resource_guides" in usage_content
+    assert "tool_list_service_policy_guides" in usage_content
+    assert "tool_list_newsroom_posts" in usage_content
     assert "tool_list_student_exchange_guides" in usage_content
     assert "tool_search_student_exchange_partners" in usage_content
     assert "tool_search_phone_book" in usage_content
@@ -1537,6 +1751,10 @@ def test_mcp_public_usage_and_class_period_resources_are_readable(app_env, monke
     assert "휴복학 문의" in usage_content
     assert "복학 신청 방법" in usage_content
     assert "재입학 지원자격" in usage_content
+    assert "학교 규정 어디서 봐?" in usage_content
+    assert "학사제도안내책자 보여줘" in usage_content
+    assert "개인정보처리방침 어디서 봐?" in usage_content
+    assert "청탁금지법 문의 어디야" in usage_content
     assert "등록금 납부 방법" in usage_content
     assert "수업평가 기간" in usage_content
     assert "계절학기 신청 시기" in usage_content
@@ -3235,6 +3453,85 @@ def test_mcp_public_affiliated_notices_return_topic_and_summary_preview(
     assert payload[0]["source_tag"] == "cuk_affiliated_notice_boards"
     assert len(payload[0]["summary"]) <= 160
     assert payload[0]["summary"].endswith("...")
+
+    clear_settings_cache()
+
+
+def test_mcp_public_affiliated_notices_return_body_match_snippet(
+    app_env,
+    monkeypatch,
+):
+    pytest.importorskip('mcp.server.fastmcp')
+    init_db()
+    monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
+    clear_settings_cache()
+
+    class DormitoryBodySearchSource:
+        topic = "dorm_k_a_general"
+        source_tag = "cuk_affiliated_notice_boards"
+
+        def fetch_list(self, offset: int = 0, limit: int = 10):
+            return "<list></list>"
+
+        def parse_list(self, _html: str):
+            return [
+                {
+                    "topic": self.topic,
+                    "article_no": "200",
+                    "title": "생활 안내",
+                    "published_at": "2026-03-12",
+                    "summary": "요약에는 검색어가 없습니다.",
+                    "source_url": "https://dorm.catholic.ac.kr/dormitory/board/comm_notice.do?mode=view&articleNo=200",
+                    "source_tag": self.source_tag,
+                }
+            ]
+
+        def fetch_detail(self, article_no: str, offset: int = 0, limit: int = 10):
+            return article_no
+
+        def parse_detail(
+            self,
+            article_no: str,
+            *,
+            default_title: str = "",
+            default_category: str = "",
+            default_summary: str = "",
+            default_published_at: str = "",
+            default_source_url: str | None = None,
+        ):
+            return {
+                "topic": self.topic,
+                "title": default_title,
+                "published_at": default_published_at,
+                "summary": default_summary,
+                "body_text": (
+                    "기숙사 생활 안내 본문입니다. 통금, 택배, 공용공간 안내 뒤에 "
+                    "심야 출입 절차와 점호 확인 방법이 포함되어 있습니다."
+                ),
+                "source_url": default_source_url,
+                "source_tag": self.source_tag,
+            }
+
+    with connection() as conn:
+        refresh_affiliated_notices_from_sources(
+            conn,
+            sources=[DormitoryBodySearchSource()],
+            fetched_at="2026-03-20T10:00:00+09:00",
+        )
+
+    async def main():
+        mcp = build_mcp()
+        result = await mcp.call_tool(
+            "tool_list_affiliated_notices",
+            {"topic": "dorm_k_a_general", "query": "심야 출입", "limit": 5},
+        )
+        return _tool_payloads(result)
+
+    payload = asyncio.run(main())
+
+    assert [item["title"] for item in payload] == ["생활 안내"]
+    assert "심야 출입" in payload[0]["summary"]
+    assert "body_text" not in payload[0]
 
     clear_settings_cache()
 

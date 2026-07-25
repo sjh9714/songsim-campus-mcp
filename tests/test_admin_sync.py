@@ -39,6 +39,10 @@ def test_run_admin_sync_records_success_history_for_snapshot(app_env, monkeypatc
             "class_guides": 4,
             "seasonal_semester_guides": 4,
             "academic_milestone_guides": 4,
+            "student_activity_notices": 2,
+            "about_resource_guides": 3,
+            "service_policy_guides": 5,
+            "newsroom_posts": 6,
             "dormitory_guides": 4,
             "phone_book_entries": 5,
             "campus_life_support_guides": 3,
@@ -68,6 +72,10 @@ def test_run_admin_sync_records_success_history_for_snapshot(app_env, monkeypatc
         "class_guides": 4,
         "seasonal_semester_guides": 4,
         "academic_milestone_guides": 4,
+        "student_activity_notices": 2,
+        "about_resource_guides": 3,
+        "service_policy_guides": 5,
+        "newsroom_posts": 6,
         "dormitory_guides": 4,
         "phone_book_entries": 5,
         "campus_life_support_guides": 3,
@@ -160,6 +168,28 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
         seen["academic_milestone_guides"] = {"fetched_at": fetched_at}
         return []
 
+    def fake_student_activity_notices(
+        conn,
+        *,
+        pages: int = 1,
+        fetched_at: str | None = None,
+        source=None,
+    ):
+        seen["student_activity_notices"] = {"pages": pages, "fetched_at": fetched_at}
+        return []
+
+    def fake_about_resource_guides(conn, *, fetched_at: str | None = None, sources=None):
+        seen["about_resource_guides"] = {"fetched_at": fetched_at}
+        return []
+
+    def fake_service_policy_guides(conn, *, fetched_at: str | None = None, sources=None):
+        seen["service_policy_guides"] = {"fetched_at": fetched_at}
+        return []
+
+    def fake_newsroom_posts(conn, *, fetched_at: str | None = None, sources=None):
+        seen["newsroom_posts"] = {"fetched_at": fetched_at}
+        return []
+
     def fake_dormitory_guides(conn, *, fetched_at: str | None = None, sources=None):
         seen["dormitory_guides"] = {"fetched_at": fetched_at}
         return []
@@ -242,6 +272,22 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
         fake_academic_milestone_guides,
     )
     monkeypatch.setattr(
+        "songsim_campus.services.refresh_student_activity_notices_from_source",
+        fake_student_activity_notices,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_about_resource_guides_from_source",
+        fake_about_resource_guides,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_service_policy_guides_from_source",
+        fake_service_policy_guides,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_newsroom_posts_from_source",
+        fake_newsroom_posts,
+    )
+    monkeypatch.setattr(
         "songsim_campus.services.refresh_dormitory_guides_from_source",
         fake_dormitory_guides,
     )
@@ -274,6 +320,10 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     class_run = run_admin_sync(target="class_guides")
     seasonal_run = run_admin_sync(target="seasonal_semester_guides")
     milestone_run = run_admin_sync(target="academic_milestone_guides")
+    student_activity_notices_run = run_admin_sync(target="student_activity_notices")
+    about_resource_run = run_admin_sync(target="about_resource_guides")
+    service_policy_run = run_admin_sync(target="service_policy_guides")
+    newsroom_run = run_admin_sync(target="newsroom_posts")
     dormitory_run = run_admin_sync(target="dormitory_guides")
     phone_book_run = run_admin_sync(target="phone_book_entries")
     campus_life_support_run = run_admin_sync(target="campus_life_support_guides")
@@ -294,6 +344,10 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     assert class_run.summary == {"class_guides": 0}
     assert seasonal_run.summary == {"seasonal_semester_guides": 0}
     assert milestone_run.summary == {"academic_milestone_guides": 0}
+    assert student_activity_notices_run.summary == {"student_activity_notices": 0}
+    assert about_resource_run.summary == {"about_resource_guides": 0}
+    assert service_policy_run.summary == {"service_policy_guides": 0}
+    assert newsroom_run.summary == {"newsroom_posts": 0}
     assert affiliated_run.summary == {"affiliated_notices": 0}
     assert campus_life_notices_run.summary == {"campus_life_notices": 0}
     assert dormitory_run.summary == {"dormitory_guides": 0}
@@ -313,7 +367,11 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     assert seen["class_guides"] == {"fetched_at": None}
     assert seen["seasonal_semester_guides"] == {"fetched_at": None}
     assert seen["academic_milestone_guides"] == {"fetched_at": None}
-    assert seen["affiliated_notices"] == {"pages": 1, "fetched_at": None}
+    assert seen["student_activity_notices"] == {"pages": 3, "fetched_at": None}
+    assert seen["about_resource_guides"] == {"fetched_at": None}
+    assert seen["service_policy_guides"] == {"fetched_at": None}
+    assert seen["newsroom_posts"] == {"fetched_at": None}
+    assert seen["affiliated_notices"] == {"pages": 3, "fetched_at": None}
     assert seen["campus_life_notices"] == {"pages": 1, "fetched_at": None}
     assert seen["dormitory_guides"] == {"fetched_at": None}
     assert seen["phone_book_entries"] == {"fetched_at": None}
@@ -324,6 +382,46 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     assert seen["library_seat_status"] == {"fetched_at": None}
     assert seen["courses"] == {"year": 2026, "semester": 1, "fetched_at": None}
     assert seen["notices"] == {"pages": 3, "fetched_at": None}
+
+
+def test_run_admin_sync_student_activity_notices_uses_notice_pages(app_env, monkeypatch):
+    init_db()
+    seen: dict[str, object] = {}
+
+    def fake_student_activity_notices(conn, *, pages: int = 1, source=None):
+        seen["student_activity_notices"] = {"pages": pages, "source": source}
+        return []
+
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_student_activity_notices_from_source",
+        fake_student_activity_notices,
+    )
+
+    run = run_admin_sync(target="student_activity_notices", notice_pages=4)
+
+    assert run.summary == {"student_activity_notices": 0}
+    assert run.params == {"notice_pages": 4}
+    assert seen["student_activity_notices"] == {"pages": 4, "source": None}
+
+
+def test_run_admin_sync_affiliated_notices_uses_notice_pages(app_env, monkeypatch):
+    init_db()
+    seen: dict[str, object] = {}
+
+    def fake_affiliated_notices(conn, *, pages: int = 1, sources=None):
+        seen["affiliated_notices"] = {"pages": pages, "sources": sources}
+        return []
+
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_affiliated_notices_from_sources",
+        fake_affiliated_notices,
+    )
+
+    run = run_admin_sync(target="affiliated_notices", notice_pages=4)
+
+    assert run.summary == {"affiliated_notices": 0}
+    assert run.params == {"notice_pages": 4}
+    assert seen["affiliated_notices"] == {"pages": 4, "sources": None}
 
 
 def test_run_admin_sync_rolls_back_failed_target_and_records_failure(app_env, monkeypatch):

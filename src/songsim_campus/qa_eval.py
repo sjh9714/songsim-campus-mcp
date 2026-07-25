@@ -19,7 +19,9 @@ from pydantic import BaseModel, Field, ValidationError
 
 from . import place_search_runtime, services
 from .ingest.campus_life_support_guides import (
+    CareerCounselingGuideSource,
     HealthCenterGuideSource,
+    ITServiceGuideSource,
     LostFoundGuideSource,
     ParkingGuideSource,
 )
@@ -62,12 +64,20 @@ from .ingest.pc_software import (
 from .ingest.pc_software import (
     search_pc_software_entries as rank_pc_software_rows,
 )
+from .ingest.service_policy_guides import (
+    AntiGraftGuideSource,
+    BiddingGuideSource,
+    CctvPolicyGuideSource,
+    JobPostingGuideSource,
+    PrivacyPolicyGuideSource,
+)
 from .ingest.student_activity_guides import (
     CampusMediaGuideSource,
     RotcGuideSource,
     SocialVolunteeringGuideSource,
     StudentGovernmentGuideSource,
 )
+from .ingest.student_activity_notices import StudentActivityNoticeSource
 
 try:
     from . import course_search_runtime as course_search_runtime
@@ -113,7 +123,9 @@ _search_course_rows = getattr(
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_CORPUS_PATH = ROOT_DIR / "data" / "qa" / "public_api_eval_corpus_1000.jsonl"
 DEFAULT_WATCHLIST_PATH = ROOT_DIR / "data" / "qa" / "public_api_eval_watchlist.jsonl"
-DEFAULT_REPORT_PATH = ROOT_DIR / "docs" / "qa" / "public-api-live-validation-1000.md"
+DEFAULT_REPORT_PATH = Path(
+    os.environ.get("SONGSIM_PUBLIC_EVAL_REPORT_PATH", "/tmp/songsim-public-api-validation.md")
+)
 PUBLIC_EVAL_HTTP_TIMEOUT_SECONDS = 20.0
 PUBLIC_EVAL_HTTP_RETRIES = 2
 PUBLIC_EVAL_MAX_WORKERS = 4
@@ -139,6 +151,12 @@ EvalDomain = Literal[
     "academic_milestone_guides",
     "student_exchange_guides",
     "student_activity_guides",
+    "student_activity_notices",
+    "service_policy_guides",
+    "service_policy_posts",
+    "research_posts",
+    "newsroom_resource_guides",
+    "anniversary_guides",
     "student_exchange_partners",
     "campus_life_support_guides",
     "pc_software_entries",
@@ -435,6 +453,66 @@ def _summarize_payload(payload: Any, *, summary_kind: str) -> Any:
             for item in rows[:5]
         ]
     if summary_kind == "student_activity_guides_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "summary": item.get("summary"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "student_activity_notices_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "published_at": item.get("published_at"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "service_policy_guides_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "summary": item.get("summary"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "service_policy_posts_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "published_at": item.get("published_at"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "research_posts_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "published_at": item.get("published_at"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "newsroom_resource_guides_top5":
+        rows = payload if isinstance(payload, list) else []
+        return [
+            {
+                "topic": item.get("topic"),
+                "title": item.get("title"),
+                "summary": item.get("summary"),
+            }
+            for item in rows[:5]
+        ]
+    if summary_kind == "anniversary_guides_top5":
         rows = payload if isinstance(payload, list) else []
         return [
             {
@@ -940,6 +1018,14 @@ def _payload_from_db(conn: psycopg.Connection, row: EvalCorpusRow) -> Any:
             limit=_limit_from_row(row, 20),
         )
         return [item.model_dump() for item in items]
+    if path == "/student-activity-notices":
+        items = services.list_student_activity_notices(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            query=row.api_request.params.get("query"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
     if path == "/dormitory-guides":
         items = services.list_dormitory_guides(
             conn,
@@ -949,6 +1035,43 @@ def _payload_from_db(conn: psycopg.Connection, row: EvalCorpusRow) -> Any:
         return [item.model_dump() for item in items]
     if path == "/campus-life-support-guides":
         items = services.list_campus_life_support_guides(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/service-policy-guides":
+        items = services.list_service_policy_guides(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/service-policy-posts":
+        items = services.list_service_policy_posts(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            query=row.api_request.params.get("query"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/research-posts":
+        items = services.list_research_posts(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            query=row.api_request.params.get("query"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/newsroom-resource-guides":
+        items = services.list_newsroom_resource_guides(
+            conn,
+            topic=row.api_request.params.get("topic"),
+            limit=_limit_from_row(row, 20),
+        )
+        return [item.model_dump() for item in items]
+    if path == "/anniversary-guides":
+        items = services.list_anniversary_guides(
             conn,
             topic=row.api_request.params.get("topic"),
             limit=_limit_from_row(row, 20),
@@ -1475,6 +1598,63 @@ def _payload_from_sources(
         if topic := row.api_request.params.get("topic"):
             rows = [item for item in rows if item.get("topic") == topic]
         return rows[:limit]
+    if path == "/student-activity-notices":
+        cache_key = "student_activity_notices"
+        if cache_key not in source_cache:
+            source = StudentActivityNoticeSource(services.NOTICE_SOURCE_URL)
+            rows: list[dict[str, Any]] = []
+            seen_articles: set[str] = set()
+            for page in range(3):
+                offset = page * 10
+                list_html = source.fetch_list(offset=offset, limit=10)
+                for item in source.parse_list(list_html):
+                    article_no = item.get("article_no")
+                    if not article_no or article_no in seen_articles:
+                        continue
+                    seen_articles.add(article_no)
+                    try:
+                        detail_html = source.fetch_detail(article_no, offset=offset, limit=10)
+                        detail = source.parse_detail(
+                            detail_html,
+                            default_title=item.get("title") or "",
+                            default_summary="",
+                            default_published_at=item.get("published_at"),
+                        )
+                    except httpx.HTTPError:
+                        detail = source.parse_detail(
+                            "",
+                            default_title=item.get("title") or "",
+                            default_summary="",
+                            default_published_at=item.get("published_at"),
+                        )
+                    topic = detail.get("topic")
+                    if topic not in services.STUDENT_ACTIVITY_NOTICE_TOPICS:
+                        continue
+                    rows.append(
+                        {
+                            "topic": topic,
+                            "article_no": article_no,
+                            "title": detail.get("title") or item.get("title"),
+                            "published_at": detail.get("published_at")
+                            or item.get("published_at"),
+                            "summary": detail.get("summary", ""),
+                            "source_url": item.get("source_url"),
+                            "source_tag": source.source_tag,
+                            "last_synced_at": captured_at,
+                        }
+                    )
+            source_cache[cache_key] = rows
+        rows = list(source_cache[cache_key])
+        if topic := row.api_request.params.get("topic"):
+            rows = [item for item in rows if item.get("topic") == topic]
+        if query := row.api_request.params.get("query"):
+            lowered = str(query).casefold()
+            rows = [
+                item
+                for item in rows
+                if lowered in f"{item.get('title', '')} {item.get('summary', '')}".casefold()
+            ]
+        return rows[:limit]
     if path == "/student-exchange-partners":
         cache_key = "student_exchange_partners"
         if cache_key not in source_cache:
@@ -1497,6 +1677,7 @@ def _payload_from_sources(
             rows: list[dict[str, Any]] = []
             try:
                 from .ingest.official_sources import (
+                    DormitoryFeeGuideSource,
                     DormitoryHomepageGuideSource,
                     DormitorySongsimGuideSource,
                 )
@@ -1504,6 +1685,7 @@ def _payload_from_sources(
                 for source in (
                     DormitorySongsimGuideSource(services.DORMITORY_SONGSIM_SOURCE_URL),
                     DormitoryHomepageGuideSource(services.DORMITORY_HOME_SOURCE_URL),
+                    DormitoryFeeGuideSource(services.DORMITORY_FEE_SOURCE_URL),
                 ):
                     rows.extend(source.parse(source.fetch(), fetched_at=captured_at))
             except Exception:
@@ -1521,6 +1703,27 @@ def _payload_from_sources(
                 HealthCenterGuideSource(services.HEALTH_CENTER_GUIDE_SOURCE_URL),
                 LostFoundGuideSource(services.LOST_FOUND_GUIDE_SOURCE_URL),
                 ParkingGuideSource(services.CAMPUS_PARKING_GUIDE_SOURCE_URL),
+                CareerCounselingGuideSource(services.CAREER_COUNSELING_GUIDE_SOURCE_URL),
+                ITServiceGuideSource(services.IT_SERVICE_GUIDE_SOURCE_URL),
+            ):
+                rows.extend(source.parse(source.fetch(), fetched_at=captured_at))
+            source_cache[cache_key] = rows
+        rows = list(source_cache[cache_key])
+        if topic := row.api_request.params.get("topic"):
+            rows = [item for item in rows if item.get("topic") == topic]
+        return rows[:limit]
+    if path == "/service-policy-guides":
+        cache_key = "service_policy_guides"
+        if cache_key not in source_cache:
+            rows: list[dict[str, Any]] = []
+            for source in (
+                BiddingGuideSource(services.SERVICE_POLICY_GUIDE_SOURCE_URLS["bidding"]),
+                JobPostingGuideSource(services.SERVICE_POLICY_GUIDE_SOURCE_URLS["job_posting"]),
+                PrivacyPolicyGuideSource(
+                    services.SERVICE_POLICY_GUIDE_SOURCE_URLS["privacy_policy"]
+                ),
+                CctvPolicyGuideSource(services.SERVICE_POLICY_GUIDE_SOURCE_URLS["cctv_policy"]),
+                AntiGraftGuideSource(services.SERVICE_POLICY_GUIDE_SOURCE_URLS["anti_graft"]),
             ):
                 rows.extend(source.parse(source.fetch(), fetched_at=captured_at))
             source_cache[cache_key] = rows
@@ -2081,6 +2284,17 @@ def _render_table(headers: list[str], rows: list[list[str]]) -> str:
     return "\n".join([header, divider, *body])
 
 
+def _render_report_cell(value: Any, *, max_length: int = 240) -> str:
+    if isinstance(value, str):
+        text = value
+    else:
+        text = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > max_length:
+        text = f"{text[: max_length - 3]}..."
+    return text.replace("|", "\\|")
+
+
 def render_validation_report(
     *,
     rows: list[EvalCorpusRow],
@@ -2106,12 +2320,18 @@ def render_validation_report(
         "certificate_guides",
         "dormitory_guides",
         "campus_life_support_guides",
+        "service_policy_guides",
         "pc_software_entries",
         "registration_guides",
         "class_guides",
         "seasonal_semester_guides",
         "academic_milestone_guides",
         "student_activity_guides",
+        "student_activity_notices",
+        "service_policy_posts",
+        "research_posts",
+        "newsroom_resource_guides",
+        "anniversary_guides",
         "phone_book",
         "scholarship_guides",
         "wifi_guides",
@@ -2161,9 +2381,12 @@ def render_validation_report(
     watch_rows = [
         [
             result.id,
-            row_by_id[result.id].user_utterance,
+            _render_report_cell(row_by_id[result.id].user_utterance),
             result.verdict,
+            row_by_id[result.id].watch_policy,
             result.comparison,
+            _render_report_cell(row_by_id[result.id].notes),
+            _render_report_cell(result.actual_summary),
         ]
         for result in normalized_results
         if result.verdict == "watch" and result.id in row_by_id
@@ -2182,7 +2405,7 @@ def render_validation_report(
     verdict_order = ["pass", "soft_pass", "soft_fail", "fail", "watch", "skip"]
     verdict_rows = [[key, str(verdict_counter.get(key, 0))] for key in verdict_order]
     watch_table = _render_table(
-        ["ID", "User utterance", "Verdict", "Comparison"],
+        ["ID", "User utterance", "Verdict", "Watch policy", "Comparison", "Notes", "Actual"],
         watch_rows,
     )
     issue_table = _render_table(

@@ -7,7 +7,7 @@
 - `songsim-public-api`
   - `songsim-api`
   - 공개 landing page, `/docs`, read-only HTTP API
-  - automation `ON`
+  - automation `OFF` in `public_readonly`
 - `songsim-public-mcp`
   - `songsim-mcp --transport streamable-http`
   - 공개 원격 MCP URL
@@ -46,8 +46,8 @@
 - `SONGSIM_APP_MODE=public_readonly`
 - `SONGSIM_SEED_DEMO_ON_START=false`
 - `SONGSIM_SYNC_OFFICIAL_ON_START=false`
-- `songsim-public-api`만 `SONGSIM_AUTOMATION_ENABLED=true`
-- `songsim-public-api`는 `SONGSIM_LIBRARY_SEAT_PREWARM_INTERVAL_MINUTES=5`
+- `songsim-public-api`는 `SONGSIM_AUTOMATION_ENABLED=false`
+- `songsim-public-api`는 live query/cache 경로를 사용하고, snapshot 동기화는 배포 전 운영자가 별도로 실행합니다.
 - `songsim-public-mcp`는 `SONGSIM_AUTOMATION_ENABLED=false`
 - `songsim-public-mcp`는 기본적으로 익명 read-only
 - 공개 MCP를 보호해야 하면 `SONGSIM_PUBLIC_MCP_AUTH_MODE=oauth`로 전환
@@ -76,7 +76,7 @@ fresh TTL은 짧게 유지하고, 최근 정상 snapshot은 최대 10분까지 s
 - Render free web service는 cold start가 생길 수 있습니다.
 - Supabase free project는 장기간 무활동 시 pause될 수 있습니다.
 - 공개 배포는 read-only입니다. profile/admin 경로는 숨겨집니다.
-- `songsim-public-api` automation은 `snapshot`, `library_seat_prewarm`, `cache_cleanup`을 실행합니다.
+- `public_readonly`에서는 automation loop가 실행되지 않습니다. Remote timeout은 `/healthz`, `/readyz`, 핵심 HTTP canary로 배포/DB/외부 source 문제를 분리해서 확인합니다.
 - ChatGPT Actions는 HTTP API를 쓰므로 MCP OAuth와 무관합니다. MCP OAuth는 원할 때만 켜면 됩니다.
 - `songsim-public-mcp`를 OAuth로 보호해도 `songsim-public-api`는 기본적으로 별도 OAuth env 없이 운영해도 됩니다. API 쪽에 같은 OAuth env를 넣는 경우는 landing status text를 MCP 보호 상태와 맞춰 보여 주고 싶을 때 정도입니다.
 - `SONGSIM_OFFICIAL_COURSE_YEAR`, `SONGSIM_OFFICIAL_COURSE_SEMESTER`는 intentionally 비워 두고, 운영 시점의 대상 학기를 명시해서 넣는 편이 안전합니다.

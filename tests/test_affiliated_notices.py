@@ -195,7 +195,10 @@ def test_affiliated_notice_detail_parsers_extract_representative_rows(
         default_source_url=source_url,
     )
 
-    assert parsed == {
+    assert {
+        key: parsed[key]
+        for key in ("topic", "title", "published_at", "summary", "source_url", "source_tag")
+    } == {
         "topic": topic,
         "title": title,
         "published_at": published_at,
@@ -203,3 +206,4 @@ def test_affiliated_notice_detail_parsers_extract_representative_rows(
         "source_url": source_url,
         "source_tag": "cuk_affiliated_notice_boards",
     }
+    assert parsed["body_text"].startswith(summary)

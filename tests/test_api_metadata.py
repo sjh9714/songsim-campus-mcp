@@ -78,6 +78,8 @@ def test_render_landing_page_keeps_public_readonly_student_surface():
     assert "/phone-book" in html
     assert "/dormitory-guides" in html
     assert "/campus-life-notices" in html
+    assert "Kakao Local external public API" in html
+    assert "separate from official" in html
     assert "configured without OAuth" in html
     assert "GPT Actions OpenAPI" not in html
     assert "Admin Sync" not in html

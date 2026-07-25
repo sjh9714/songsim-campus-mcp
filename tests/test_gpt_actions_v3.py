@@ -31,6 +31,7 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         "/academic-milestone-guides",
         "/academic-status-guides",
         "/academic-support-guides",
+        "/about-resource-guides",
         "/affiliated-notices",
         "/campus-life-notices",
         "/campus-life-support-guides",
@@ -38,6 +39,7 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         "/class-guides",
         "/courses",
         "/dormitory-guides",
+        "/gpt/notice-categories",
         "/gpt/classrooms/empty",
         "/gpt/dining-menus",
         "/gpt/library-seats",
@@ -47,12 +49,19 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         "/gpt/restaurants/nearby",
         "/gpt/restaurants/search",
         "/leave-of-absence-guides",
+        "/anniversary-guides",
+        "/newsroom-posts",
+        "/newsroom-resource-guides",
         "/pc-software",
         "/phone-book",
         "/registration-guides",
+        "/research-posts",
+        "/service-policy-guides",
+        "/service-policy-posts",
         "/scholarship-guides",
         "/seasonal-semester-guides",
         "/student-activity-guides",
+        "/student-activity-notices",
         "/student-exchange-guides",
         "/student-exchange-partners",
         "/transport",
@@ -79,6 +88,54 @@ def test_public_readonly_mode_exposes_gpt_actions_openapi_v3_hybrid_schema(monke
         payload["paths"]["/student-activity-guides"]["get"]["operationId"]
         == "listStudentActivityGuides"
     )
+    assert (
+        payload["paths"]["/student-activity-notices"]["get"]["operationId"]
+        == "listStudentActivityNotices"
+    )
+    assert payload["paths"]["/newsroom-posts"]["get"]["operationId"] == "listNewsroomPosts"
+    assert (
+        payload["paths"]["/service-policy-posts"]["get"]["operationId"]
+        == "listServicePolicyPosts"
+    )
+    assert payload["paths"]["/research-posts"]["get"]["operationId"] == "listResearchPosts"
+    assert (
+        payload["paths"]["/newsroom-resource-guides"]["get"]["operationId"]
+        == "listNewsroomResourceGuides"
+    )
+    assert (
+        payload["paths"]["/anniversary-guides"]["get"]["operationId"]
+        == "listAnniversaryGuides"
+    )
+    assert (
+        payload["paths"]["/service-policy-guides"]["get"]["operationId"]
+        == "listServicePolicyGuides"
+    )
+    assert (
+        payload["paths"]["/about-resource-guides"]["get"]["operationId"]
+        == "listAboutResourceGuides"
+    )
+    nearby_restaurant_description = payload["paths"]["/gpt/restaurants/nearby"]["get"][
+        "description"
+    ]
+    restaurant_search_description = payload["paths"]["/gpt/restaurants/search"]["get"][
+        "description"
+    ]
+    assert "Kakao Local external public API" in nearby_restaurant_description
+    assert "Kakao Local external public API" in restaurant_search_description
+    assert "first-party university source coverage" in restaurant_search_description
+    assert (
+        payload["paths"]["/gpt/notice-categories"]["get"]["operationId"]
+        == "listNoticeCategoriesForGpt"
+    )
+    about_description = payload["paths"]["/about-resource-guides"]["get"]["description"]
+    assert "연혁" in about_description
+    assert "교회문헌" in about_description
+    assert "예결산공고" in about_description
+    student_activity_description = payload["paths"]["/student-activity-guides"]["get"][
+        "description"
+    ]
+    assert "student innovation supporters" in student_activity_description
+    assert "CAT-CERT" in student_activity_description
 
 
 def test_public_readonly_mode_keeps_gpt_actions_v2_slim(monkeypatch):

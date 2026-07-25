@@ -101,6 +101,7 @@ def get_connection() -> DBConnection:
             settings.database_url,
             row_factory=dict_row,
             connect_timeout=5,
+            options="-c timezone=Asia/Seoul",
         )
     except Exception:
         if limiter is not None:

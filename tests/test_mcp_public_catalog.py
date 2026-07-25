@@ -21,6 +21,10 @@ def test_public_usage_guide_text_contains_current_anchor_phrases():
     assert "tool_list_seasonal_semester_guides" in content
     assert "tool_list_academic_milestone_guides" in content
     assert "tool_list_student_activity_guides" in content
+    assert "tool_list_student_activity_notices" in content
+    assert "tool_list_about_resource_guides" in content
+    assert "tool_list_service_policy_guides" in content
+    assert "tool_list_newsroom_posts" in content
     assert "tool_list_student_exchange_guides" in content
     assert "tool_search_phone_book" in content
     assert "tool_list_dormitory_guides" in content
@@ -29,6 +33,10 @@ def test_public_usage_guide_text_contains_current_anchor_phrases():
     assert "tool_list_scholarship_guides" in content
     assert "tool_list_wifi_guides" in content
     assert "tool_find_nearby_restaurants" in content
+    assert "Kakao Local external public API convenience surface" in content
+    assert "separate from first-party university source coverage" in content
+    assert "Best first questions" in content
+    assert "songsim://status" in content
     assert "예상 공실" in content
     assert "등록금 고지서 조회 방법" in content
     assert "수강신청 변경기간" in content
@@ -49,8 +57,17 @@ def test_public_usage_guide_text_contains_current_anchor_phrases():
     assert "교내미디어 뭐 있어?" in content
     assert "사회봉사 활동 알려줘" in content
     assert "학생군사교육단 안내해줘" in content
+    assert "학생활동 공지 알려줘" in content
+    assert "학생지원팀 공지 보여줘" in content
+    assert "학교 규정 어디서 봐?" in content
+    assert "학사제도안내책자 보여줘" in content
+    assert "개인정보처리방침 어디서 봐?" in content
+    assert "청탁금지법 문의 어디야" in content
+    assert "포토뉴스 최신 글 보여줘" in content
+    assert "보도자료 알려줘" in content
     assert "성심교정 대관안내 알려줘" in content
     assert "개인형 이동장치 안전교육 알려줘" in content
+    assert "진로/취업 상담 어디서 신청해?" in content
     assert "기숙사 최신 공지" in content
     assert "행사안내" in content
     assert "교내 행사 공지" in content
@@ -78,10 +95,12 @@ def test_register_public_resources_and_prompts_exposes_expected_catalog():
 
     assert resource_uris == {
         "songsim://usage-guide",
+        "songsim://status",
         "songsim://place-categories",
         "songsim://notice-categories",
         "songsim://class-periods",
     }
+    assert "songsim://go" + "al" not in resource_uris
     assert prompt_names == {
         "prompt_find_place",
         "prompt_search_courses",
@@ -129,6 +148,14 @@ def test_register_shared_resources_exposes_expected_resource_uris(tmp_path):
         "songsim://seasonal-semester-guide",
         "songsim://academic-milestone-guide",
         "songsim://student-activity-guide",
+        "songsim://student-activity-notices",
+        "songsim://about-resource-guide",
+        "songsim://service-policy-guide",
+        "songsim://service-policy-posts",
+        "songsim://newsroom-posts",
+        "songsim://research-posts",
+        "songsim://newsroom-resource-guide",
+        "songsim://anniversary-guide",
         "songsim://student-exchange-guide",
         "songsim://student-exchange-partners",
         "songsim://phone-book",

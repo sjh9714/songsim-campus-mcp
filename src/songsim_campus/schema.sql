@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS affiliated_notices (
     title TEXT NOT NULL,
     published_at DATE NOT NULL,
     summary TEXT NOT NULL DEFAULT '',
+    body_text TEXT NOT NULL DEFAULT '',
     source_url TEXT,
     source_tag TEXT NOT NULL DEFAULT 'demo',
     last_synced_at TIMESTAMPTZ NOT NULL
@@ -296,6 +297,107 @@ CREATE TABLE IF NOT EXISTS student_activity_guides (
     last_synced_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS student_activity_notices (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    article_no TEXT,
+    title TEXT NOT NULL,
+    published_at DATE,
+    summary TEXT NOT NULL DEFAULT '',
+    body_text TEXT NOT NULL DEFAULT '',
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS about_resource_guides (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    steps_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    links_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS service_policy_guides (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    steps_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    links_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS service_policy_posts (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    article_no TEXT,
+    title TEXT NOT NULL,
+    published_at DATE,
+    summary TEXT NOT NULL DEFAULT '',
+    body_text TEXT NOT NULL DEFAULT '',
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS newsroom_posts (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    article_no TEXT,
+    title TEXT NOT NULL,
+    published_at DATE,
+    summary TEXT NOT NULL DEFAULT '',
+    thumbnail_url TEXT,
+    external_url TEXT,
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS research_posts (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    article_no TEXT,
+    title TEXT NOT NULL,
+    published_at DATE,
+    summary TEXT NOT NULL DEFAULT '',
+    body_text TEXT NOT NULL DEFAULT '',
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS newsroom_resource_guides (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    steps_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    links_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS anniversary_guides (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic TEXT NOT NULL,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    steps_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    links_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    source_url TEXT,
+    source_tag TEXT NOT NULL DEFAULT 'demo',
+    last_synced_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS student_exchange_partners (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     partner_code TEXT NOT NULL,
@@ -435,6 +537,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS student_year INTEGER;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS admission_type TEXT;
 ALTER TABLE restaurant_cache_items ADD COLUMN IF NOT EXISTS kakao_place_id TEXT;
 ALTER TABLE restaurant_cache_items ADD COLUMN IF NOT EXISTS source_url TEXT;
+ALTER TABLE affiliated_notices ADD COLUMN IF NOT EXISTS body_text TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS sync_runs (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -481,6 +584,46 @@ CREATE INDEX IF NOT EXISTS idx_student_activity_guides_topic
 ON student_activity_guides(topic);
 CREATE INDEX IF NOT EXISTS idx_student_activity_guides_title
 ON student_activity_guides(title);
+CREATE INDEX IF NOT EXISTS idx_student_activity_notices_topic
+ON student_activity_notices(topic);
+CREATE INDEX IF NOT EXISTS idx_student_activity_notices_published_at
+ON student_activity_notices(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_student_activity_notices_title
+ON student_activity_notices(title);
+CREATE INDEX IF NOT EXISTS idx_about_resource_guides_topic
+ON about_resource_guides(topic);
+CREATE INDEX IF NOT EXISTS idx_about_resource_guides_title
+ON about_resource_guides(title);
+CREATE INDEX IF NOT EXISTS idx_service_policy_guides_topic
+ON service_policy_guides(topic);
+CREATE INDEX IF NOT EXISTS idx_service_policy_guides_title
+ON service_policy_guides(title);
+CREATE INDEX IF NOT EXISTS idx_service_policy_posts_topic
+ON service_policy_posts(topic);
+CREATE INDEX IF NOT EXISTS idx_service_policy_posts_published_at
+ON service_policy_posts(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_service_policy_posts_title
+ON service_policy_posts(title);
+CREATE INDEX IF NOT EXISTS idx_newsroom_posts_topic
+ON newsroom_posts(topic);
+CREATE INDEX IF NOT EXISTS idx_newsroom_posts_published_at
+ON newsroom_posts(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_newsroom_posts_title
+ON newsroom_posts(title);
+CREATE INDEX IF NOT EXISTS idx_research_posts_topic
+ON research_posts(topic);
+CREATE INDEX IF NOT EXISTS idx_research_posts_published_at
+ON research_posts(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_research_posts_title
+ON research_posts(title);
+CREATE INDEX IF NOT EXISTS idx_newsroom_resource_guides_topic
+ON newsroom_resource_guides(topic);
+CREATE INDEX IF NOT EXISTS idx_newsroom_resource_guides_title
+ON newsroom_resource_guides(title);
+CREATE INDEX IF NOT EXISTS idx_anniversary_guides_topic
+ON anniversary_guides(topic);
+CREATE INDEX IF NOT EXISTS idx_anniversary_guides_title
+ON anniversary_guides(title);
 CREATE INDEX IF NOT EXISTS idx_campus_life_support_guides_topic
 ON campus_life_support_guides(topic);
 CREATE INDEX IF NOT EXISTS idx_campus_life_support_guides_title

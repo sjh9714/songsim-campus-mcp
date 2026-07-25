@@ -9,20 +9,29 @@ from pydantic import Field
 from .services import (
     get_class_periods,
     get_notice_categories,
+    get_public_status_snapshot,
+    list_about_resource_guides,
     list_academic_calendar,
     list_academic_milestone_guides,
     list_academic_status_guides,
     list_academic_support_guides,
+    list_anniversary_guides,
     list_campus_life_notices,
     list_campus_life_support_guides,
     list_certificate_guides,
     list_class_guides,
     list_dormitory_guides,
     list_leave_of_absence_guides,
+    list_newsroom_posts,
+    list_newsroom_resource_guides,
     list_registration_guides,
+    list_research_posts,
     list_scholarship_guides,
     list_seasonal_semester_guides,
+    list_service_policy_guides,
+    list_service_policy_posts,
     list_student_activity_guides,
+    list_student_activity_notices,
     list_student_exchange_guides,
     list_transport_guides,
     list_wifi_guides,
@@ -47,6 +56,27 @@ def public_usage_guide_text() -> str:
             "",
             "This server is read-only.",
             "",
+            "Best first questions:",
+            "- 최신 학사 공지 2개 보여줘",
+            "- 학생회관 어디야?",
+            "- 중앙도서관 열람실 남은 좌석 알려줘",
+            "- 등록금 반환 기준 알려줘",
+            "- SPSS 설치된 컴퓨터실 어디야",
+            "",
+            "What I can't do:",
+            "- 내 시간표 저장해줘, 개인 성적 보여줘, 등록금 고지서 열어줘 같은 개인/로그인 작업",
+            "- 공식 source로 확인되지 않은 값을 추측해서 만들기",
+            "",
+            (
+                "When data is uncertain, expect null, empty results, stale cache, "
+                "or fallback notes instead of guesses."
+            ),
+            "",
+            "Out of scope (unsupported):",
+            "- Authentication / 로그인 기반 시스템 (Trinity/uPortal, e-Cyber/LMS 등)",
+            "- 개인정보/개별 고지 (등록금 고지서 개인 화면, 개인별 공지/메시지 등)",
+            "- 성적/과제/수강내역 등 개인 학사 데이터",
+            "",
             (
                 "Use this public MCP first for source-backed student questions about deadlines, "
                 "places, procedures, study resources, dormitory, campus-life support, and "
@@ -65,6 +95,12 @@ def public_usage_guide_text() -> str:
                 "어디/연락처, 절차/제도, 공부공간/자원, 특수 경로."
             ),
             (
+                "For a simpler first pass, use the high-level journey tools: "
+                "tool_today_campus_updates, tool_find_campus_place, "
+                "tool_explain_academic_process, tool_find_study_resource, "
+                "and tool_campus_life_help."
+            ),
+            (
                 "3. Call the matching prompt, resource, or tool first. Use HTTP only when "
                 "you want to verify the same result directly."
             ),
@@ -74,13 +110,16 @@ def public_usage_guide_text() -> str:
             "1. 오늘 할 일",
             (
                 "Use tool_list_latest_notices, tool_list_affiliated_notices, "
-                "tool_list_campus_life_notices, and tool_list_academic_calendar for "
-                "latest notices, department/dormitory boards, campus-life notices, and "
-                "academic calendar deadlines."
+                "tool_list_campus_life_notices, tool_list_newsroom_posts, "
+                "tool_list_service_policy_posts, tool_list_research_posts, "
+                "and tool_list_academic_calendar for "
+                "latest notices, department/dormitory boards, campus-life notices, "
+                "service/policy boards, research results, and academic calendar deadlines."
             ),
             (
                 "Example: 최신 학사 공지 2개 보여줘 / 국제학부 최신 공지 알려줘 / "
-                "행사안내 보여줘 / 교내 행사 공지 있어? / 3월 학사일정 알려줘"
+                "행사안내 보여줘 / 교내 행사 공지 있어? / 포토뉴스 최신 글 보여줘 / "
+                "보도자료 알려줘 / 3월 학사일정 알려줘"
             ),
             "",
             "2. 어디 / 연락처",
@@ -101,7 +140,10 @@ def public_usage_guide_text() -> str:
                 "tool_list_academic_support_guides, "
                 "tool_list_leave_of_absence_guides, tool_list_academic_status_guides, "
                 "tool_list_class_guides, tool_list_seasonal_semester_guides, "
-                "tool_list_student_activity_guides, "
+                "tool_list_student_activity_guides, tool_list_student_activity_notices, "
+                "tool_list_about_resource_guides, "
+                "tool_list_service_policy_guides, tool_list_newsroom_resource_guides, "
+                "tool_list_anniversary_guides, "
                 "tool_list_academic_milestone_guides, tool_list_student_exchange_guides, "
                 "tool_search_student_exchange_partners, and tool_list_scholarship_guides "
                 "for academic procedures and institutional rules."
@@ -115,7 +157,12 @@ def public_usage_guide_text() -> str:
                 "계절학기 신청 시기 알려줘 / 성적평가 방법 알려줘 / "
                 "졸업요건 알려줘 / 재입학 지원자격 알려줘 / "
                 "총학생회 안내해줘 / 교내미디어 뭐 있어? / 사회봉사 활동 알려줘 / "
-                "학생군사교육단 안내해줘 / 학생활동 공지 알려줘 / "
+                "중앙동아리 뭐 있어? / 기관동아리 CUK프렌즈 알려줘 / "
+                "캠퍼스투어 신청 어디서 해? / "
+                "학생군사교육단 안내해줘 / 학생활동 공지 알려줘 / 동아리 모집 공지 있어? / "
+                "학생지원팀 공지 보여줘 / "
+                "학교 규정 어디서 봐? / 요람 링크 알려줘 / 학사제도안내책자 보여줘 / "
+                "개인정보처리방침 어디서 봐? / 채용공고 알려줘 / 청탁금지법 문의 어디야 / "
                 "국내 학점교류 신청대상 알려줘 / 학점교류 신청시기 알려줘 / "
                 "교류대학 현황 알려줘 / 교환학생 프로그램 알려줘 / "
                 "해외 교류프로그램 알려줘 / 해외협정대학 알려줘 / "
@@ -130,6 +177,10 @@ def public_usage_guide_text() -> str:
                 "for study-space availability. Use tool_search_dining_menus, "
                 "tool_find_nearby_restaurants, tool_search_restaurants, and "
                 "tool_search_pc_software for food and campus computing resources."
+            ),
+            (
+                "Restaurant nearby/brand search is a Kakao Local external public API "
+                "convenience surface, separate from first-party university source coverage."
             ),
             (
                 "Library seats are best-effort live lookups with stale fallback. Empty "
@@ -157,20 +208,33 @@ def public_usage_guide_text() -> str:
                 "Use tool_list_dormitory_guides for dormitory guidance and "
                 "tool_list_campus_life_support_guides for health center, lost and found, "
                 "parking, counseling, disability support, reservist guidance, hospital use, "
-                "facility rental, and personal mobility safety guidance."
+                "facility rental, personal mobility safety guidance, career counseling, "
+                "and IT service guidance."
             ),
             (
                 "Example: 성심교정 기숙사 안내해줘 / 기숙사 입사안내 어디서 봐? / "
-                "기숙사 최신 공지 알려줘 / 학생상담 어디서 받아? / "
+                "기숙사비 알려줘 / 기숙사 환불 기준 알려줘 / 기숙사 최신 공지 알려줘 / "
+                "학생상담 어디서 받아? / "
                 "장애학생지원센터 뭐 해줘? / 예비군 신고 시기 알려줘 / "
                 "부속병원 이용 안내해줘 / 성심교정 대관안내 알려줘 / "
-                "개인형 이동장치 안전교육 알려줘 / 헬스장 어디야 / 편의점 어디야"
+                "개인형 이동장치 안전교육 알려줘 / 진로/취업 상담 어디서 신청해? / "
+                "웹메일 신청이나 Office 365 이용 방법 알려줘 / "
+                "헬스장 어디야 / 편의점 어디야"
             ),
             "",
             "Helper resources:",
+            "- songsim://status",
             "- songsim://place-categories",
             "- songsim://notice-categories",
             "- songsim://class-periods",
+            "- songsim://about-resource-guide",
+            "- songsim://service-policy-guide",
+            "- songsim://service-policy-posts",
+            "- songsim://student-activity-notices",
+            "- songsim://newsroom-posts",
+            "- songsim://research-posts",
+            "- songsim://newsroom-resource-guide",
+            "- songsim://anniversary-guide",
             "- songsim://source-registry",
         ]
     )
@@ -312,6 +376,86 @@ def register_shared_resources(mcp: Any, connection_factory: Any, docs_dir: Path)
                 indent=2,
             )
 
+    @mcp.resource("songsim://student-activity-notices")
+    def student_activity_notices_resource() -> str:
+        """Return the latest student activity notices as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_student_activity_notices(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://about-resource-guide")
+    def about_resource_guide_resource() -> str:
+        """Return the latest about resource guides as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_about_resource_guides(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://service-policy-guide")
+    def service_policy_guide_resource() -> str:
+        """Return the latest service/policy guides as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_service_policy_guides(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://service-policy-posts")
+    def service_policy_posts_resource() -> str:
+        """Return the latest service/policy board posts as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_service_policy_posts(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://newsroom-posts")
+    def newsroom_posts_resource() -> str:
+        """Return the latest official newsroom posts as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_newsroom_posts(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://research-posts")
+    def research_posts_resource() -> str:
+        """Return the latest official research posts as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_research_posts(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://newsroom-resource-guide")
+    def newsroom_resource_guide_resource() -> str:
+        """Return the latest newsroom resource guides as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_newsroom_resource_guides(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    @mcp.resource("songsim://anniversary-guide")
+    def anniversary_guide_resource() -> str:
+        """Return the latest 170th anniversary guides as JSON."""
+        with connection_factory() as conn:
+            return json.dumps(
+                [item.model_dump() for item in list_anniversary_guides(conn, limit=50)],
+                ensure_ascii=False,
+                indent=2,
+            )
+
     @mcp.resource("songsim://student-exchange-partners")
     def student_exchange_partners_resource() -> str:
         """Return the latest student exchange partner universities as JSON."""
@@ -403,6 +547,15 @@ def register_public_resources(mcp: Any, connection_factory: Any) -> None:
     def usage_guide_resource() -> str:
         """Return the public MCP usage guide."""
         return public_usage_guide_text()
+
+    @mcp.resource("songsim://status")
+    def status_resource() -> str:
+        """Return public dataset freshness/status as JSON."""
+        return json.dumps(
+            get_public_status_snapshot().model_dump(),
+            ensure_ascii=False,
+            indent=2,
+        )
 
     @mcp.resource("songsim://place-categories")
     def place_categories_resource() -> str:
