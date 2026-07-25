@@ -563,7 +563,6 @@ ADMIN_SYNC_TARGETS = {
 }
 AUTOMATION_SYNC_TARGETS = {"snapshot", "library_seat_prewarm", "cache_cleanup"}
 AUTOMATION_TARGET_ORDER = ("snapshot", "library_seat_prewarm", "cache_cleanup")
-PUBLIC_READONLY_AUTOMATION_SYNC_TARGETS = {"library_seat_prewarm", "cache_cleanup"}
 SYNC_RUN_TARGETS = ADMIN_SYNC_TARGETS | AUTOMATION_SYNC_TARGETS
 AUTOMATION_LOCK_KEY = 20_260_314
 ALLOWED_ADMISSION_TYPES = {"general", "freshman", "transfer", "exchange"}
@@ -1632,12 +1631,12 @@ def _sync_run_completed_at(run: dict[str, Any] | SyncRun | None) -> str | None:
 
 
 def _automation_targets_for_settings(settings: Any) -> tuple[str, ...]:
-    allowed = (
-        PUBLIC_READONLY_AUTOMATION_SYNC_TARGETS
-        if settings.app_mode == "public_readonly"
-        else AUTOMATION_SYNC_TARGETS
-    )
-    return tuple(target for target in AUTOMATION_TARGET_ORDER if target in allowed)
+    # public_readonly 는 run_automation_tick 진입부에서 이미 걸러진다.
+    # 공개 read-only 배포는 공식 데이터를 써넣지 않는다는 것이 그 게이트의 취지고,
+    # 애초에 Render 무료 플랜은 15분이면 잠들어 서버 안 스케줄러가 돌 수 없다.
+    # 정기 갱신은 .github/workflows/sync.yml 이 바깥에서 담당한다.
+    del settings
+    return AUTOMATION_TARGET_ORDER
 
 
 def _automation_job_snapshot(
@@ -6445,6 +6444,7 @@ def sync_official_snapshot(
     year: int | None = None,
     semester: int | None = None,
     notice_pages: int | None = None,
+    failed_sources: list[str] | None = None,
 ) -> dict[str, int]:
     """공식 source 를 순회하며 스냅샷을 갱신한다.
 
@@ -6456,6 +6456,10 @@ def sync_official_snapshot(
 
     이제 소스별로 격리한다. 실패한 소스는 기록하고 건너뛰며 나머지는 갱신한다.
     실패한 소스의 기존 데이터는 지우지 않는다.
+
+    격리 덕에 이 함수는 일부가 실패해도 정상 반환한다. 그래서 정기 동기화처럼
+    "조용히 안 들어오는 것"이 곧 사고인 호출부는 실패 여부를 알아야 한다.
+    `failed_sources` 리스트를 넘기면 실패한 소스 이름이 채워진다.
     """
     settings = get_settings()
     resolved_campus = campus or settings.official_campus_id
@@ -6539,6 +6543,8 @@ def sync_official_snapshot(
             len(failed),
             ",".join(failed),
         )
+    if failed_sources is not None:
+        failed_sources.extend(failed)
     return summary
 
 

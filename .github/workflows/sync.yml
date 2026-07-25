@@ -1,0 +1,131 @@
+name: Sync official data
+
+# 프로덕션은 SONGSIM_APP_MODE=public_readonly 라 스스로 공식 데이터를 갱신하지 않는다.
+# 그 게이트는 의도된 것이고, 애초에 Render 무료 플랜은 15분이면 잠들어서
+# 서버 안의 스케줄러가 돌 수도 없다. 그래서 갱신은 바깥에서 이 워크플로가 맡는다.
+#
+# 실패하면 Actions 탭에 빨간색으로 남는 것이 이 방식의 핵심이다.
+# 학식은 주 단위, 공지는 매일 바뀌므로 조용히 멈추면 학생이 지난주 메뉴를 보게 된다.
+
+on:
+  schedule:
+    # 6시간 간격 (UTC) → KST 09:00 / 15:00 / 21:00 / 03:00
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "개설과목 조회 연도 (비우면 오늘 날짜로 계산)"
+        required: false
+        type: string
+      semester:
+        description: "학기 1 또는 2 (비우면 오늘 날짜로 계산)"
+        required: false
+        type: string
+      notice_pages:
+        description: "가져올 공지 목록 페이지 수"
+        required: false
+        default: "3"
+        type: string
+
+concurrency:
+  # 앞선 실행이 아직 돌고 있으면 겹쳐 쓰지 않는다.
+  group: sync-official-data
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies from lockfile
+        run: uv sync --frozen --extra dev --extra scrape
+
+      - name: Resolve academic term
+        id: term
+        env:
+          # 수동 실행 입력은 run: 에 직접 보간하지 않고 환경변수로만 넘긴다.
+          INPUT_YEAR: ${{ inputs.year }}
+          INPUT_SEMESTER: ${{ inputs.semester }}
+          INPUT_NOTICE_PAGES: ${{ inputs.notice_pages }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          from datetime import datetime, timedelta, timezone
+
+          # 학기를 하드코딩하면 9월에 2학기가 시작될 때 조용히 지난 학기 과목을 받는다.
+          # 한국 학사 기준 3~8월은 1학기, 9~2월은 2학기다.
+          now = datetime.now(timezone(timedelta(hours=9)))
+          if 3 <= now.month <= 8:
+              year, semester = now.year, 1
+          elif now.month >= 9:
+              year, semester = now.year, 2
+          else:  # 1~2월은 직전 연도의 2학기
+              year, semester = now.year - 1, 2
+
+          # 수동 실행 입력은 신뢰하지 않는다. 정수로 강제해서
+          # GITHUB_OUTPUT 에 임의 문자열이 섞여 들어가지 못하게 한다.
+          def _override(name, fallback, allowed=None):
+              raw = (os.environ.get(name) or "").strip()
+              if not raw:
+                  return fallback
+              value = int(raw)  # 숫자가 아니면 여기서 실패시킨다
+              if allowed is not None and value not in allowed:
+                  raise SystemExit(f"{name} must be one of {sorted(allowed)}")
+              return value
+
+          year = _override("INPUT_YEAR", year)
+          semester = _override("INPUT_SEMESTER", semester, allowed={1, 2})
+          notice_pages = _override("INPUT_NOTICE_PAGES", 3)
+          if not 1 <= notice_pages <= 20:
+              raise SystemExit("notice_pages must be between 1 and 20")
+
+          print(f"year={year}")
+          print(f"semester={semester}")
+          print(f"notice_pages={notice_pages}")
+          PY
+
+      - name: Sync
+        env:
+          SONGSIM_DATABASE_URL: ${{ secrets.SONGSIM_DATABASE_URL }}
+          # 공개 서비스와 무관한 별도 프로세스다. public_readonly 는 쓰기를 막는다.
+          SONGSIM_APP_MODE: local_full
+          SONGSIM_SEED_DEMO_ON_START: "false"
+          SONGSIM_SYNC_OFFICIAL_ON_START: "false"
+          # Kakao 키는 넣지 않는다. 공식 스냅샷 동기화는 주변 식당(Kakao Local)을
+          # 건드리지 않으므로, 이 워크플로가 들고 있을 이유가 없다.
+          # 앞 단계에서 정수로 검증된 값이지만, 셸에는 환경변수로만 넘긴다.
+          TERM_YEAR: ${{ steps.term.outputs.year }}
+          TERM_SEMESTER: ${{ steps.term.outputs.semester }}
+          TERM_NOTICE_PAGES: ${{ steps.term.outputs.notice_pages }}
+        run: |
+          uv run songsim-sync \
+            --year "$TERM_YEAR" \
+            --semester "$TERM_SEMESTER" \
+            --notice-pages "$TERM_NOTICE_PAGES"
+
+      - name: Verify the service sees fresh data
+        run: |
+          # readiness 스냅샷은 30초 캐시된다.
+          sleep 45
+          curl -sf --max-time 90 https://songsim-public-api.onrender.com/readyz \
+            | python -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          stale = [k for k, v in (data.get('tables') or {}).items() if not v.get('ok')]
+          print('ok =', data.get('ok'))
+          if stale:
+              print('not ready:', ', '.join(stale))
+              sys.exit(1)
+          "
