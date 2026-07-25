@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     app_mode: Literal["local_full", "public_readonly"] = "local_full"
     public_http_url: str | None = None
     public_mcp_url: str | None = None
+    # 학생용 모바일 웹 주소. 설정하면 랜딩 페이지가 학생을 먼저 이쪽으로 보낸다.
+    student_web_url: str | None = None
     public_mcp_auth_mode: Literal["anonymous", "oauth"] = "anonymous"
     mcp_oauth_enabled: bool = False
     mcp_oauth_issuer: str | None = None
@@ -51,6 +53,7 @@ class Settings(BaseSettings):
     @field_validator(
         "public_http_url",
         "public_mcp_url",
+        "student_web_url",
         "kakao_rest_api_key",
         "mcp_oauth_issuer",
         "mcp_oauth_audience",

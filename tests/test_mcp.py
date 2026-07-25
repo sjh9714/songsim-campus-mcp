@@ -2528,6 +2528,7 @@ def test_mcp_places_tool_populates_generic_facility_metadata_when_place_alias_ma
     app_env,
     monkeypatch,
 ):
+    pytest.importorskip('mcp.server.fastmcp')
     init_db()
     with connection() as conn:
         replace_places(

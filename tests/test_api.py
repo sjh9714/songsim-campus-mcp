@@ -4556,3 +4556,86 @@ def test_transport_endpoint_explicit_mode_wins_over_query(client):
     items = response.json()
     assert [item["mode"] for item in items] == ["bus"]
     assert items[0]["title"] == "시내버스"
+
+
+def test_app_starts_when_startup_official_sync_fails(app_env, monkeypatch):
+    """학교 페이지 주소가 바뀌어 동기화가 실패해도 서버는 떠야 한다.
+
+    실제로 tuition_fee_payment_schedule.do 가 404 가 되면서
+    sync_official_snapshot 이 그대로 터져 앱 기동이 통째로 실패한 적이 있다.
+    """
+    monkeypatch.setenv("SONGSIM_SYNC_OFFICIAL_ON_START", "true")
+    monkeypatch.setenv("SONGSIM_SEED_DEMO_ON_START", "false")
+    clear_settings_cache()
+
+    called = {"count": 0}
+
+    def _exploding_sync(conn):
+        called["count"] += 1
+        raise RuntimeError("Client error '404 404' for url '.../tuition_fee_payment_schedule.do'")
+
+    monkeypatch.setattr(api_module, "sync_official_snapshot", _exploding_sync)
+
+    app = create_app()
+    with TestClient(app) as test_client:
+        assert test_client.get("/healthz").status_code == 200
+
+    assert called["count"] == 1
+
+    clear_settings_cache()
+
+
+def test_landing_page_sends_students_to_web_app_when_configured():
+    html_with = render_landing_page(
+        public_http_url="https://api.example.edu",
+        mcp_url="https://mcp.example.edu/mcp",
+        public_readonly=True,
+        oauth_enabled=False,
+        admin_link_html="",
+        gpt_actions_links_html="",
+        student_web_url="https://songsim.example.app",
+    )
+
+    assert "학생이신가요?" in html_with
+    assert "https://songsim.example.app" in html_with
+    # 배너는 개발자용 본문보다 위에 있어야 학생이 헤매지 않는다.
+    assert html_with.index("학생이신가요?") < html_with.index("Songsim Campus MCP</h1>")
+
+    html_without = render_landing_page(
+        public_http_url="https://api.example.edu",
+        mcp_url="https://mcp.example.edu/mcp",
+        public_readonly=True,
+        oauth_enabled=False,
+        admin_link_html="",
+        gpt_actions_links_html="",
+    )
+
+    assert "학생이신가요?" not in html_without
+
+
+def test_app_stays_up_and_returns_503_when_database_is_unreachable(app_env, monkeypatch):
+    """데이터베이스가 사라져도 크래시 루프에 빠지지 않는다.
+
+    실제로 Supabase 프로젝트가 없어지면서 init_db() 가 터졌고, uvicorn 이
+    exit 3 으로 죽고 Render 가 재시작하는 크래시 루프가 두 달 넘게 이어졌다.
+    밖에서는 요청이 매달릴 뿐이라 아무도 눈치채지 못했다.
+    """
+    monkeypatch.setenv(
+        "SONGSIM_DATABASE_URL",
+        "postgresql://nobody:nobody@127.0.0.1:1/does_not_exist",
+    )
+    monkeypatch.setenv("SONGSIM_SEED_DEMO_ON_START", "false")
+    monkeypatch.setenv("SONGSIM_SYNC_OFFICIAL_ON_START", "false")
+    clear_settings_cache()
+
+    app = create_app()
+    # 데이터베이스가 없어도 기동 자체는 성공해야 한다.
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        assert test_client.get("/healthz").status_code == 200
+        assert test_client.get("/").status_code == 200
+
+        response = test_client.get("/places", params={"query": "학생회관"})
+        assert response.status_code == 503
+        assert response.json()["retryable"] is True
+
+    clear_settings_cache()

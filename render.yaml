@@ -23,6 +23,9 @@ services:
         sync: false
       - key: SONGSIM_PUBLIC_MCP_URL
         sync: false
+      # 학생용 모바일 웹 주소. 설정하면 랜딩 페이지 맨 위에 학생용 배너가 뜬다.
+      - key: SONGSIM_STUDENT_WEB_URL
+        sync: false
       - key: SONGSIM_APP_MODE
         value: public_readonly
       - key: SONGSIM_SEED_DEMO_ON_START
