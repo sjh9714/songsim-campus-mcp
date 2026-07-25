@@ -176,6 +176,7 @@ def _affiliated_notice_row(
     title: str,
     published_at: str,
     summary: str,
+    body_text: str = "",
     source_url: str = "https://example.com/notices/1",
     source_tag: str = "cuk_affiliated_notice_boards",
 ) -> dict:
@@ -184,6 +185,7 @@ def _affiliated_notice_row(
         "title": title,
         "published_at": published_at,
         "summary": summary,
+        "body_text": body_text,
         "source_url": source_url,
         "source_tag": source_tag,
         "last_synced_at": "2026-03-20T00:00:00+09:00",
@@ -5057,6 +5059,14 @@ def test_refresh_affiliated_notices_replaces_rows_and_orders_by_query_and_date(a
                             "published_at": "2026-03-20",
                             "summary": "OT 안내",
                             "source_url": "https://dorm.catholic.ac.kr/dormitory/board/comm_notice.do?articleNo=3",
+                        },
+                        {
+                            "article_no": "4",
+                            "title": "생활 안내",
+                            "published_at": "2026-03-02",
+                            "summary": "요약에는 없는 문장",
+                            "body_text": "본문에는 심야 출입 절차가 들어 있습니다.",
+                            "source_url": "https://dorm.catholic.ac.kr/dormitory/board/comm_notice.do?articleNo=4",
                         }
                     ],
                 ),
@@ -5071,12 +5081,19 @@ def test_refresh_affiliated_notices_replaces_rows_and_orders_by_query_and_date(a
             limit=20,
         )
         latest_only = list_affiliated_notices(conn, query="공지", limit=20)
+        body_only = list_affiliated_notices(
+            conn,
+            topic="dorm_k_a_general",
+            query="심야 출입",
+            limit=20,
+        )
 
-    assert len(notices) == 3
+    assert len(notices) == 4
     assert [item.topic for item in all_notices] == [
         "dorm_k_a_general",
         "international_studies",
         "international_studies",
+        "dorm_k_a_general",
     ]
     assert [item.title for item in study_notices] == [
         "국제학부 공결 신청 안내",
@@ -5086,8 +5103,44 @@ def test_refresh_affiliated_notices_replaces_rows_and_orders_by_query_and_date(a
         "기숙사 일반 공지",
         "국제학부 일반 공지",
     ]
+    assert [item.title for item in body_only] == ["생활 안내"]
+    assert "심야 출입" in body_only[0].summary
     assert all_notices[0].source_tag == "cuk_affiliated_notice_boards"
     assert all_notices[0].source_url == "https://dorm.catholic.ac.kr/dormitory/board/comm_notice.do?articleNo=3"
+
+
+def test_list_affiliated_notices_exposes_body_match_snippet(app_env):
+    init_db()
+
+    with connection() as conn:
+        repo.replace_affiliated_notices(
+            conn,
+            [
+                _affiliated_notice_row(
+                    topic="dorm_francis_checkin_out",
+                    title="프란치스코관 입사 안내",
+                    published_at="2026-03-20",
+                    summary="입사 일정 요약",
+                    body_text=(
+                        "입사 대상자는 지정된 기간에 절차를 확인합니다. "
+                        "개별 호실 배정과 납부 상태는 로그인 시스템에서 확인해야 합니다. "
+                        "공식 공지 본문에는 정기 점검 시간과 공용 공간 이용 안내가 함께 제공됩니다."
+                    ),
+                    source_url="https://dorm.catholic.ac.kr/dormitory/board/checkin-out_notice.do?articleNo=1",
+                )
+            ],
+        )
+        rows = list_affiliated_notices(
+            conn,
+            topic="dorm_francis_checkin_out",
+            query="정기 점검",
+            limit=5,
+        )
+
+    assert [row.title for row in rows] == ["프란치스코관 입사 안내"]
+    assert "정기 점검" in rows[0].summary
+    assert "공식 공지 본문에는" in rows[0].summary
+    assert len(rows[0].summary) <= 220
 
 
 def test_refresh_campus_life_notices_replaces_rows_and_orders_by_query_and_date(app_env):
@@ -5281,6 +5334,7 @@ def test_list_campus_life_support_guides_accepts_new_topics_and_rejects_unknown_
         assert list_campus_life_support_guides(conn, topic="student_reservist", limit=1) == []
         assert list_campus_life_support_guides(conn, topic="hospital_use", limit=1) == []
         assert list_campus_life_support_guides(conn, topic="facility_rental", limit=1) == []
+        assert list_campus_life_support_guides(conn, topic="career_counseling", limit=1) == []
 
         with pytest.raises(InvalidRequestError, match="mobility_safety"):
             list_campus_life_support_guides(conn, topic="invalid", limit=1)
@@ -5292,6 +5346,7 @@ def test_list_campus_life_support_guides_accepts_new_topics_and_rejects_unknown_
         "student_reservist",
         "hospital_use",
         "facility_rental",
+        "career_counseling",
     ]
 
 
@@ -5338,6 +5393,8 @@ def test_list_student_activity_guides_accepts_new_topics_and_rejects_unknown_top
         assert list_student_activity_guides(conn, topic="campus_media", limit=1) == []
         assert list_student_activity_guides(conn, topic="social_volunteering", limit=1) == []
         assert list_student_activity_guides(conn, topic="rotc", limit=1) == []
+        assert list_student_activity_guides(conn, topic="central_clubs", limit=1) == []
+        assert list_student_activity_guides(conn, topic="institutional_clubs", limit=1) == []
 
         with pytest.raises(
             InvalidRequestError,
@@ -5350,6 +5407,8 @@ def test_list_student_activity_guides_accepts_new_topics_and_rejects_unknown_top
         "campus_media",
         "social_volunteering",
         "rotc",
+        "central_clubs",
+        "institutional_clubs",
     ]
 
 
@@ -5372,6 +5431,14 @@ def test_refresh_student_activity_guides_fetches_default_sources(app_env, monkey
         def fetch(self) -> str:
             return (FIXTURES_DIR / "rotc.do.html").read_text(encoding="utf-8")
 
+    class CentralClubFixtureSource(services_module.CentralClubGuideSource):
+        def fetch(self) -> str:
+            return (FIXTURES_DIR / "club.do.html").read_text(encoding="utf-8")
+
+    class InstitutionalClubFixtureSource(services_module.InstitutionalClubGuideSource):
+        def fetch(self) -> str:
+            return (FIXTURES_DIR / "institutional_club1.do.html").read_text(encoding="utf-8")
+
     monkeypatch.setattr(services_module, "StudentGovernmentGuideSource", GovernmentFixtureSource)
     monkeypatch.setattr(services_module, "CampusMediaGuideSource", MediaFixtureSource)
     monkeypatch.setattr(
@@ -5380,6 +5447,12 @@ def test_refresh_student_activity_guides_fetches_default_sources(app_env, monkey
         VolunteerFixtureSource,
     )
     monkeypatch.setattr(services_module, "RotcGuideSource", RotcFixtureSource)
+    monkeypatch.setattr(services_module, "CentralClubGuideSource", CentralClubFixtureSource)
+    monkeypatch.setattr(
+        services_module,
+        "InstitutionalClubGuideSource",
+        InstitutionalClubFixtureSource,
+    )
 
     with connection() as conn:
         guides = refresh_student_activity_guides_from_source(
@@ -5387,20 +5460,14 @@ def test_refresh_student_activity_guides_fetches_default_sources(app_env, monkey
             fetched_at="2026-03-21T00:00:00+09:00",
         )
 
-    assert [item.topic for item in guides] == [
-        "campus_media",
-        "campus_media",
-        "campus_media",
-        "campus_media",
-        "rotc",
-        "social_volunteering",
-        "social_volunteering",
-        "social_volunteering",
-        "social_volunteering",
-        "student_government",
-        "student_government",
-        "student_government",
-    ]
+    topics = [item.topic for item in guides]
+
+    assert topics.count("campus_media") == 4
+    assert topics.count("central_clubs") == 4
+    assert topics.count("institutional_clubs") == 6
+    assert topics.count("rotc") == 1
+    assert topics.count("social_volunteering") == 4
+    assert topics.count("student_government") == 3
     assert services_module.PUBLIC_READY_DATASET_POLICIES["student_activity_guides"] == "core"
 
 
@@ -5514,11 +5581,23 @@ def test_refresh_campus_life_support_guides_uses_all_default_sources(app_env, mo
         lambda url: FakeGuideSource("hospital_use", url),
         raising=False,
     )
+    monkeypatch.setattr(
+        services_module,
+        "CareerCounselingGuideSource",
+        lambda url: FakeGuideSource("career_counseling", url),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        services_module,
+        "ITServiceGuideSource",
+        lambda url: FakeGuideSource("it_service", url),
+        raising=False,
+    )
 
     with connection() as conn:
         guides = refresh_campus_life_support_guides_from_source(conn)
 
-    assert len(guides) == 9
+    assert len(guides) == 11
     assert {item.topic for item in guides} == {
         "health_center",
         "lost_found",
@@ -5529,6 +5608,8 @@ def test_refresh_campus_life_support_guides_uses_all_default_sources(app_env, mo
         "disability_support",
         "student_reservist",
         "hospital_use",
+        "career_counseling",
+        "it_service",
     }
     assert {item.title for item in guides} == {
         "health_center title",
@@ -5540,6 +5621,8 @@ def test_refresh_campus_life_support_guides_uses_all_default_sources(app_env, mo
         "disability_support title",
         "student_reservist title",
         "hospital_use title",
+        "career_counseling title",
+        "it_service title",
     }
     assert services_module.PUBLIC_READY_DATASET_POLICIES["campus_life_support_guides"] == "core"
 
@@ -5875,6 +5958,22 @@ def test_sync_official_snapshot_runs_opening_hours_before_courses_and_transport(
         lambda conn: call_order.append('student_activity_guides') or [],
     )
     monkeypatch.setattr(
+        'songsim_campus.services.refresh_student_activity_notices_from_source',
+        lambda conn, pages=None: call_order.append('student_activity_notices') or [],
+    )
+    monkeypatch.setattr(
+        'songsim_campus.services.refresh_about_resource_guides_from_source',
+        lambda conn: call_order.append('about_resource_guides') or [],
+    )
+    monkeypatch.setattr(
+        'songsim_campus.services.refresh_service_policy_guides_from_source',
+        lambda conn: call_order.append('service_policy_guides') or [],
+    )
+    monkeypatch.setattr(
+        'songsim_campus.services.refresh_newsroom_posts_from_source',
+        lambda conn: call_order.append('newsroom_posts') or [],
+    )
+    monkeypatch.setattr(
         'songsim_campus.services.refresh_student_exchange_guides_from_source',
         lambda conn: call_order.append('student_exchange_guides') or [],
     )
@@ -5938,6 +6037,10 @@ def test_sync_official_snapshot_runs_opening_hours_before_courses_and_transport(
         'seasonal_semester_guides',
         'academic_milestone_guides',
         'student_activity_guides',
+        'student_activity_notices',
+        'about_resource_guides',
+        'service_policy_guides',
+        'newsroom_posts',
         'student_exchange_guides',
         'dormitory_guides',
         'phone_book_entries',
@@ -5960,6 +6063,10 @@ def test_sync_official_snapshot_runs_opening_hours_before_courses_and_transport(
     assert summary['seasonal_semester_guides'] == 0
     assert summary['academic_milestone_guides'] == 0
     assert summary['student_activity_guides'] == 0
+    assert summary['student_activity_notices'] == 0
+    assert summary['about_resource_guides'] == 0
+    assert summary['service_policy_guides'] == 0
+    assert summary['newsroom_posts'] == 0
     assert summary['affiliated_notices'] == 0
     assert summary['campus_life_notices'] == 0
     assert summary['campus_life_support_guides'] == 0

@@ -1,5 +1,7 @@
 # Public MCP Rehearsal
 
+> Historical/superseded: measured results below are preserved as the local public_readonly rehearsal run. Current release-gate docs are superseded by `public-mcp-release-pack-50.md`, `public-synthetic-smoke.md`, and the `student_activity_notices` canary addendum; do not rewrite the verdicts in this historical report when adding new public surface coverage.
+
 대표 질문 20개를 실제 `public_readonly` MCP contract 기준으로 점검한 기록입니다.
 
 ## 실행 기준

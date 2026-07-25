@@ -87,6 +87,23 @@ def render_admin_sync_page(
         {"title": "seasonal_semester_guides", "fields": []},
         {"title": "academic_milestone_guides", "fields": []},
         {"title": "student_activity_guides", "fields": []},
+        {
+            "title": "student_activity_notices",
+            "fields": [
+                render_field(
+                    "notice_pages",
+                    "notice_pages",
+                    str(official_notice_pages),
+                )
+            ],
+        },
+        {"title": "about_resource_guides", "fields": []},
+        {"title": "service_policy_guides", "fields": []},
+        {"title": "service_policy_posts", "fields": []},
+        {"title": "newsroom_posts", "fields": []},
+        {"title": "research_posts", "fields": []},
+        {"title": "newsroom_resource_guides", "fields": []},
+        {"title": "anniversary_guides", "fields": []},
         {"title": "student_exchange_guides", "fields": []},
         {"title": "student_exchange_partners", "fields": []},
         {"title": "phone_book_entries", "fields": []},
@@ -328,6 +345,8 @@ def render_landing_page(
         "부속병원 이용 안내해줘",
         "성심교정 대관안내 알려줘",
         "개인형 이동장치 안전교육 알려줘",
+        "진로/취업 상담 어디서 신청해?",
+        "웹메일 신청이나 Office 365 이용 방법 알려줘",
         "보건실 위치와 운영시간 알려줘",
         "유실물 찾는 방법 알려줘",
         "성심교정 주차요금 알려줘",
@@ -336,6 +355,7 @@ def render_landing_page(
         "SPSS 설치된 컴퓨터실 어디야",
         "포토샵 있는 PC실 알려줘",
         "Visual Studio 설치된 실습실 있어?",
+        "학생지원팀 공지 보여줘",
         "성심교정 기숙사 안내해줘",
         "기숙사 최신 공지 알려줘",
         "외부기관공지 알려줘",
@@ -538,6 +558,22 @@ def render_landing_page(
               social volunteering, and ROTC guides
             </li>
             <li>
+              <code>/student-activity-notices</code> student activity notice bundles
+            </li>
+            <li>
+              <code>/about-resource-guides</code> official rules, university bulletin,
+              academic handbook, campus tour, education philosophy, and president office
+              resource links
+            </li>
+            <li>
+              <code>/service-policy-guides</code> official bidding, job posting,
+              privacy, CCTV, and anti-graft policy links
+            </li>
+            <li>
+              <code>/newsroom-posts</code> official newsroom photo-news, press,
+              alumni interview, and promo-video post snapshots
+            </li>
+            <li>
               <code>/student-exchange-guides</code> domestic credit exchange, partner
               universities, exchange student, and exchange program guides
             </li>
@@ -548,8 +584,8 @@ def render_landing_page(
             <li><code>/phone-book</code> campus-wide department contacts and phone numbers</li>
             <li>
               <code>/campus-life-support-guides</code> health center, counseling,
-              disability, reservist, hospital use, facility rental, mobility
-              safety, lost-found, and Songsim parking guides
+              IT service, disability, reservist, hospital use, facility rental,
+              mobility safety, career counseling, lost-found, and Songsim parking guides
             </li>
             <li>
               <code>/campus-life-notices</code> outside-agency and event campus-life
@@ -559,8 +595,8 @@ def render_landing_page(
               <code>/pc-software</code> lab rooms and installed software search
             </li>
             <li>
-              <code>/dormitory-guides</code> dormitory hall info, quick links, and latest
-              notice cards
+              <code>/dormitory-guides</code> dormitory hall info, quick links, fees,
+              and latest notice cards
             </li>
             <li>
               <code>/affiliated-notices</code> affiliated department and dormitory board
@@ -576,8 +612,16 @@ def render_landing_page(
               <code>/classrooms/empty</code> official realtime classrooms first,
               estimated fallback
             </li>
-            <li><code>/restaurants/nearby</code> walkable food recommendations</li>
-            <li><code>/restaurants/search</code> direct cafe and brand lookup</li>
+            <li>
+              <code>/restaurants/nearby</code> walkable food recommendations
+              via Kakao Local external public API, separate from official
+              first-party university source coverage
+            </li>
+            <li>
+              <code>/restaurants/search</code> direct cafe and brand lookup
+              via Kakao Local external public API, separate from official
+              first-party university source coverage
+            </li>
             <li><code>/notices</code> latest public campus notices</li>
             <li><code>/transport</code> Songsim transit guides</li>
           </ul>

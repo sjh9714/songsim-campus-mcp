@@ -67,6 +67,22 @@ def test_readyz_reports_database_and_table_status(client):
     assert payload["tables"]["sync_runs"]["ok"] is True
 
 
+def test_status_exposes_public_dataset_freshness_without_operational_details(client):
+    response = client.get("/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert {"ok", "datasets", "notes"} <= set(payload)
+    assert payload["datasets"]
+    first = payload["datasets"][0]
+    assert {"name", "status", "policy", "row_count", "source_tag", "last_synced_at"} <= set(first)
+    assert "database" not in payload
+    assert "sync_runs" not in {item["name"] for item in payload["datasets"]}
+    assert "automation" not in payload
+    assert "cache" not in payload
+    assert any("No secrets" in note for note in payload["notes"])
+
+
 def test_readyz_marks_empty_required_public_dataset_as_not_ready(app_env, monkeypatch):
     monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
     clear_settings_cache()
@@ -330,6 +346,75 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
                 "last_synced_at": "2026-03-20T10:00:00+09:00",
             }
         ]
+    def stub_student_activity_notices(conn, topic=None, query=None, limit=20):
+        return [
+            {
+                "id": 1,
+                "topic": "student_government",
+                "article_no": "42",
+                "title": "학생지원팀 학생활동 공지",
+                "published_at": "2026-03-12",
+                "summary": "학생활동 관련 공지",
+                "content": "학생지원팀에서 안내하는 학생활동 공지입니다.",
+                "source_url": "https://www.catholic.ac.kr/ko/campuslife/student.do",
+                "source_tag": "cuk_student_activity_notices",
+                "last_synced_at": "2026-03-20T10:00:00+09:00",
+            }
+        ]
+    def stub_about_resource_guides(conn, topic=None, limit=20):
+        return [
+            {
+                "id": 1,
+                "topic": "rules",
+                "title": "규정",
+                "summary": "규정정보시스템 안내",
+                "steps": ["공식 규정정보시스템에서 원문을 확인합니다."],
+                "links": [
+                    {
+                        "label": "규정정보시스템 바로가기",
+                        "url": "http://rule.catholic.ac.kr:8080/lmxsrv/main/main.srv",
+                    }
+                ],
+                "source_url": "https://www.catholic.ac.kr/ko/about/rule.do",
+                "source_tag": "cuk_about_resource_guides",
+                "last_synced_at": "2026-03-20T10:00:00+09:00",
+            }
+        ]
+    def stub_service_policy_guides(conn, topic=None, limit=20):
+        return [
+            {
+                "id": 1,
+                "topic": "privacy_policy",
+                "title": "개인정보처리방침",
+                "summary": "개인정보처리방침 안내",
+                "steps": ["공식 개인정보처리방침에서 원문을 확인합니다."],
+                "links": [
+                    {
+                        "label": "개인정보처리방침",
+                        "url": "https://www.catholic.ac.kr/ko/service/privacy.do",
+                    }
+                ],
+                "source_url": "https://www.catholic.ac.kr/ko/service/privacy.do",
+                "source_tag": "cuk_service_policy_guides",
+                "last_synced_at": "2026-03-20T10:00:00+09:00",
+            }
+        ]
+    def stub_newsroom_posts(conn, topic=None, query=None, limit=20):
+        return [
+            {
+                "id": 1,
+                "topic": "photo_news",
+                "article_no": "300",
+                "title": "성심교정 봄 캠퍼스 포토뉴스",
+                "published_at": "2026-03-12",
+                "summary": "성심교정 포토뉴스",
+                "thumbnail_url": "https://example.com/photo.jpg",
+                "external_url": None,
+                "source_url": "https://www.catholic.ac.kr/ko/newsroom/photonews.do",
+                "source_tag": "cuk_newsroom_posts",
+                "last_synced_at": "2026-03-20T10:00:00+09:00",
+            }
+        ]
     def stub_student_exchange_partners(conn, query=None, limit=20):
         return [
             {
@@ -440,6 +525,32 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
                     "last_synced_at": "2026-03-20T10:00:00+09:00",
                 }
             ],
+            "career_counseling": [
+                {
+                    "id": 8,
+                    "topic": "career_counseling",
+                    "title": "진로/취업 상담",
+                    "summary": "가톨릭대학교 학부생 및 졸업생",
+                    "steps": [
+                        "가톨릭대학교 학부생 및 졸업생",
+                        (
+                            "트리니티 → AI코디(aicodi.catholic.ac.kr) → 통합상담 "
+                            "→ 진로취업상담 → 상담신청"
+                        ),
+                    ],
+                    "links": [
+                        {
+                            "label": "aicodi.catholic.ac.kr",
+                            "url": "https://aicodi.catholic.ac.kr/",
+                        }
+                    ],
+                    "source_url": (
+                        "https://career.catholic.ac.kr/career/job/job_counseling.do"
+                    ),
+                    "source_tag": "cuk_campus_life_support_guides",
+                    "last_synced_at": "2026-03-20T10:00:00+09:00",
+                }
+            ],
         }
         return topics.get(topic, topics["health_center"])
     def stub_pc_software_entries(conn, query=None, limit=20):
@@ -470,6 +581,30 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     )
     monkeypatch.setattr(
         services,
+        "list_student_activity_notices",
+        stub_student_activity_notices,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        services,
+        "list_about_resource_guides",
+        stub_about_resource_guides,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        services,
+        "list_service_policy_guides",
+        stub_service_policy_guides,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        services,
+        "list_newsroom_posts",
+        stub_newsroom_posts,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        services,
         "search_student_exchange_partners",
         stub_student_exchange_partners,
         raising=False,
@@ -494,6 +629,23 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     monkeypatch.setattr(
         "songsim_campus.api.list_student_activity_guides",
         stub_student_activity_guides,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.api.list_student_activity_notices",
+        stub_student_activity_notices,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.api.list_about_resource_guides",
+        stub_about_resource_guides,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.api.list_service_policy_guides",
+        stub_service_policy_guides,
+    )
+    monkeypatch.setattr(
+        "songsim_campus.api.list_newsroom_posts",
+        stub_newsroom_posts,
     )
     monkeypatch.setattr(
         "songsim_campus.api.search_student_exchange_partners",
@@ -535,6 +687,22 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
             "/student-activity-guides",
             params={"topic": "student_government"},
         )
+        student_activity_notices = public_client.get(
+            "/student-activity-notices",
+            params={"topic": "student_government", "query": "학생지원팀"},
+        )
+        about_resource_guides = public_client.get(
+            "/about-resource-guides",
+            params={"topic": "rules"},
+        )
+        service_policy_guides = public_client.get(
+            "/service-policy-guides",
+            params={"topic": "privacy_policy"},
+        )
+        newsroom_posts = public_client.get(
+            "/newsroom-posts",
+            params={"topic": "photo_news"},
+        )
         student_exchange_partners = public_client.get(
             "/student-exchange-partners",
             params={"query": "Utrecht"},
@@ -567,6 +735,10 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
             "/campus-life-support-guides",
             params={"topic": "mobility_safety"},
         )
+        campus_life_support_career = public_client.get(
+            "/campus-life-support-guides",
+            params={"topic": "career_counseling"},
+        )
         campus_life_notices = public_client.get(
             "/campus-life-notices",
             params={"query": "외부기관공지"},
@@ -595,6 +767,10 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "/seasonal-semester-guides" in landing.text
     assert "/academic-milestone-guides" in landing.text
     assert "/student-activity-guides" in landing.text
+    assert "/student-activity-notices" in landing.text
+    assert "/about-resource-guides" in landing.text
+    assert "/service-policy-guides" in landing.text
+    assert "/newsroom-posts" in landing.text
     assert "/student-exchange-guides" in landing.text
     assert "/student-exchange-partners" in landing.text
     assert "/phone-book" in landing.text
@@ -607,6 +783,8 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "부속병원 이용 안내해줘" in landing.text
     assert "성심교정 대관안내 알려줘" in landing.text
     assert "개인형 이동장치 안전교육 알려줘" in landing.text
+    assert "진로/취업 상담 어디서 신청해?" in landing.text
+    assert "학생지원팀 공지 보여줘" in landing.text
     assert "/pc-software" in landing.text
     assert "/affiliated-notices" in landing.text
     assert "/dormitory-guides" in landing.text
@@ -624,6 +802,14 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert student_exchange_guides.json()[0]["topic"] == "exchange_student"
     assert student_activity_guides.status_code == 200
     assert student_activity_guides.json()[0]["topic"] == "student_government"
+    assert student_activity_notices.status_code == 200
+    assert student_activity_notices.json()[0]["source_tag"] == "cuk_student_activity_notices"
+    assert about_resource_guides.status_code == 200
+    assert about_resource_guides.json()[0]["topic"] == "rules"
+    assert service_policy_guides.status_code == 200
+    assert service_policy_guides.json()[0]["topic"] == "privacy_policy"
+    assert newsroom_posts.status_code == 200
+    assert newsroom_posts.json()[0]["topic"] == "photo_news"
     assert student_exchange_partners.status_code == 200
     assert student_exchange_partners.json()[0]["partner_code"] == "00122"
     assert campus_life_support.status_code == 200
@@ -640,6 +826,8 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert campus_life_support_rental.json()[0]["topic"] == "facility_rental"
     assert campus_life_support_safety.status_code == 200
     assert campus_life_support_safety.json()[0]["topic"] == "mobility_safety"
+    assert campus_life_support_career.status_code == 200
+    assert campus_life_support_career.json()[0]["topic"] == "career_counseling"
     assert campus_life_notices.status_code == 200
     assert campus_life_notices.json()[0]["topic"] == "outside_agencies"
     assert campus_life_events.status_code == 200
@@ -655,6 +843,10 @@ def test_public_readonly_mode_exposes_only_public_routes(app_env, monkeypatch):
     assert "/seasonal-semester-guides" in openapi.text
     assert "/academic-milestone-guides" in openapi.text
     assert "/student-activity-guides" in openapi.text
+    assert "/student-activity-notices" in openapi.text
+    assert "/about-resource-guides" in openapi.text
+    assert "/service-policy-guides" in openapi.text
+    assert "/newsroom-posts" in openapi.text
     assert "/student-exchange-guides" in openapi.text
     assert "/student-exchange-partners" in openapi.text
     assert "/phone-book" in openapi.text
@@ -798,6 +990,80 @@ def test_public_readonly_affiliated_notices_deduplicate_titles(app_env, monkeypa
     assert len(titles) == len(set(titles)) == 2
 
 
+def test_affiliated_notices_api_returns_body_match_snippet(app_env, monkeypatch):
+    init_db()
+    monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
+    clear_settings_cache()
+
+    class DormitoryBodySearchSource:
+        topic = "dorm_k_a_general"
+        source_tag = "cuk_affiliated_notice_boards"
+
+        def fetch_list(self, offset: int = 0, limit: int = 10):
+            return "<list></list>"
+
+        def parse_list(self, _html: str):
+            return [
+                {
+                    "topic": self.topic,
+                    "article_no": "200",
+                    "title": "생활 안내",
+                    "published_at": "2026-03-12",
+                    "summary": "요약에는 검색어가 없습니다.",
+                    "source_url": "https://dorm.catholic.ac.kr/dormitory/board/comm_notice.do?mode=view&articleNo=200",
+                    "source_tag": self.source_tag,
+                }
+            ]
+
+        def fetch_detail(self, article_no: str, offset: int = 0, limit: int = 10):
+            return article_no
+
+        def parse_detail(
+            self,
+            article_no: str,
+            *,
+            default_title: str = "",
+            default_category: str = "",
+            default_summary: str = "",
+            default_published_at: str = "",
+            default_source_url: str | None = None,
+        ):
+            return {
+                "topic": self.topic,
+                "title": default_title,
+                "published_at": default_published_at,
+                "summary": default_summary,
+                "body_text": (
+                    "기숙사 생활 안내 본문입니다. 통금, 택배, 공용공간 안내 뒤에 "
+                    "심야 출입 절차와 점호 확인 방법이 포함되어 있습니다."
+                ),
+                "source_url": default_source_url,
+                "source_tag": self.source_tag,
+            }
+
+    with connection() as conn:
+        refresh_affiliated_notices_from_sources(
+            conn,
+            sources=[DormitoryBodySearchSource()],
+            fetched_at="2026-03-20T10:00:00+09:00",
+        )
+
+    app = create_app()
+    with TestClient(app) as public_client:
+        response = public_client.get(
+            "/affiliated-notices",
+            params={"topic": "dorm_k_a_general", "query": "심야 출입", "limit": 5},
+        )
+
+    clear_settings_cache()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["title"] for item in payload] == ["생활 안내"]
+    assert "심야 출입" in payload[0]["summary"]
+    assert "body_text" not in payload[0]
+
+
 def test_api_docs_helper_preserves_filtered_openapi_shape(app_env, monkeypatch):
     monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
     clear_settings_cache()
@@ -852,7 +1118,11 @@ def test_api_page_helpers_render_expected_strings():
     assert "/class-guides" in landing_html
     assert "/seasonal-semester-guides" in landing_html
     assert "/academic-milestone-guides" in landing_html
+    assert "/student-activity-guides" in landing_html
+    assert "/student-activity-notices" in landing_html
     assert "/student-exchange-guides" in landing_html
+    assert "/service-policy-guides" in landing_html
+    assert "/newsroom-posts" in landing_html
     assert "/student-exchange-partners" in landing_html
     assert "/phone-book" in landing_html
     assert "/campus-life-support-guides" in landing_html
@@ -887,6 +1157,9 @@ def test_api_page_helpers_render_expected_strings():
     assert "affiliated_notices" in sync_html
     assert "student_exchange_guides" in sync_html
     assert "student_activity_guides" in sync_html
+    assert "student_activity_notices" in sync_html
+    assert "service_policy_guides" in sync_html
+    assert "newsroom_posts" in sync_html
 
     observability_html = render_admin_observability_page(
         state={

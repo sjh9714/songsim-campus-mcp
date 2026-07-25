@@ -252,6 +252,104 @@ class StudentActivityGuide(BaseModel):
     last_synced_at: str
 
 
+class StudentActivityNotice(BaseModel):
+    id: int
+    topic: str
+    article_no: str | None = None
+    title: str
+    published_at: str | None = None
+    summary: str = ""
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class AboutResourceGuide(BaseModel):
+    id: int
+    topic: str
+    title: str
+    summary: str = ""
+    steps: list[str] = Field(default_factory=list)
+    links: list[dict[str, str]] = Field(default_factory=list)
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class ServicePolicyGuide(BaseModel):
+    id: int
+    topic: str
+    title: str
+    summary: str = ""
+    steps: list[str] = Field(default_factory=list)
+    links: list[dict[str, str]] = Field(default_factory=list)
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class ServicePolicyPost(BaseModel):
+    id: int
+    topic: str
+    article_no: str | None = None
+    title: str
+    published_at: str | None = None
+    summary: str = ""
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class NewsroomPost(BaseModel):
+    id: int
+    topic: str
+    article_no: str | None = None
+    title: str
+    published_at: str | None = None
+    summary: str = ""
+    thumbnail_url: str | None = None
+    external_url: str | None = None
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class ResearchPost(BaseModel):
+    id: int
+    topic: str
+    article_no: str | None = None
+    title: str
+    published_at: str | None = None
+    summary: str = ""
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class NewsroomResourceGuide(BaseModel):
+    id: int
+    topic: str
+    title: str
+    summary: str = ""
+    steps: list[str] = Field(default_factory=list)
+    links: list[dict[str, str]] = Field(default_factory=list)
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
+class AnniversaryGuide(BaseModel):
+    id: int
+    topic: str
+    title: str
+    summary: str = ""
+    steps: list[str] = Field(default_factory=list)
+    links: list[dict[str, str]] = Field(default_factory=list)
+    source_url: str | None = None
+    source_tag: str = "demo"
+    last_synced_at: str
+
+
 class StudentExchangePartner(BaseModel):
     id: int
     partner_code: str
@@ -331,6 +429,37 @@ class AcademicCalendarEvent(BaseModel):
     source_url: str | None = None
     source_tag: str = "demo"
     last_synced_at: str
+
+
+class PublicJourneySection(BaseModel):
+    name: str
+    title: str
+    items: list[dict[str, Any]] = Field(default_factory=list)
+    note: str | None = None
+
+
+class PublicJourneyResponse(BaseModel):
+    journey: str
+    query: str | None = None
+    sections: list[PublicJourneySection] = Field(default_factory=list)
+    next_steps: list[str] = Field(default_factory=list)
+    out_of_scope: list[str] = Field(default_factory=list)
+
+
+class PublicDatasetStatus(BaseModel):
+    name: str
+    status: Literal["ready", "empty", "error"]
+    policy: Literal["core", "best_effort", "optional"]
+    row_count: int | None = None
+    source_tag: str | None = None
+    last_synced_at: str | None = None
+    note: str | None = None
+
+
+class PublicStatusSnapshot(BaseModel):
+    ok: bool
+    datasets: list[PublicDatasetStatus]
+    notes: list[str] = Field(default_factory=list)
 
 
 class McpCoordinates(BaseModel):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from pathlib import Path
 
 import httpx
@@ -23,6 +24,7 @@ from songsim_campus.qa_eval import (
     EvalTruthRow,
     build_truth_rows,
     load_eval_rows,
+    load_truth_rows,
     render_validation_report,
     run_evaluation,
     run_row_evaluation,
@@ -231,7 +233,7 @@ def test_search_courses_from_source_normalizes_database_alias(
             "truth_mode": "watch_only",
             "pass_rule": {"summary_kind": "courses_top5"},
             "watch_policy": "course_source_gap",
-            "notes": "",
+            "notes": "source-backed direct hit 미확인",
         }
     )
     monkeypatch.setattr(
@@ -1331,7 +1333,15 @@ def test_run_row_evaluation_supports_exact_set_contains_invariant_and_watch() ->
     )
     watch_result = run_row_evaluation(
         watch_row,
-        actual_payload=[],
+        actual_payload=[
+            {
+                "code": "CSE300",
+                "title": "데이터베이스활용",
+                "professor": "김가톨",
+                "year": 2026,
+                "semester": 1,
+            }
+        ],
         truth=watch_truth,
         checked_at="2026-03-18T10:20:00+09:00",
     )
@@ -1340,6 +1350,16 @@ def test_run_row_evaluation_supports_exact_set_contains_invariant_and_watch() ->
     assert contains_result.verdict == "pass"
     assert invariant_result.verdict == "pass"
     assert watch_result.verdict == "watch"
+    assert watch_result.actual_summary == [
+        {
+            "code": "CSE300",
+            "title": "데이터베이스활용",
+            "professor": "김가톨",
+            "year": 2026,
+            "semester": 1,
+            "period_start": None,
+        }
+    ]
 
 
 def test_run_row_evaluation_supports_place_top1_facility_host_summary() -> None:
@@ -1438,7 +1458,7 @@ def test_render_validation_report_separates_watchlist() -> None:
                 "truth_mode": "watch_only",
                 "pass_rule": {"summary_kind": "courses_top5"},
                 "watch_policy": "course_source_gap",
-                "notes": "",
+                "notes": "source-backed direct hit 미확인",
             }
         ),
     ]
@@ -1456,7 +1476,7 @@ def test_render_validation_report_separates_watchlist() -> None:
             "id": "CW001",
             "status": "completed",
             "verdict": "watch",
-            "actual_summary": [],
+            "actual_summary": [{"code": "CSE300", "title": "데이터베이스활용"}],
             "comparison": "watch_only",
             "truth_source": "watchlist",
             "checked_at": "2026-03-18T10:20:00+09:00",
@@ -1475,6 +1495,9 @@ def test_render_validation_report_separates_watchlist() -> None:
     assert "executed: `2`" in report
     assert "Watchlist (hard fail 제외)" in report
     assert "CW001" in report
+    assert "course_source_gap" in report
+    assert "source-backed direct hit 미확인" in report
+    assert "데이터베이스활용" in report
 
 
 def test_render_validation_report_includes_registration_guides_coverage() -> None:
@@ -1696,6 +1719,187 @@ def test_render_validation_report_includes_student_activity_guides_coverage() ->
 
     assert "Guide-Domain Coverage" in report
     assert report.count("| student_activity_guides | 1 | 1 |") == 2
+
+
+def test_run_row_evaluation_summarizes_student_activity_notice_invariants() -> None:
+    row = EvalCorpusRow.model_validate(
+        {
+            "id": "SAN-0001",
+            "domain": "student_activity_notices",
+            "style": "normal",
+            "user_utterance": "동아리 모집 공지 알려줘",
+            "api_request": {
+                "path": "/student-activity-notices",
+                "params": {"topic": "club_recruitment", "limit": 5},
+            },
+            "expected_mcp_flow": "tool_list_student_activity_notices",
+            "truth_mode": "invariant_only",
+            "pass_rule": {
+                "summary_kind": "student_activity_notices_top5",
+                "allow_empty": True,
+            },
+            "watch_policy": "none",
+            "notes": "",
+        }
+    )
+
+    result = run_row_evaluation(
+        row,
+        actual_payload=[
+            {
+                "topic": "club_recruitment",
+                "article_no": "123",
+                "title": "중앙동아리 신입부원 모집",
+                "published_at": "2026-03-20",
+                "summary": "모집 안내",
+                "source_tag": "cuk_student_activity_notices",
+            }
+        ],
+        truth=None,
+        checked_at="2026-03-21T10:20:00+09:00",
+    )
+
+    assert result.verdict == "pass"
+    assert result.comparison == "invariants_hold"
+    assert result.actual_summary == [
+        {
+            "topic": "club_recruitment",
+            "title": "중앙동아리 신입부원 모집",
+            "published_at": "2026-03-20",
+        }
+    ]
+
+    empty_result = run_row_evaluation(
+        row,
+        actual_payload=[],
+        truth=None,
+        checked_at="2026-03-21T10:21:00+09:00",
+    )
+
+    assert empty_result.verdict == "pass"
+    assert empty_result.comparison == "invariants_hold"
+    assert empty_result.actual_summary == []
+
+
+def test_render_validation_report_includes_student_activity_notices_coverage() -> None:
+    rows = [
+        EvalCorpusRow.model_validate(
+            {
+                "id": "SAN-0001",
+                "domain": "student_activity_notices",
+                "style": "normal",
+                "user_utterance": "동아리 모집 공지 알려줘",
+                "api_request": {
+                    "path": "/student-activity-notices",
+                    "params": {"topic": "club_recruitment", "limit": 5},
+                },
+                "expected_mcp_flow": "tool_list_student_activity_notices",
+                "truth_mode": "invariant_only",
+                "pass_rule": {
+                    "summary_kind": "student_activity_notices_top5",
+                    "allow_empty": True,
+                },
+                "watch_policy": "none",
+                "notes": "",
+            }
+        )
+    ]
+    results = [
+        {
+            "id": "SAN-0001",
+            "status": "completed",
+            "verdict": "pass",
+            "actual_summary": [],
+            "comparison": "invariants_hold",
+            "truth_source": "database_snapshot",
+            "checked_at": "2026-03-21T10:20:00+09:00",
+        }
+    ]
+
+    report = render_validation_report(
+        rows=rows,
+        results=results,
+        checked_at="2026-03-21T10:20:00+09:00",
+        base_url="https://songsim-public-api.onrender.com",
+    )
+
+    assert "Guide-Domain Coverage" in report
+    assert report.count("| student_activity_notices | 1 | 1 |") == 2
+
+
+@pytest.mark.parametrize(
+    ("domain", "path", "tool", "summary_kind", "topic"),
+    [
+        (
+            "service_policy_posts",
+            "/service-policy-posts",
+            "tool_list_service_policy_posts",
+            "service_policy_posts_top5",
+            "bidding",
+        ),
+        (
+            "research_posts",
+            "/research-posts",
+            "tool_list_research_posts",
+            "research_posts_top5",
+            "research_result",
+        ),
+        (
+            "newsroom_resource_guides",
+            "/newsroom-resource-guides",
+            "tool_list_newsroom_resource_guides",
+            "newsroom_resource_guides_top5",
+            "brochure",
+        ),
+        (
+            "anniversary_guides",
+            "/anniversary-guides",
+            "tool_list_anniversary_guides",
+            "anniversary_guides_top5",
+            "president_message",
+        ),
+    ],
+)
+def test_render_validation_report_includes_release_gate_new_domain_coverage(
+    domain: str,
+    path: str,
+    tool: str,
+    summary_kind: str,
+    topic: str,
+) -> None:
+    row = EvalCorpusRow.model_validate(
+        {
+            "id": "NEW001",
+            "domain": domain,
+            "style": "normal",
+            "user_utterance": "공식 공개정보 알려줘",
+            "api_request": {"path": path, "params": {"topic": topic, "limit": 5}},
+            "expected_mcp_flow": tool,
+            "truth_mode": "invariant_only",
+            "pass_rule": {"summary_kind": summary_kind, "allow_empty": True},
+            "watch_policy": "none",
+            "notes": "",
+        }
+    )
+    result = {
+        "id": "NEW001",
+        "status": "completed",
+        "verdict": "pass",
+        "actual_summary": [],
+        "comparison": "invariants_hold",
+        "truth_source": "database_snapshot",
+        "checked_at": "2026-05-07T10:20:00+09:00",
+    }
+
+    report = render_validation_report(
+        rows=[row],
+        results=[result],
+        checked_at="2026-05-07T10:20:00+09:00",
+        base_url="https://songsim-public-api.onrender.com",
+    )
+
+    assert "Guide-Domain Coverage" in report
+    assert report.count(f"| {domain} | 1 | 1 |") == 2
 
 
 def test_render_validation_report_includes_phone_book_coverage() -> None:
@@ -2245,11 +2449,18 @@ def test_load_actual_payload_retries_read_timeout_until_success(
 def test_default_eval_assets_match_distribution_plan() -> None:
     rows = load_eval_rows(DEFAULT_CORPUS_PATH)
     watchlist_rows = load_eval_rows(DEFAULT_WATCHLIST_PATH)
+    truth_rows = load_truth_rows(DEFAULT_CORPUS_PATH.with_name("public_api_eval_truth_1000.jsonl"))
 
     assert len(rows) == 1000
     assert len(watchlist_rows) == 5
+    assert len(truth_rows) == len(rows) + len(watchlist_rows)
+    assert {row.domain for row in watchlist_rows} == {"courses"}
+    assert {row.truth_mode for row in watchlist_rows} == {"watch_only"}
+    assert {row.watch_policy for row in watchlist_rows} == {"course_source_gap"}
     assert len({row.id for row in rows}) == 1000
     assert len({row.user_utterance for row in rows}) == 1000
+    assert len({row.id for row in truth_rows}) == len(truth_rows)
+    assert {row.id for row in truth_rows} == {row.id for row in rows + watchlist_rows}
     assert {row.truth_mode for row in rows}.issubset(
         {"set_contains", "invariant_only", "exact_value"}
     )
@@ -2265,6 +2476,18 @@ def test_default_eval_assets_match_distribution_plan() -> None:
     assert by_domain == DOMAIN_QUOTAS
     assert by_style == STYLE_QUOTAS
     assert by_truth_mode == TRUTH_MODE_QUOTAS
+    assert DOMAIN_QUOTAS["student_activity_guides"] == 11
+    assert DOMAIN_QUOTAS["student_activity_notices"] == 5
+    assert DOMAIN_QUOTAS["service_policy_posts"] == 1
+    assert DOMAIN_QUOTAS["research_posts"] == 1
+    assert DOMAIN_QUOTAS["newsroom_resource_guides"] == 1
+    assert DOMAIN_QUOTAS["anniversary_guides"] == 1
+
+    truth_ids = {row.id for row in truth_rows}
+    assert Counter(row.domain for row in rows if row.id in truth_ids) == Counter(DOMAIN_QUOTAS)
+    assert Counter(row.truth_mode for row in rows if row.id in truth_ids) == Counter(
+        TRUTH_MODE_QUOTAS
+    )
 
     coarse_counts: dict[str, dict[tuple[str | None, str | None, str], int]] = {}
     for row in rows:
@@ -2368,6 +2591,121 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "campus_media",
         "social_volunteering",
         "rotc",
+        "student_innovation_supporters",
+        "cat_cert",
+    }
+    assert {
+        "총학생회 안내해줘",
+        "교내미디어 뭐 있어?",
+        "사회봉사 활동 알려줘",
+        "학생군사교육단 안내해줘",
+        "학생혁신 서포터즈 알려줘",
+        "CAT-CERT 뭐야?",
+    }.issubset({row.user_utterance for row in student_activity_rows})
+
+    student_activity_notice_rows = [
+        row for row in rows if row.domain == "student_activity_notices"
+    ]
+
+    assert len(student_activity_notice_rows) == DOMAIN_QUOTAS["student_activity_notices"]
+    assert {row.api_request.path for row in student_activity_notice_rows} == {
+        "/student-activity-notices"
+    }
+    assert {row.expected_mcp_flow for row in student_activity_notice_rows} == {
+        "tool_list_student_activity_notices"
+    }
+    assert {row.truth_mode for row in student_activity_notice_rows} == {"invariant_only"}
+    assert {row.pass_rule["summary_kind"] for row in student_activity_notice_rows} == {
+        "student_activity_notices_top5"
+    }
+    assert {row.pass_rule["allow_empty"] for row in student_activity_notice_rows} == {True}
+    assert {row.api_request.params["topic"] for row in student_activity_notice_rows} == {
+        "club_recruitment",
+        "student_government",
+        "volunteering",
+        "rotc",
+        "campus_event",
+    }
+
+    service_policy_rows = [row for row in rows if row.domain == "service_policy_guides"]
+
+    assert len(service_policy_rows) == DOMAIN_QUOTAS["service_policy_guides"]
+    assert {row.api_request.path for row in service_policy_rows} == {"/service-policy-guides"}
+    assert {row.expected_mcp_flow for row in service_policy_rows} == {
+        "tool_list_service_policy_guides"
+    }
+    assert {row.pass_rule["summary_kind"] for row in service_policy_rows} == {
+        "service_policy_guides_top5"
+    }
+    assert {row.api_request.params["topic"] for row in service_policy_rows} == {
+        "bidding",
+        "job_posting",
+        "privacy_policy",
+        "cctv_policy",
+        "anti_graft",
+    }
+    truth_by_id = {row.id: row for row in truth_rows}
+    for row in service_policy_rows:
+        expected = truth_by_id[row.id].normalized_expected
+        assert isinstance(expected, list)
+        assert expected[0]["topic"] == row.api_request.params["topic"]
+
+    service_policy_post_rows = [row for row in rows if row.domain == "service_policy_posts"]
+
+    assert len(service_policy_post_rows) == DOMAIN_QUOTAS["service_policy_posts"]
+    assert {row.api_request.path for row in service_policy_post_rows} == {
+        "/service-policy-posts"
+    }
+    assert {row.expected_mcp_flow for row in service_policy_post_rows} == {
+        "tool_list_service_policy_posts"
+    }
+    assert {row.pass_rule["summary_kind"] for row in service_policy_post_rows} == {
+        "service_policy_posts_top5"
+    }
+    assert {row.pass_rule["allow_empty"] for row in service_policy_post_rows} == {True}
+    assert {row.api_request.params["topic"] for row in service_policy_post_rows} == {"bidding"}
+
+    research_post_rows = [row for row in rows if row.domain == "research_posts"]
+
+    assert len(research_post_rows) == DOMAIN_QUOTAS["research_posts"]
+    assert {row.api_request.path for row in research_post_rows} == {"/research-posts"}
+    assert {row.expected_mcp_flow for row in research_post_rows} == {
+        "tool_list_research_posts"
+    }
+    assert {row.pass_rule["summary_kind"] for row in research_post_rows} == {
+        "research_posts_top5"
+    }
+    assert {row.pass_rule["allow_empty"] for row in research_post_rows} == {True}
+    assert {row.api_request.params["topic"] for row in research_post_rows} == {
+        "research_result"
+    }
+
+    newsroom_resource_rows = [row for row in rows if row.domain == "newsroom_resource_guides"]
+
+    assert len(newsroom_resource_rows) == DOMAIN_QUOTAS["newsroom_resource_guides"]
+    assert {row.api_request.path for row in newsroom_resource_rows} == {
+        "/newsroom-resource-guides"
+    }
+    assert {row.expected_mcp_flow for row in newsroom_resource_rows} == {
+        "tool_list_newsroom_resource_guides"
+    }
+    assert {row.pass_rule["summary_kind"] for row in newsroom_resource_rows} == {
+        "newsroom_resource_guides_top5"
+    }
+    assert {row.api_request.params["topic"] for row in newsroom_resource_rows} == {"brochure"}
+
+    anniversary_rows = [row for row in rows if row.domain == "anniversary_guides"]
+
+    assert len(anniversary_rows) == DOMAIN_QUOTAS["anniversary_guides"]
+    assert {row.api_request.path for row in anniversary_rows} == {"/anniversary-guides"}
+    assert {row.expected_mcp_flow for row in anniversary_rows} == {
+        "tool_list_anniversary_guides"
+    }
+    assert {row.pass_rule["summary_kind"] for row in anniversary_rows} == {
+        "anniversary_guides_top5"
+    }
+    assert {row.api_request.params["topic"] for row in anniversary_rows} == {
+        "president_message"
     }
 
     partner_rows = [row for row in rows if row.domain == "student_exchange_partners"]
@@ -2412,6 +2750,23 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "dorm_francis_general",
         "dorm_francis_checkin_out",
     }
+    assert {
+        (
+            row.api_request.params.get("topic"),
+            row.api_request.params.get("query"),
+        )
+        for row in affiliated_rows
+        if row.api_request.params.get("query")
+    } >= {
+        ("dorm_k_a_checkin_out", "OT"),
+        ("dorm_francis_checkin_out", "입퇴사"),
+        ("dorm_k_a_general", "장학"),
+    }
+    assert "dorm_k_a_general-body-search" in {row.notes for row in affiliated_rows}
+    body_search_row = next(
+        row for row in affiliated_rows if row.notes == "dorm_k_a_general-body-search"
+    )
+    assert body_search_row.api_request.params["query"] == "점호"
 
     campus_life_notice_rows = [row for row in rows if row.domain == "campus_life_notices"]
 
@@ -2450,6 +2805,8 @@ def test_default_eval_assets_match_distribution_plan() -> None:
         "disability_support",
         "student_reservist",
         "hospital_use",
+        "career_counseling",
+        "it_service",
     }
 
 
@@ -2457,3 +2814,87 @@ def test_default_eval_corpus_snapshot_matches_builder() -> None:
     committed_rows = qa_eval._read_jsonl(DEFAULT_CORPUS_PATH)
 
     assert build_public_api_eval_corpus(seed_rows=committed_rows) == committed_rows
+
+
+def test_public_synthetic_smoke_documents_dormitory_affiliated_body_search() -> None:
+    root = DEFAULT_CORPUS_PATH.parents[2]
+    smoke_doc = (root / "docs" / "qa" / "public-synthetic-smoke.md").read_text(
+        encoding="utf-8"
+    )
+    audit_doc = (
+        root / "docs" / "qa" / "main-site-coverage-audit-2026-03-17.md"
+    ).read_text(encoding="utf-8")
+
+    assert "/affiliated-notices?topic=dorm_k_a_general&query=점호&limit=3" in smoke_doc
+    assert "/affiliated-notices?topic=dorm_francis_general&query=점호&limit=3" in smoke_doc
+    assert "tool_list_affiliated_notices dorm body 200" in smoke_doc
+    assert "`body_text`" in smoke_doc
+    assert "기숙사 affiliated notice 제목/요약/본문 검색" in audit_doc
+    assert "`기숙사`의 상세 board / 본문 검색 확장" not in audit_doc
+
+
+def test_release_docs_track_completion_loop_topics_without_goal_surface() -> None:
+    root = DEFAULT_CORPUS_PATH.parents[2]
+    source_registry = (root / "docs" / "source_registry.md").read_text(encoding="utf-8")
+    smoke_doc = (root / "docs" / "qa" / "public-synthetic-smoke.md").read_text(
+        encoding="utf-8"
+    )
+    audit_doc = (
+        root / "docs" / "qa" / "main-site-coverage-audit-2026-03-17.md"
+    ).read_text(encoding="utf-8")
+    combined_docs = "\n".join([source_registry, smoke_doc, audit_doc])
+
+    for implemented_source in (
+        "https://www.catholic.ac.kr/ko/campuslife/itservice.do",
+        "https://www.catholic.ac.kr/ko/newsroom/interview.do",
+        "https://www.catholic.ac.kr/ko/newsroom/media.do",
+        "https://www.catholic.ac.kr/ko/about/educational_philosophy.do",
+        "https://www.catholic.ac.kr/ko/about/educational_brand.do",
+        "https://www.catholic.ac.kr/ko/about/president_greeting.do",
+        "https://www.catholic.ac.kr/ko/about/president_profile.do",
+        "https://www.catholic.ac.kr/ko/about/president_moto.do",
+        "https://www.catholic.ac.kr/ko/about/former_president.do",
+    ):
+        assert implemented_source in source_registry
+
+    for implemented_topic in (
+        "it_service",
+        "alumni_interview",
+        "promo_video",
+        "education_philosophy",
+        "catholic_education_brand",
+        "president_office_static",
+    ):
+        assert implemented_topic in smoke_doc
+        assert implemented_topic in audit_doc
+
+    assert "not release gate" not in smoke_doc
+    assert "SNS/Instagram" in combined_docs
+    assert "uPortal/e-Cyber" in combined_docs
+    slash = "/"
+    goal = "goal"
+    assert "GET " + slash + goal not in combined_docs
+    assert "songsim:" + slash + slash + goal not in combined_docs
+    assert "Goal" + "Snapshot" not in combined_docs
+
+
+def test_release_docs_keep_kakao_restaurants_as_external_convenience_surface() -> None:
+    root = DEFAULT_CORPUS_PATH.parents[2]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    source_registry = (root / "docs" / "source_registry.md").read_text(encoding="utf-8")
+    smoke_doc = (root / "docs" / "qa" / "public-synthetic-smoke.md").read_text(
+        encoding="utf-8"
+    )
+    audit_doc = (
+        root / "docs" / "qa" / "main-site-coverage-audit-2026-03-17.md"
+    ).read_text(encoding="utf-8")
+    combined_docs = "\n".join([readme, source_registry, smoke_doc, audit_doc])
+
+    assert "/restaurants/nearby" in combined_docs
+    assert "/restaurants/search" in combined_docs
+    assert "Kakao Local 외부 공개 API" in combined_docs
+    assert "학교 공식 1차 source가 아닌 학생 편의 기능" in source_registry
+    assert "공식 1차 source coverage와 별도 범주" in combined_docs
+    assert "Kakao Local 외부 공개 API 기반 편의" in readme
+    assert "Kakao Local 외부 공개 API 기반 편의" in smoke_doc
+    assert "Kakao Local 외부 공개 API 기반 편의" in audit_doc

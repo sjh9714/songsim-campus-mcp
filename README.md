@@ -1,21 +1,14 @@
-# 성심교정 도우미
+# songsim-campus-mcp
 
-가톨릭대학교 성심교정 학생이 **학교에서 헤매지 않도록** 만든 캠퍼스 안내 서비스입니다.  
-학식, 도서관 좌석, 빈 강의실, 공지, 건물과 전화번호를 공식 source 기준으로 한 곳에 모았습니다.
+`songsim-campus-mcp`는 가톨릭대학교 성심교정 학생이 자주 묻는 학사·생활 정보를 **공식 source 중심 Remote MCP + HTTP API**로 제공하는 캠퍼스 도우미 서버입니다. 공지, 학사일정, 건물/연락처, 강의, 도서관 좌석, 식당, Wi-Fi, IT서비스, 기숙사와 생활지원 정보를 LLM 클라이언트에서 읽기 전용으로 조회할 수 있게 구성했습니다. 주변 식당 검색은 학교 공식 1차 source가 아니라 Kakao Local 외부 공개 API 기반 편의 기능으로 분리해 표시합니다.
 
 [![학생용 웹](https://img.shields.io/badge/학생용%20웹-바로%20열기-16a34a)](https://songsim-web.vercel.app)
-[![Official Source](https://img.shields.io/badge/Source-official%20first-2563EB)](docs/source_registry.md)
-[![Public QA](https://img.shields.io/badge/Public%20QA-hard%20fail%200-brightgreen)](docs/qa/public-api-live-validation-1000.md)
-
----
 
 ## 학생이라면 — 이것만 열면 됩니다
 
 ### 👉 [songsim-web.vercel.app](https://songsim-web.vercel.app)
 
 **설치도, 로그인도, AI 계정도 필요 없습니다.** 폰 브라우저에서 주소만 열면 끝입니다.
-
-열면 바로 보이는 것
 
 | | |
 |---|---|
@@ -24,340 +17,228 @@
 | 📢 **공지** | 학사·장학·행사 공지 모아보기 |
 | 🔎 **찾기** | "복사실 어디야?", "보건실 몇 번이야?" |
 
-홈 화면에 추가하면 앱처럼 열립니다.
+홈 화면에 추가하면 앱처럼 열립니다. 소스는 [`web/`](web/), 배포 방법은 [학생용 웹 배포 가이드](docs/deploy-web.md).
 
----
+## AI 앱에서 쓰려면
 
-## 개발자·AI 앱 연동
+ChatGPT나 Claude 같은 LLM 클라이언트에서 직접 연결하는 경로입니다. 공개 MCP URL을 연결한 뒤 `songsim://usage-guide`를 먼저 읽으면, 서버가 지원하는 질문 범위와 제한을 바로 확인할 수 있습니다. HTTP API는 같은 결과를 직접 검증하거나 외부 앱에서 붙이는 companion layer입니다.
 
-학생용 웹 말고 **직접 연동**하려는 경우에만 필요한 내용입니다.
+- ChatGPT 연결 문서: [docs/connect-chatgpt.md](docs/connect-chatgpt.md)
+- Public MCP URL: 운영 배포에서는 `SONGSIM_PUBLIC_MCP_URL` 값의 `/mcp`
+- API 상태 확인: `/healthz`, 학생용 데이터 신뢰 상태는 `/status`
+- MCP 상태 resource: `songsim://status`
 
-<details>
-<summary>Remote MCP / HTTP API / ChatGPT GPT 연결하기</summary>
+처음 연결했다면 아래처럼 물어보세요.
 
-### ChatGPT
+- `최신 학사 공지 2개 보여줘`
+- `학생회관 어디야?`
+- `등록금 반환 기준 알려줘`
+- `중앙도서관 열람실 남은 좌석 알려줘`
+- `SPSS 설치된 컴퓨터실 어디야`
 
-바로 사용할 수 있는 shared GPT가 열려 있습니다.
+공개 서버가 하지 않는 일도 명확합니다.
 
-- **웹 GPT 주소:** `https://chatgpt.com/g/g-69b526a162c48191843a6a7f469f5030-gatolrigdae-seongsimgyojeong-doumi`
-- **바로가기:** [가톨릭대 성심교정 도우미](https://chatgpt.com/g/g-69b526a162c48191843a6a7f469f5030-gatolrigdae-seongsimgyojeong-doumi)
-- **추천 연결 방식:** MCP connector
-- **MCP URL:** `https://songsim-public-mcp.onrender.com/mcp`
-- **모드:** read-only public server
+- Trinity/uPortal, e-Cyber/LMS 같은 로그인 기반 개인 정보 조회
+- 개인 성적, 과제, 수강내역, 개별 등록금 고지서, 개인별 공지/메시지 조회
+- 공식 source로 확인되지 않은 값 추측
+- SNS/Instagram/외부 게시글 본문 수집
 
-공유 GPT를 직접 구성할 때는 아래 값을 사용하면 됩니다.
+답변에는 가능한 한 원문 source, `source_tag`, `last_synced_at`, stale/fallback 여부를 함께 남기는 것을 목표로 합니다.
 
-- **Schema:** `https://songsim-public-api.onrender.com/gpt-actions-openapi-v3.json`
-- **Privacy:** `https://songsim-public-api.onrender.com/privacy`
-- **Auth:** `None`
+## 문제의식
 
-자세한 설정은 [Connect ChatGPT](docs/connect-chatgpt.md)에서 볼 수 있습니다.
+학생이 필요한 정보는 학교 홈페이지, 공지 게시판, 학사 안내, 시설 안내에 흩어져 있습니다. 이 프로젝트는 "성심교정에서 지금 필요한 답"을 하나의 student-facing surface로 묶고, 공식 source에 없는 값은 만들지 않는 방식으로 신뢰 경계를 드러냅니다.
 
-### Codex
+## 주요 사용 질문
 
-- 가이드: [docs/connect-codex.md](docs/connect-codex.md)
+- 최신 학사 공지와 소속기관 공지
+- 포토뉴스, 보도자료, 동문 인터뷰, 홍보영상, 브로슈어, CUK Story, 갤러리
+- 월별 학사일정과 등록·휴학·복학·증명·장학 안내
+- 건물, 시설, 편의시설, 전화번호, 운영시간
+- 과목 검색, 교시 정보, 도서관 좌석, 예상 빈 강의실
+- 학식, 주변 식당, PC 소프트웨어, Wi-Fi
+- 기숙사, 상담, 병원, 예비군, 웹메일/Office 365 같은 IT서비스, 학생활동 안내
+- 입찰/채용 게시글, 연구성과, 170주년 기념사업 공식 안내
 
-### Claude
+## 질문과 답변 방식
 
-- 가이드: [docs/connect-claude.md](docs/connect-claude.md)
+README의 질문 예시는 `data/qa/public_api_eval_corpus_1000.jsonl`과 `docs/qa/`의 공개 검증 기록을 기준으로 잡았습니다. 질문은 자연어 그대로 들어오지만, 서버는 내부적으로 공식 source를 조회할 수 있는 MCP tool 또는 HTTP endpoint로 바꿔 실행하고, 답변에는 **핵심 결과, 근거 source, 불확실성/fallback 상태**를 함께 담는 것을 목표로 합니다.
 
-</details>
+| 사용자가 묻는 말 | 조회 흐름 | 답변에 담는 내용 |
+| --- | --- | --- |
+| `K관 먼저 알려주고 핵심만 같이 정리해줘` | `tool_search_places` -> `tool_get_place` 또는 `/places?query=K관` | `K관`을 `김수환관`으로 정규화하고, 건물/시설 분류, 대표 위치, 연결된 시설 정보를 함께 제공합니다. QA truth 기준으로 ATM 질문은 `김수환관(K관) 1층 우리은행`까지 연결됩니다. |
+| `04483 검색해줘` | `tool_search_courses` 또는 `/courses?query=04483&year=2026&semester=1` | 과목 코드, 과목명, 교수명, 연도/학기, 시작 교시를 구조화해서 반환합니다. 공개 QA snapshot에서는 `04483 -> 3D애니메이션1 / 신은하 / 2026-1 / 7교시`가 stable truth로 고정되어 있습니다. |
+| `자료구조 과목 뭐야`, `객체지향 과목 2개만` | `tool_search_courses` | 띄어쓰기, 일부 표기 차이, 과목명/교수명/강의실 query를 정규화해 후보를 돌려줍니다. source-backed direct hit가 없으면 임의로 과목을 만들지 않고 watchlist 또는 빈 결과로 분리합니다. |
+| `academic 공지 알려줘` | `tool_list_latest_notices` 또는 `/notices?category=academic` | 공지 제목, 카테고리, 게시일, 원문 URL을 반환합니다. 예를 들어 live validation에서는 `멘토 주관 프로그램`, `YBM 온라인 모의 토익/토익스피킹`, `Major Discovery Week` 같은 학사 공지가 `academic`으로 확인됐습니다. |
+| `학사일정 10월 일정 보여줘` | `songsim://academic-calendar` 또는 `/academic-calendar?academic_year=2026&month=10` | 일정명, 시작일, 종료일, 해당 캠퍼스를 보여줍니다. 공개 QA 기준 2026년 10월에는 `중간고사`, `수업일수 1/2` 같은 일정이 포함됩니다. |
+| `기숙사 운영팀 전화번호 알려줘` | `tool_search_phone_book` 또는 `/phone-book?query=기숙사 운영팀` | 부서명, 담당 업무, 전화번호를 분리해 반환합니다. 공개 QA truth는 `기숙사운영팀 / 기숙사 운영 / 4661`처럼 짧은 연락처도 구조화해 검증합니다. |
+| `학생식당 근처 한식집 추천해줘` | `tool_find_nearby_restaurants` 또는 `/restaurants/nearby` | 기준 위치, 음식점명, 카테고리, 거리, 예상 도보 시간, 가격 힌트, 영업 여부를 가능한 범위에서 제공합니다. 가격이나 영업 상태 근거가 없으면 `budget_max`나 `open_now` 필터에서 제외하거나 빈 결과로 답합니다. |
+| `K관 지금 빈 강의실 있어?` | `tool_list_estimated_empty_classrooms` 또는 `/classrooms/empty` | 실시간 source를 먼저 확인하고, 없으면 시간표 기반 `estimated` 결과와 fallback note를 붙입니다. 건물은 `K관 -> 김수환관`처럼 alias를 먼저 정규화합니다. |
+| `무선랜 안내 보여줘` | `songsim://usage-guide` + `/wifi-guides` | 건물별 SSID와 접속 안내를 반환합니다. 공개 QA truth는 니콜스관 `catholic_univ`, 강의실 호실명 SSID, 미카엘관 `catholic_mica`, 다솔관 `catholic_dasol` 같은 값을 확인합니다. |
+| `내 시간표 보여줘`, `관리자 화면 열어줘` | usage guide policy | 공개 read-only surface 범위를 벗어난 요청으로 보고 거절합니다. profile, 개인 시간표, 내부 admin, 쓰기 작업은 기본 공개 답변 대상이 아닙니다. |
 
-**문서 바로가기**  
-[학생용 웹 배포](docs/deploy-web.md) · [Render 배포](docs/deploy-render.md) · [Connect ChatGPT](docs/connect-chatgpt.md) · [Connect Codex](docs/connect-codex.md) · [Connect Claude](docs/connect-claude.md) · [Source Registry](docs/source_registry.md)
+답변은 다음 원칙으로 정리합니다.
 
----
+- 먼저 바로 쓸 수 있는 결론을 1~3개로 보여주고, 이어서 원문 source나 endpoint 근거를 붙입니다.
+- 같은 질문이라도 `지금 기준`, `먼저 알려줘`, `핵심만`, 띄어쓰기 오류가 섞인 경우를 QA corpus에 넣어 회귀 테스트합니다.
+- source gap은 실패와 분리합니다. 예를 들어 `CSE301`, `김가톨`, `CSE 420`처럼 공식 snapshot에서 direct hit가 확인되지 않은 질문은 릴리즈 fail이 아니라 watchlist로 둡니다.
+- 식당, 도서관 좌석, 빈 강의실처럼 live source 의존도가 큰 답변은 stale fallback 또는 estimated 상태를 명시합니다.
 
-## 이런 질문을 해결합니다
+## Surface
 
-### 오늘 할 일
-- 최신 학사 공지
-- 소속기관 공지
-- 행사 / 대외 프로그램 공지
-- 월별 학사일정
+Remote MCP는 학생이 LLM 클라이언트에서 직접 쓰는 기본 진입점입니다. HTTP API는 같은 데이터를 직접 확인하거나 외부 앱에서 연결하는 companion layer입니다.
 
-예시
+대표 MCP resource/tool:
 
-```text
-최신 학사 공지 2개 보여줘
-국제학부 최신 공지 알려줘
-행사안내 보여줘
-2026학년도 3월 학사일정 보여줘
-```
-
-### 어디 / 연락처
-- 건물 / 시설 / 편의시설
-- 전화번호 / 운영시간
-- 교통 / Wi-Fi
-
-예시
-
-```text
-학생회관 어디야?
-복사실이 어디야?
-보건실 전화번호 알려줘
-니콜스관 WIFI 안내 알려줘
-```
-
-### 절차 / 제도
-- 등록
-- 증명
-- 휴학 / 복학 / 자퇴 / 재입학
-- 수업 / 공결 / 계절학기
-- 성적 / 졸업
-- 학생교류
-- 장학
-
-예시
-
-```text
-등록금 반환 기준 알려줘
-재학증명서 발급 방법 알려줘
-공결 신청 방법 알려줘
-계절학기 신청 시기 알려줘
-졸업요건 알려줘
-국내 학점교류 신청대상 알려줘
-```
-
-### 공부공간 / 자원
-- 과목 검색
-- 교시 정보
-- 도서관 좌석
-- 예상 빈 강의실
-- 학식
-- 주변 식당
-- PC 소프트웨어
-
-예시
-
-```text
-7교시가 몇 시야?
-2026년 1학기 객체지향 과목 찾아줘
-중앙도서관 열람실 남은 좌석 알려줘
-K관 지금 예상 빈 강의실 있어?
-학생식당 메뉴 보여줘
-SPSS 설치된 컴퓨터실 어디야?
-```
-
-### 특수 경로
-- 기숙사
-- 생활지원
-- 상담 / 예비군 / 병원
-- 학생활동
-- 소속기관 공지
-
-예시
-
-```text
-성심교정 기숙사 안내해줘
-학생상담 어디서 받아?
-예비군 신고 시기 알려줘
-부속병원 이용 안내해줘
-총학생회 안내해줘
-프란치스코관 입퇴사공지 알려줘
-```
-
----
-
-## Student-facing Surface
-
-### 모바일 웹 (`web/`)
-
-학생이 실제로 쓰는 **primary surface**입니다. Next.js로 만들었고 백엔드 HTTP API를 그대로 씁니다.
-
-- 카드 홈: 학식 / 도서관 좌석 / 최신 공지 / 장소·연락처
-- 통합 검색: 장소, 부서 전화번호, 과목, PC 소프트웨어
-- 무로그인 개인화: 마지막으로 본 건물을 브라우저에만 기억
-- 백엔드가 잠들어 있어도 캐시로 즉시 화면을 보여주고, 못 받아온 값은 만들어내지 않습니다
-
-### Remote MCP
-
-학생이 LLM 클라이언트에서 직접 쓰는 surface입니다.
-
-대표 resource / tool
+아래 목록은 학생-facing 대표 entrypoint입니다. 전체 catalog와 추천 흐름은 `songsim://usage-guide`에서 확인합니다.
 
 - `songsim://usage-guide`
+- `songsim://status`
 - `songsim://academic-calendar`
 - `songsim://registration-guide`
 - `songsim://class-guide`
-- `songsim://academic-milestone-guide`
 - `songsim://student-exchange-guide`
-- `songsim://student-exchange-partners`
 - `songsim://student-activity-guide`
+- `songsim://student-activity-notices`
+- `songsim://service-policy-guide`
+- `songsim://service-policy-posts`
+- `songsim://newsroom-posts`
+- `songsim://research-posts`
+- `songsim://newsroom-resource-guide`
+- `songsim://anniversary-guide`
 - `songsim://phone-book`
-- `songsim://campus-life-support-guide`
 - `songsim://dormitory-guide`
-- `songsim://certificate-guide`
-- `songsim://scholarship-guide`
-- `songsim://affiliated-notices`
-- `songsim://campus-life-notices`
-- `songsim://transport-guide`
-- `songsim://wifi-guide`
+- `tool_today_campus_updates`
+- `tool_find_campus_place`
+- `tool_explain_academic_process`
+- `tool_find_study_resource`
+- `tool_campus_life_help`
 - `tool_search_places`
 - `tool_search_courses`
 - `tool_search_phone_book`
-- `tool_search_pc_software`
 - `tool_list_latest_notices`
 - `tool_list_affiliated_notices`
-- `tool_list_campus_life_notices`
 - `tool_list_student_activity_guides`
+- `tool_list_student_activity_notices`
+- `tool_list_service_policy_guides`
+- `tool_list_service_policy_posts`
+- `tool_list_newsroom_posts`
+- `tool_list_research_posts`
+- `tool_list_newsroom_resource_guides`
+- `tool_list_anniversary_guides`
 - `tool_search_dining_menus`
 - `tool_find_nearby_restaurants`
 - `tool_get_library_seat_status`
 - `tool_list_estimated_empty_classrooms`
 
-### HTTP API
+대표 HTTP endpoint:
 
-같은 데이터를 직접 확인하거나 앱에 붙일 때 쓰는 **companion layer**입니다.
-
-대표 endpoint
-
+- `/status`
 - `/places`
 - `/phone-book`
 - `/courses`
-- `/periods`
 - `/academic-calendar`
 - `/registration-guides`
 - `/class-guides`
-- `/seasonal-semester-guides`
-- `/academic-milestone-guides`
 - `/student-exchange-guides`
-- `/student-exchange-partners`
 - `/student-activity-guides`
-- `/certificate-guides`
-- `/leave-of-absence-guides`
-- `/academic-status-guides`
-- `/academic-support-guides`
+- `/student-activity-notices`
+- `/about-resource-guides`
+- `/service-policy-guides`
+- `/service-policy-posts`
+- `/campus-life-support-guides`
 - `/scholarship-guides`
 - `/notices`
 - `/affiliated-notices`
 - `/campus-life-notices`
+- `/newsroom-posts`
+- `/research-posts`
+- `/newsroom-resource-guides`
+- `/anniversary-guides`
 - `/dormitory-guides`
-- `/campus-life-support-guides`
 - `/pc-software`
 - `/dining-menus`
 - `/restaurants/nearby`
-- `/restaurants/search`
 - `/library-seats`
 - `/classrooms/empty`
 - `/transport`
 - `/wifi-guides`
 
----
-
 ## 신뢰 정책
 
-이 프로젝트는 **정답을 꾸며내는 대신 신뢰 경계를 드러내는 방식**을 택합니다.
-
 - 학교 공식 source에 없는 값은 만들지 않습니다.
-- 없거나 불확실하면 `null` 또는 빈 결과를 반환합니다.
-- 일부 동적 도메인은 best-effort / fallback 정책을 명시적으로 사용합니다.
+- 없거나 불확실한 값은 `null`, 빈 결과, 또는 명시적인 fallback 상태로 반환합니다.
+- 주변 식당/브랜드 검색은 Kakao Local 외부 공개 API 기반 편의 surface이며, 학교 공식 1차 source coverage와 별도 범주로 봅니다.
+- 도서관 좌석은 live fetch 후 stale fallback을 사용할 수 있습니다.
+- 예상 빈 강의실은 realtime source를 먼저 시도하고, 없으면 시간표 기준 예상 공실로 폴백합니다.
+- 기본 공개 surface는 profile 개인화, 내부 admin, observability, GPT Actions packaging layer를 중심 기능으로 두지 않습니다.
 
-현재 기준
+## 기술 스택
 
-- **도서관 좌석:** `live fetch + stale fallback`
-- **예상 빈 강의실:** `realtime` source를 먼저 시도하고, 없으면 시간표 기준 예상 공실로 폴백
+| 영역 | 기술 |
+| --- | --- |
+| Runtime | Python 3.12+ |
+| API | FastAPI, Uvicorn |
+| MCP | MCP optional extra |
+| Data | PostgreSQL, psycopg, pydantic |
+| Ingest | httpx, BeautifulSoup, pypdf, Playwright optional extra |
+| Quality | pytest, ruff, public QA corpus |
+| Deployment | Render blueprint (`render.yaml`) |
 
----
+## 프로젝트 구조
 
-## 품질 검증
+```text
+src/songsim_campus/
+├── api.py                     # HTTP API entrypoint
+├── mcp_server.py              # MCP server entrypoint
+├── ingest/                    # 공식 source와 외부 데이터 수집기
+├── *_runtime.py               # 검색/메뉴/좌석 등 runtime service
+├── repo.py, db.py             # 저장소와 DB 접근
+├── schema.sql                 # PostgreSQL schema
+└── qa_eval.py                 # 공개 QA 평가 실행
+data/                          # 샘플 데이터, alias, QA corpus
+docs/                          # 연결 가이드, source registry, QA 문서
+tests/                         # API, MCP, ingest, runtime 회귀 테스트
+web/                           # 학생용 모바일 웹 (Next.js)
+├── app/                       # 카드 홈, 학식/공부/공지/찾기, 통합 검색
+├── lib/api.ts                 # 캐시 수명·타임아웃·실패 처리
+└── components/
+```
 
-공개 student surface는 설명만이 아니라 **live validation baseline**으로 관리합니다.
-
-### Public API live baseline
-- checked_at: `2026-03-21T12:31:05+00:00`
-- corpus size: `1000`
-- executed: `1005`
-- hard fail: `0`
-- watch: `5`
-- skip: `104`
-
-### Public MCP live summary
-- release pack size: `50`
-- executed: `50 / 50`
-- pass: `43`
-- soft_pass: `7`
-- fail: `0`
-
-자세한 문서
-
-- [Public API Live Validation Baseline](docs/qa/public-api-live-validation-1000.md)
-- [Public MCP Release Pack (50)](docs/qa/public-mcp-release-pack-50.md)
-- [Public MCP Live Validation Summary](docs/qa/public-mcp-live-validation-summary.md)
-
----
-
-## Quick Start
-
-### 1. Install
+## 로컬 실행
 
 ```bash
 uv sync --extra dev --extra mcp --extra scrape
-```
-
-또는
-
-```bash
-pip install -e '.[dev,mcp,scrape]'
-```
-
-### 2. Configure
-
-```bash
 cp .env.example .env
-```
-
-공개 read-only 배포 예시
-
-```bash
-SONGSIM_APP_MODE=public_readonly
-SONGSIM_PUBLIC_HTTP_URL=https://your-public-api-url
-SONGSIM_PUBLIC_MCP_URL=https://your-public-mcp-url/mcp
-SONGSIM_PUBLIC_MCP_AUTH_MODE=anonymous
-```
-
-공개 MCP를 OAuth로 보호하려면
-
-```bash
-SONGSIM_PUBLIC_MCP_AUTH_MODE=oauth
-SONGSIM_MCP_OAUTH_ENABLED=true
-SONGSIM_MCP_OAUTH_ISSUER=https://your-tenant.us.auth0.com/
-SONGSIM_MCP_OAUTH_AUDIENCE=https://your-public-mcp-url/mcp
-SONGSIM_MCP_OAUTH_SCOPES=songsim.read
-```
-
-### 3. Run Local Postgres
-
-```bash
 docker compose up -d postgres
 ```
 
-### 4. Seed or Sync
-
-데모 데이터
+데모 데이터:
 
 ```bash
 uv run songsim-seed-demo --force
 ```
 
-공식 데이터
+공식 데이터 동기화:
 
 ```bash
-uv run songsim-sync --year <current-year> --semester <1-or-2> --notice-pages 1
+uv run songsim-sync --year <year> --semester <1-or-2> --notice-pages 1
 ```
 
-### 5. Run HTTP API
+HTTP API:
 
 ```bash
 uv run songsim-api
 ```
 
-- docs: `http://127.0.0.1:8000/docs`
-- shared GPT schema v3: `http://127.0.0.1:8000/gpt-actions-openapi-v3.json`
-- shared GPT schema v2: `http://127.0.0.1:8000/gpt-actions-openapi-v2.json`
-- legacy schema v1: `http://127.0.0.1:8000/gpt-actions-openapi.json`
+MCP 서버:
 
-### 6. Run Student Web
+```bash
+uv run songsim-mcp --transport stdio
+uv run songsim-mcp --transport streamable-http
+```
+
+학생용 웹:
 
 ```bash
 cd web
@@ -366,71 +247,19 @@ cp .env.example .env.local   # SONGSIM_API_BASE 를 위에서 띄운 API 주소�
 npm run dev
 ```
 
-- 웹: `http://localhost:3000`
-- 배포 방법은 [학생용 웹 배포 가이드](docs/deploy-web.md) 참고
+개발 환경에서 확인할 수 있는 문서:
 
-### 7. Run MCP Server
+- `http://127.0.0.1:8000/docs`
+- `http://127.0.0.1:8000/gpt-actions-openapi-v3.json`
 
-stdio
-
-```bash
-uv run songsim-mcp --transport stdio
-```
-
-streamable HTTP
+## 검증
 
 ```bash
-uv run songsim-mcp --transport streamable-http
+uv run pytest
+uv run ruff check .
+uv run songsim-eval-public run \
+  --truth data/qa/public_api_eval_truth_1000.jsonl \
+  --report /tmp/songsim-public-api-validation.md
 ```
 
----
-
-## Example HTTP Calls
-
-```bash
-curl 'http://127.0.0.1:8000/places?query=학생회관%20어디야?'
-curl 'http://127.0.0.1:8000/phone-book?query=보건실'
-curl 'http://127.0.0.1:8000/courses?query=객체지향&year=2026&semester=1'
-curl 'http://127.0.0.1:8000/academic-calendar?academic_year=2026&month=3'
-curl 'http://127.0.0.1:8000/registration-guides?topic=payment_and_return&limit=2'
-curl 'http://127.0.0.1:8000/notices?category=academic&limit=3'
-curl 'http://127.0.0.1:8000/dining-menus?query=학생식당'
-curl 'http://127.0.0.1:8000/library-seats'
-curl 'http://127.0.0.1:8000/classrooms/empty?building=%EB%8B%88%EC%BD%9C%EC%8A%A4%EA%B4%80&at=2026-03-16T10:15:00%2B09:00'
-curl 'http://127.0.0.1:8000/wifi-guides'
-```
-
----
-
-## Out of Scope
-
-아래는 기본 공개 surface의 중심은 아닙니다.
-
-- profile 개인화
-- 시간표 저장
-- 관심사 기반 추천
-- `/admin/*`
-- `/readyz`
-- observability
-- 내부 automation
-- `/gpt/*` 및 GPT Actions packaging layer
-  - 공개 기본 진입면은 아니고, shared GPT 연결용 secondary surface입니다.
-
----
-
-## 문서
-
-- [Connect ChatGPT](docs/connect-chatgpt.md)
-- [Connect Codex](docs/connect-codex.md)
-- [Connect Claude](docs/connect-claude.md)
-- [Source Registry](docs/source_registry.md)
-- [Render Deploy Guide](docs/deploy-render.md)
-- [Public API Live Validation Baseline](docs/qa/public-api-live-validation-1000.md)
-- [Public MCP Release Pack (50)](docs/qa/public-mcp-release-pack-50.md)
-- [Public MCP Live Validation Summary](docs/qa/public-mcp-live-validation-summary.md)
-
----
-
-## 한 줄 요약
-
-**성심교정 도우미는 학생이 링크 하나만 열면 학교에서 헤매지 않도록, 공식 데이터를 모바일 웹·Remote MCP·HTTP API로 제공하는 프로젝트입니다.**
+공개 API와 MCP 검증 기록은 `docs/qa/` 아래의 live validation 문서와 release pack 문서에서 확인할 수 있습니다.

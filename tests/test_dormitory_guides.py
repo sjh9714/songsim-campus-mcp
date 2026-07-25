@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from songsim_campus.ingest.official_sources import (
+    DormitoryFeeGuideSource,
     DormitoryHomepageGuideSource,
     DormitorySongsimGuideSource,
 )
@@ -17,11 +18,14 @@ def _fixture(name: str) -> str:
 def test_dormitory_guide_sources_expose_expected_defaults() -> None:
     songsim_source = DormitorySongsimGuideSource()
     home_source = DormitoryHomepageGuideSource()
+    fee_source = DormitoryFeeGuideSource()
 
     assert songsim_source.source_tag == "cuk_dormitory_guides"
     assert home_source.source_tag == "cuk_dormitory_guides"
+    assert fee_source.source_tag == "cuk_dormitory_guides"
     assert songsim_source.url.endswith("/dormitory_songsim.do")
     assert home_source.url == "https://dorm.catholic.ac.kr/"
+    assert fee_source.url.endswith("/life-guide/stefano-andrea.do")
 
 
 def test_dormitory_songsim_page_parser_extracts_expected_rows() -> None:
@@ -119,3 +123,23 @@ def test_dormitory_home_page_parser_extracts_quick_links_and_notices() -> None:
         link["url"].startswith("https://dorm.catholic.ac.kr/dormitory/board/")
         for link in francis_notice["links"]
     )
+
+
+def test_dormitory_fee_page_parser_extracts_fee_and_refund_rows() -> None:
+    rows = DormitoryFeeGuideSource().parse(
+        _fixture("dormitory_fee_stefano_andrea.html"),
+        fetched_at="2026-03-20T00:00:00+09:00",
+    )
+
+    assert len(rows) == 1
+    fee = rows[0]
+    assert fee["topic"] == "fees"
+    assert fee["title"] == "스테파노관 / 안드레아관 기숙사비"
+    assert fee["source_tag"] == "cuk_dormitory_guides"
+    assert fee["summary"].startswith("정규학기와 방학 기숙사비")
+    assert any("정규학기 스테파노관 기숙사비" in step for step in fee["steps"])
+    assert any("2인실" in step and "1,308,000원" in step for step in fee["steps"])
+    assert any("추가 선발 시 납부금액" in step and "85% 금액" in step for step in fee["steps"])
+    assert any("환불절차: STEP 1" in step for step in fee["steps"])
+    assert any("기숙사비 전액 환불" in step for step in fee["steps"])
+    assert any("환불금은 실제 퇴사일 기준" in step for step in fee["steps"])

@@ -4,9 +4,11 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from .schemas import (
+    AboutResourceGuide,
     AcademicMilestoneGuide,
     AcademicStatusGuide,
     AcademicSupportGuide,
+    AnniversaryGuide,
     CampusDiningMenu,
     CampusLifeNotice,
     CampusLifeSupportGuide,
@@ -22,14 +24,21 @@ from .schemas import (
     McpRestaurantSearchResult,
     McpToolError,
     NearbyRestaurant,
+    NewsroomPost,
+    NewsroomResourceGuide,
     Notice,
     PCSoftwareEntry,
     Place,
+    PublicJourneyResponse,
     RegistrationGuide,
+    ResearchPost,
     RestaurantSearchResult,
     ScholarshipGuide,
     SeasonalSemesterGuide,
+    ServicePolicyGuide,
+    ServicePolicyPost,
     StudentActivityGuide,
+    StudentActivityNotice,
     StudentExchangeGuide,
     TransportGuide,
     WifiGuide,
@@ -78,6 +87,10 @@ def serialize_public_error(exc: Exception) -> dict[str, str]:
     error_type = "not_found" if exc.__class__.__name__ == "NotFoundError" else "invalid_request"
     message = str(exc)
     return McpToolError(error=message, type=error_type, message=message).model_dump()
+
+
+def serialize_public_journey_response(response: PublicJourneyResponse) -> dict[str, object]:
+    return response.model_dump(exclude_none=True)
 
 
 def serialize_public_place(place: Place) -> dict[str, object]:
@@ -270,6 +283,62 @@ def serialize_public_seasonal_semester_guide(
 def serialize_public_student_activity_guide(
     guide: StudentActivityGuide,
 ) -> dict[str, object]:
+    payload = guide.model_dump()
+    payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
+    return payload
+
+
+def serialize_public_student_activity_notice(
+    notice: StudentActivityNotice,
+) -> dict[str, object]:
+    payload = notice.model_dump()
+    payload["notice_summary"] = notice.summary
+    return payload
+
+
+def serialize_public_about_resource_guide(
+    guide: AboutResourceGuide,
+) -> dict[str, object]:
+    payload = guide.model_dump()
+    payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
+    return payload
+
+
+def serialize_public_service_policy_guide(
+    guide: ServicePolicyGuide,
+) -> dict[str, object]:
+    payload = guide.model_dump()
+    payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
+    return payload
+
+
+def serialize_public_service_policy_post(post: ServicePolicyPost) -> dict[str, object]:
+    payload = post.model_dump()
+    payload["post_summary"] = post.summary
+    return payload
+
+
+def serialize_public_newsroom_post(post: NewsroomPost) -> dict[str, object]:
+    payload = post.model_dump()
+    payload["post_summary"] = post.summary
+    return payload
+
+
+def serialize_public_research_post(post: ResearchPost) -> dict[str, object]:
+    payload = post.model_dump()
+    payload["post_summary"] = post.summary
+    return payload
+
+
+def serialize_public_newsroom_resource_guide(
+    guide: NewsroomResourceGuide,
+) -> dict[str, object]:
+    payload = guide.model_dump()
+    payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
+    return payload
+
+
+def serialize_public_anniversary_guide(guide: AnniversaryGuide) -> dict[str, object]:
     payload = guide.model_dump()
     payload["guide_summary"] = guide.summary or (guide.steps[0] if guide.steps else "")
     return payload

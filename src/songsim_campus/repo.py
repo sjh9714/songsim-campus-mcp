@@ -32,7 +32,13 @@ JSON_COLUMNS = {
     "student_exchange_partners": {},
     "dormitory_guides": {"steps_json": "steps", "links_json": "links"},
     "campus_life_support_guides": {"steps_json": "steps", "links_json": "links"},
+    "about_resource_guides": {"steps_json": "steps", "links_json": "links"},
+    "service_policy_guides": {"steps_json": "steps", "links_json": "links"},
+    "service_policy_posts": {},
     "pc_software_entries": {"software_list_json": "software_list"},
+    "research_posts": {},
+    "newsroom_resource_guides": {"steps_json": "steps", "links_json": "links"},
+    "anniversary_guides": {"steps_json": "steps", "links_json": "links"},
     "academic_calendar": {"campuses_json": "campuses"},
     "profile_notice_preferences": {
         "categories_json": "categories",
@@ -224,8 +230,8 @@ def replace_affiliated_notices(
         conn,
         """
         INSERT INTO affiliated_notices (
-            topic, title, published_at, summary, source_url, source_tag, last_synced_at
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            topic, title, published_at, summary, body_text, source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """,
         [
             (
@@ -233,6 +239,7 @@ def replace_affiliated_notices(
                 row["title"],
                 row["published_at"],
                 row.get("summary", ""),
+                row.get("body_text", ""),
                 row.get("source_url"),
                 row.get("source_tag", "demo"),
                 row["last_synced_at"],
@@ -703,8 +710,8 @@ def list_affiliated_notices(
     normalized_query = (query or "").strip()
     query_like = f"%{normalized_query}%"
     if normalized_query:
-        clauses.append("(title ILIKE %s OR summary ILIKE %s)")
-        params.extend([query_like, query_like])
+        clauses.append("(title ILIKE %s OR summary ILIKE %s OR body_text ILIKE %s)")
+        params.extend([query_like, query_like, query_like])
 
     if clauses:
         sql += " WHERE " + " AND ".join(clauses)
@@ -715,13 +722,14 @@ def list_affiliated_notices(
                 CASE
                     WHEN title ILIKE %s THEN 0
                     WHEN summary ILIKE %s THEN 1
-                    ELSE 2
+                    WHEN body_text ILIKE %s THEN 2
+                    ELSE 3
                 END,
                 published_at DESC,
                 id DESC
             LIMIT %s
         """
-        params.extend([query_like, query_like, limit])
+        params.extend([query_like, query_like, query_like, limit])
     else:
         sql += " ORDER BY published_at DESC, id DESC LIMIT %s"
         params.append(limit)
@@ -1111,6 +1119,239 @@ def replace_student_activity_guides(
         conn,
         """
         INSERT INTO student_activity_guides (
+            topic, title, summary, steps_json, links_json, source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        [
+            (
+                row["topic"],
+                row["title"],
+                row.get("summary", ""),
+                Jsonb(row.get("steps", [])),
+                Jsonb(row.get("links", [])),
+                row.get("source_url"),
+                row.get("source_tag", "demo"),
+                row["last_synced_at"],
+            )
+            for row in rows
+        ],
+    )
+
+
+def replace_student_activity_notices(
+    conn: psycopg.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    conn.execute("TRUNCATE TABLE student_activity_notices RESTART IDENTITY CASCADE")
+    _executemany(
+        conn,
+        """
+        INSERT INTO student_activity_notices (
+            topic, article_no, title, published_at, summary, body_text,
+            source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        [
+            (
+                row["topic"],
+                row.get("article_no"),
+                row["title"],
+                row.get("published_at"),
+                row.get("summary", ""),
+                row.get("body_text", ""),
+                row.get("source_url"),
+                row.get("source_tag", "demo"),
+                row["last_synced_at"],
+            )
+            for row in rows
+        ],
+    )
+
+
+def replace_about_resource_guides(
+    conn: psycopg.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    conn.execute("TRUNCATE TABLE about_resource_guides RESTART IDENTITY CASCADE")
+    _executemany(
+        conn,
+        """
+        INSERT INTO about_resource_guides (
+            topic, title, summary, steps_json, links_json, source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        [
+            (
+                row["topic"],
+                row["title"],
+                row.get("summary", ""),
+                Jsonb(row.get("steps", [])),
+                Jsonb(row.get("links", [])),
+                row.get("source_url"),
+                row.get("source_tag", "demo"),
+                row["last_synced_at"],
+            )
+            for row in rows
+        ],
+    )
+
+
+def replace_service_policy_guides(
+    conn: psycopg.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    conn.execute("TRUNCATE TABLE service_policy_guides RESTART IDENTITY CASCADE")
+    _executemany(
+        conn,
+        """
+        INSERT INTO service_policy_guides (
+            topic, title, summary, steps_json, links_json, source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        [
+            (
+                row["topic"],
+                row["title"],
+                row.get("summary", ""),
+                Jsonb(row.get("steps", [])),
+                Jsonb(row.get("links", [])),
+                row.get("source_url"),
+                row.get("source_tag", "demo"),
+                row["last_synced_at"],
+            )
+            for row in rows
+        ],
+    )
+
+
+def replace_service_policy_posts(
+    conn: psycopg.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    conn.execute("TRUNCATE TABLE service_policy_posts RESTART IDENTITY CASCADE")
+    _executemany(
+        conn,
+        """
+        INSERT INTO service_policy_posts (
+            topic, article_no, title, published_at, summary, body_text,
+            source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        [
+            (
+                row["topic"],
+                row.get("article_no"),
+                row["title"],
+                row.get("published_at"),
+                row.get("summary", ""),
+                row.get("body_text", ""),
+                row.get("source_url"),
+                row.get("source_tag", "demo"),
+                row["last_synced_at"],
+            )
+            for row in rows
+        ],
+    )
+
+
+def replace_newsroom_posts(
+    conn: psycopg.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    conn.execute("TRUNCATE TABLE newsroom_posts RESTART IDENTITY CASCADE")
+    _executemany(
+        conn,
+        """
+        INSERT INTO newsroom_posts (
+            topic, article_no, title, published_at, summary, thumbnail_url,
+            external_url, source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        [
+            (
+                row["topic"],
+                row.get("article_no"),
+                row["title"],
+                row.get("published_at"),
+                row.get("summary", ""),
+                row.get("thumbnail_url"),
+                row.get("external_url"),
+                row.get("source_url"),
+                row.get("source_tag", "demo"),
+                row["last_synced_at"],
+            )
+            for row in rows
+        ],
+    )
+
+
+def replace_research_posts(
+    conn: psycopg.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    conn.execute("TRUNCATE TABLE research_posts RESTART IDENTITY CASCADE")
+    _executemany(
+        conn,
+        """
+        INSERT INTO research_posts (
+            topic, article_no, title, published_at, summary, body_text,
+            source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        [
+            (
+                row["topic"],
+                row.get("article_no"),
+                row["title"],
+                row.get("published_at"),
+                row.get("summary", ""),
+                row.get("body_text", ""),
+                row.get("source_url"),
+                row.get("source_tag", "demo"),
+                row["last_synced_at"],
+            )
+            for row in rows
+        ],
+    )
+
+
+def replace_newsroom_resource_guides(
+    conn: psycopg.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    conn.execute("TRUNCATE TABLE newsroom_resource_guides RESTART IDENTITY CASCADE")
+    _executemany(
+        conn,
+        """
+        INSERT INTO newsroom_resource_guides (
+            topic, title, summary, steps_json, links_json, source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        [
+            (
+                row["topic"],
+                row["title"],
+                row.get("summary", ""),
+                Jsonb(row.get("steps", [])),
+                Jsonb(row.get("links", [])),
+                row.get("source_url"),
+                row.get("source_tag", "demo"),
+                row["last_synced_at"],
+            )
+            for row in rows
+        ],
+    )
+
+
+def replace_anniversary_guides(
+    conn: psycopg.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    conn.execute("TRUNCATE TABLE anniversary_guides RESTART IDENTITY CASCADE")
+    _executemany(
+        conn,
+        """
+        INSERT INTO anniversary_guides (
             topic, title, summary, steps_json, links_json, source_url, source_tag, last_synced_at
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """,
@@ -1677,6 +1918,198 @@ def list_student_activity_guides(
     return [_row_to_dict("student_activity_guides", row) for row in rows]
 
 
+def list_student_activity_notices(
+    conn: psycopg.Connection,
+    *,
+    topic: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT *
+        FROM student_activity_notices
+    """
+    clauses: list[str] = []
+    params: list[Any] = []
+    if topic:
+        clauses.append("topic = %s")
+        params.append(topic)
+    if query:
+        clauses.append("(title ILIKE %s OR summary ILIKE %s OR body_text ILIKE %s)")
+        pattern = f"%{query}%"
+        params.extend([pattern, pattern, pattern])
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += " ORDER BY published_at DESC NULLS LAST, id DESC LIMIT %s"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_dict("student_activity_notices", row) for row in rows]
+
+
+def list_about_resource_guides(
+    conn: psycopg.Connection,
+    *,
+    topic: str | None = None,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT *
+        FROM about_resource_guides
+    """
+    params: list[Any] = []
+    if topic:
+        sql += " WHERE topic = %s"
+        params.append(topic)
+    sql += " ORDER BY topic, title, id LIMIT %s"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_dict("about_resource_guides", row) for row in rows]
+
+
+def list_service_policy_guides(
+    conn: psycopg.Connection,
+    *,
+    topic: str | None = None,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT *
+        FROM service_policy_guides
+    """
+    params: list[Any] = []
+    if topic:
+        sql += " WHERE topic = %s"
+        params.append(topic)
+    sql += " ORDER BY topic, title, id LIMIT %s"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_dict("service_policy_guides", row) for row in rows]
+
+
+def list_service_policy_posts(
+    conn: psycopg.Connection,
+    *,
+    topic: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT *
+        FROM service_policy_posts
+    """
+    clauses: list[str] = []
+    params: list[Any] = []
+    if topic:
+        clauses.append("topic = %s")
+        params.append(topic)
+    if query:
+        clauses.append("(title ILIKE %s OR summary ILIKE %s OR body_text ILIKE %s)")
+        pattern = f"%{query}%"
+        params.extend([pattern, pattern, pattern])
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += " ORDER BY published_at DESC NULLS LAST, id DESC LIMIT %s"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_dict("service_policy_posts", row) for row in rows]
+
+
+def list_newsroom_posts(
+    conn: psycopg.Connection,
+    *,
+    topic: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT *
+        FROM newsroom_posts
+    """
+    clauses: list[str] = []
+    params: list[Any] = []
+    if topic:
+        clauses.append("topic = %s")
+        params.append(topic)
+    if query:
+        clauses.append("(title ILIKE %s OR summary ILIKE %s)")
+        pattern = f"%{query}%"
+        params.extend([pattern, pattern])
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += " ORDER BY published_at DESC NULLS LAST, id LIMIT %s"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_dict("newsroom_posts", row) for row in rows]
+
+
+def list_research_posts(
+    conn: psycopg.Connection,
+    *,
+    topic: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT *
+        FROM research_posts
+    """
+    clauses: list[str] = []
+    params: list[Any] = []
+    if topic:
+        clauses.append("topic = %s")
+        params.append(topic)
+    if query:
+        clauses.append("(title ILIKE %s OR summary ILIKE %s OR body_text ILIKE %s)")
+        pattern = f"%{query}%"
+        params.extend([pattern, pattern, pattern])
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += " ORDER BY published_at DESC NULLS LAST, id DESC LIMIT %s"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_dict("research_posts", row) for row in rows]
+
+
+def list_newsroom_resource_guides(
+    conn: psycopg.Connection,
+    *,
+    topic: str | None = None,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT *
+        FROM newsroom_resource_guides
+    """
+    params: list[Any] = []
+    if topic:
+        sql += " WHERE topic = %s"
+        params.append(topic)
+    sql += " ORDER BY topic, title, id LIMIT %s"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_dict("newsroom_resource_guides", row) for row in rows]
+
+
+def list_anniversary_guides(
+    conn: psycopg.Connection,
+    *,
+    topic: str | None = None,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT *
+        FROM anniversary_guides
+    """
+    params: list[Any] = []
+    if topic:
+        sql += " WHERE topic = %s"
+        params.append(topic)
+    sql += " ORDER BY topic, title, id LIMIT %s"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_dict("anniversary_guides", row) for row in rows]
+
+
 def list_student_exchange_partners(
     conn: psycopg.Connection,
     *,
@@ -1686,7 +2119,12 @@ def list_student_exchange_partners(
         """
         SELECT *
         FROM student_exchange_partners
-        ORDER BY country_ko NULLS LAST, university_name, partner_code, id
+        ORDER BY
+            country_ko IS NULL,
+            convert_to(COALESCE(country_ko, ''), 'UTF8'),
+            convert_to(university_name, 'UTF8'),
+            partner_code,
+            id
         LIMIT %s
         """,
         (limit,),
@@ -1723,7 +2161,7 @@ def list_phone_book_entries(
         """
         SELECT *
         FROM phone_book_entries
-        ORDER BY department, id
+        ORDER BY convert_to(department, 'UTF8'), id
         LIMIT %s
         """,
         (limit,),
@@ -1912,6 +2350,14 @@ def get_dataset_sync_state(conn: psycopg.Connection, table: str) -> dict[str, An
         "academic_milestone_guides",
         "campus_life_support_guides",
         "student_activity_guides",
+        "student_activity_notices",
+        "about_resource_guides",
+        "service_policy_guides",
+        "service_policy_posts",
+        "newsroom_posts",
+        "research_posts",
+        "newsroom_resource_guides",
+        "anniversary_guides",
         "pc_software_entries",
         "student_exchange_guides",
         "student_exchange_partners",

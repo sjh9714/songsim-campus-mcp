@@ -104,14 +104,19 @@ GPT_ACTION_PATHS: dict[str, dict[str, str]] = {
     "/restaurants/nearby": {
         "operationId": "findNearbyRestaurants",
         "summary": "Find nearby restaurants",
-        "description": ("Find walkable restaurants near a Songsim campus building or landmark."),
+        "description": (
+            "Find walkable restaurants near a Songsim campus building or landmark using "
+            "the Kakao Local external public API convenience surface."
+        ),
     },
     "/restaurants/search": {
         "operationId": "searchRestaurants",
         "summary": "Search restaurant brands or venue names",
         "description": (
             "Search nearby restaurant or cafe brands directly by venue name. "
-            "Use this for questions like 매머드커피 어디 있어 or 이디야 있나."
+            "This is a Kakao Local external public API convenience surface, separate "
+            "from first-party university source coverage. Use this for questions like "
+            "매머드커피 어디 있어 or 이디야 있나."
         ),
     },
     "/transport": {
@@ -176,6 +181,8 @@ GPT_ACTION_V2_PATHS: dict[str, dict[str, str]] = {
         "summary": "Find nearby restaurants with concise hints",
         "description": (
             "Use when the user asks for nearby food around a Songsim campus location. "
+            "This is a Kakao Local external public API convenience surface, separate "
+            "from first-party university source coverage. "
             "Returns concise distance, walk time, price, and location hints."
         ),
     },
@@ -184,6 +191,8 @@ GPT_ACTION_V2_PATHS: dict[str, dict[str, str]] = {
         "summary": "Search restaurant brands with concise hints",
         "description": (
             "Use when the user asks whether a specific brand or venue exists nearby. "
+            "This is a Kakao Local external public API convenience surface, separate "
+            "from first-party university source coverage. "
             "Returns concise distance, walk time, price, and location hints."
         ),
     },
@@ -201,6 +210,7 @@ GPT_ACTION_V2_PATHS: dict[str, dict[str, str]] = {
 GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
     "/gpt/places": GPT_ACTION_V2_PATHS["/gpt/places"],
     "/gpt/notices": GPT_ACTION_V2_PATHS["/gpt/notices"],
+    "/gpt/notice-categories": GPT_ACTION_V2_PATHS["/gpt/notice-categories"],
     "/gpt/periods": GPT_ACTION_V2_PATHS["/gpt/periods"],
     "/gpt/library-seats": GPT_ACTION_V2_PATHS["/gpt/library-seats"],
     "/gpt/dining-menus": GPT_ACTION_V2_PATHS["/gpt/dining-menus"],
@@ -278,14 +288,14 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
         "summary": "List campus life support guides",
         "description": (
             "List the current Songsim campus life support guidance for counseling, "
-            "disability support, reservist, and hospital use."
+            "career counseling, IT service, disability support, reservist, and hospital use."
         ),
     },
     "/dormitory-guides": {
         "operationId": "listDormitoryGuides",
         "summary": "List dormitory guides",
         "description": (
-            "List the current Songsim dormitory guidance and notice bundles."
+            "List the current Songsim dormitory guidance, fees, and notice bundles."
         ),
     },
     "/pc-software": {
@@ -315,7 +325,74 @@ GPT_ACTION_V3_PATHS: dict[str, dict[str, str]] = {
         "summary": "List student activity guides",
         "description": (
             "List the current Songsim student activity guidance for government, "
-            "media, volunteering, and ROTC."
+            "central clubs, institutional clubs, student innovation supporters, "
+            "CAT-CERT, media, volunteering, and ROTC."
+        ),
+    },
+    "/student-activity-notices": {
+        "operationId": "listStudentActivityNotices",
+        "summary": "List student activity notices",
+        "description": (
+            "List current official notice-board posts related to student activity, "
+            "club recruitment, student government, volunteering, ROTC, and campus events."
+        ),
+    },
+    "/newsroom-posts": {
+        "operationId": "listNewsroomPosts",
+        "summary": "List official newsroom posts",
+        "description": (
+            "List current official CUK newsroom posts such as 포토뉴스 and 보도자료. "
+            "External press article bodies, social posts, and video bodies are outside "
+            "this official-page summary surface."
+        ),
+    },
+    "/service-policy-posts": {
+        "operationId": "listServicePolicyPosts",
+        "summary": "List service and policy board posts",
+        "description": (
+            "List current official service and policy board posts such as 입찰공고 "
+            "and 채용공고 with title, date, official summary, and source link."
+        ),
+    },
+    "/research-posts": {
+        "operationId": "listResearchPosts",
+        "summary": "List official research posts",
+        "description": (
+            "List current official research-result posts from the university research "
+            "and industry-cooperation section."
+        ),
+    },
+    "/newsroom-resource-guides": {
+        "operationId": "listNewsroomResourceGuides",
+        "summary": "List newsroom resource guides",
+        "description": (
+            "List official CUK promotion resource links such as brochures, 가대이야기, "
+            "and the promotion image DB guide."
+        ),
+    },
+    "/anniversary-guides": {
+        "operationId": "listAnniversaryGuides",
+        "summary": "List 170th anniversary guides",
+        "description": (
+            "List official 170th anniversary guide links and summaries for messages, "
+            "history, slogan, media, online museum, events, and donation information."
+        ),
+    },
+    "/about-resource-guides": {
+        "operationId": "listAboutResourceGuides",
+        "summary": "List about resource guides",
+        "description": (
+            "List the current Songsim official about-resource guide links for rules, "
+            "the university bulletin, the academic handbook, campus tours, 연혁, "
+            "교육이념, 가톨릭교육브랜드, 교회문헌, 예결산공고, and 총장실."
+        ),
+    },
+    "/service-policy-guides": {
+        "operationId": "listServicePolicyGuides",
+        "summary": "List service and policy guides",
+        "description": (
+            "List current official service and policy guide links for 입찰공고, 채용공고, "
+            "개인정보처리방침, CCTV policy, and 청탁금지법 안내."
         ),
     },
 }
