@@ -37,3 +37,13 @@
 - [x] 앱 내부 운영 자동화
 - [x] Postgres/PostGIS 이전
 - [x] Public read-only remote MCP mode
+
+## Phase 6 - Student entrance
+- [x] 학생용 모바일 웹 (`web/`, Next.js)
+- [x] 카드 홈 + 통합 검색
+- [x] 잠든 백엔드를 흡수하는 프론트 캐시 계층
+- [x] 무로그인 개인화 (마지막 건물 기억)
+- [x] PWA manifest / 홈 화면 추가
+- [x] 랜딩 페이지 학생용 배너 (`SONGSIM_STUDENT_WEB_URL`)
+- [ ] Vercel 배포 및 공유용 짧은 주소 + QR
+- [ ] 학과 선택 기반 공지 필터

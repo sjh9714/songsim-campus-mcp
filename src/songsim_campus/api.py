@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from urllib.parse import parse_qs
 
+import psycopg
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -174,13 +175,28 @@ GPT_RESTAURANT_CATEGORY_DISPLAY = {
 }
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    init_db()
+    # 데이터베이스가 없어도 프로세스는 뜬다.
+    #
+    # 예전에는 여기서 그대로 터지면서 uvicorn 이 exit 3 으로 죽었고, Render 가
+    # 재시작하면 다시 죽는 크래시 루프가 됐다. 밖에서 보면 요청이 그냥 매달릴 뿐
+    # 아무 신호가 없어서, 두 달 넘게 죽어 있는 걸 아무도 몰랐다.
+    # 서버가 떠 있으면 랜딩 페이지와 /healthz 가 살아 있고, 데이터 요청은
+    # 503 과 함께 이유를 돌려주므로 장애가 눈에 보인다.
+    try:
+        init_db()
+    except Exception:
+        logger.exception("event=init_db_failed")
     settings = get_settings()
     stop_event = asyncio.Event()
     automation_task: asyncio.Task[None] | None = None
     if settings.startup_sync_enabled:
-        with connection() as conn:
-            sync_official_snapshot(conn)
+        # 학교 페이지 주소는 예고 없이 바뀐다. 동기화 실패로 서버가 아예 뜨지 않으면
+        # 이미 받아둔 데이터까지 학생에게 못 보여주게 되므로, 실패해도 기동은 계속한다.
+        try:
+            with connection() as conn:
+                sync_official_snapshot(conn)
+        except Exception:
+            logger.exception("event=startup_sync_failed")
     elif settings.seed_demo_on_start:
         seed_demo(force=False)
     if settings.automation_runtime_enabled:
@@ -368,8 +384,25 @@ def create_app() -> FastAPI:
                 detail="Admin dashboard is only available from loopback clients.",
             )
 
+    @app.exception_handler(psycopg.OperationalError)
+    def database_unavailable(_: Request, exc: psycopg.OperationalError) -> JSONResponse:
+        """데이터베이스에 못 붙었을 때 500 대신 이유가 붙은 503 을 돌려준다."""
+        logger.error("event=database_unavailable error=%s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "데이터베이스에 연결할 수 없어 지금은 조회할 수 없습니다.",
+                "retryable": True,
+            },
+        )
+
     @app.get("/healthz")
     def health() -> dict[str, bool]:
+        """프로세스가 살아 있는지만 본다. 데이터베이스 상태는 /readyz 가 본다.
+
+        Render 의 health check 가 여기를 보는데, 데이터베이스가 죽었다고 여기서
+        실패시키면 서비스가 통째로 내려가 장애가 다시 안 보이게 된다.
+        """
         return {"ok": True}
 
     @app.get("/", response_class=HTMLResponse)
@@ -405,6 +438,7 @@ def create_app() -> FastAPI:
                 oauth_enabled=oauth_enabled,
                 admin_link_html=admin_link,
                 gpt_actions_links_html=gpt_actions_links,
+                student_web_url=settings.student_web_url,
             )
         )
 

@@ -2,9 +2,26 @@
 
 `songsim-campus-mcp`는 가톨릭대학교 성심교정 학생이 자주 묻는 학사·생활 정보를 **공식 source 중심 Remote MCP + HTTP API**로 제공하는 캠퍼스 도우미 서버입니다. 공지, 학사일정, 건물/연락처, 강의, 도서관 좌석, 식당, Wi-Fi, IT서비스, 기숙사와 생활지원 정보를 LLM 클라이언트에서 읽기 전용으로 조회할 수 있게 구성했습니다. 주변 식당 검색은 학교 공식 1차 source가 아니라 Kakao Local 외부 공개 API 기반 편의 기능으로 분리해 표시합니다.
 
-## 지금 바로 써보기
+[![학생용 웹](https://img.shields.io/badge/학생용%20웹-바로%20열기-16a34a)](https://songsim-web.vercel.app)
 
-학생용 기본 입구는 Remote MCP입니다. ChatGPT나 Claude에서 공개 MCP URL을 연결한 뒤 `songsim://usage-guide`를 먼저 읽으면, 서버가 지원하는 질문 범위와 제한을 바로 확인할 수 있습니다. HTTP API는 같은 결과를 직접 검증하거나 외부 앱에서 붙이는 companion layer입니다.
+## 학생이라면 — 이것만 열면 됩니다
+
+### 👉 [songsim-web.vercel.app](https://songsim-web.vercel.app)
+
+**설치도, 로그인도, AI 계정도 필요 없습니다.** 폰 브라우저에서 주소만 열면 끝입니다.
+
+| | |
+|---|---|
+| 🍚 **학식** | 오늘 교내 식당에 뭐 나오는지 |
+| 📚 **공부할 곳** | 도서관 남은 좌석, 지금 빈 강의실 |
+| 📢 **공지** | 학사·장학·행사 공지 모아보기 |
+| 🔎 **찾기** | "복사실 어디야?", "보건실 몇 번이야?" |
+
+홈 화면에 추가하면 앱처럼 열립니다. 소스는 [`web/`](web/), 배포 방법은 [학생용 웹 배포 가이드](docs/deploy-web.md).
+
+## AI 앱에서 쓰려면
+
+ChatGPT나 Claude 같은 LLM 클라이언트에서 직접 연결하는 경로입니다. 공개 MCP URL을 연결한 뒤 `songsim://usage-guide`를 먼저 읽으면, 서버가 지원하는 질문 범위와 제한을 바로 확인할 수 있습니다. HTTP API는 같은 결과를 직접 검증하거나 외부 앱에서 붙이는 companion layer입니다.
 
 - ChatGPT 연결 문서: [docs/connect-chatgpt.md](docs/connect-chatgpt.md)
 - Public MCP URL: 운영 배포에서는 `SONGSIM_PUBLIC_MCP_URL` 값의 `/mcp`
@@ -182,6 +199,10 @@ src/songsim_campus/
 data/                          # 샘플 데이터, alias, QA corpus
 docs/                          # 연결 가이드, source registry, QA 문서
 tests/                         # API, MCP, ingest, runtime 회귀 테스트
+web/                           # 학생용 모바일 웹 (Next.js)
+├── app/                       # 카드 홈, 학식/공부/공지/찾기, 통합 검색
+├── lib/api.ts                 # 캐시 수명·타임아웃·실패 처리
+└── components/
 ```
 
 ## 로컬 실행
@@ -215,6 +236,15 @@ MCP 서버:
 ```bash
 uv run songsim-mcp --transport stdio
 uv run songsim-mcp --transport streamable-http
+```
+
+학생용 웹:
+
+```bash
+cd web
+npm install
+cp .env.example .env.local   # SONGSIM_API_BASE 를 위에서 띄운 API 주소로
+npm run dev
 ```
 
 개발 환경에서 확인할 수 있는 문서:
