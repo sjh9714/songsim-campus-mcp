@@ -6076,3 +6076,38 @@ def test_sync_official_snapshot_runs_opening_hours_before_courses_and_transport(
     assert summary['academic_support_guides'] == 0
     assert summary['wifi_guides'] == 0
     assert summary['transport_guides'] == 0
+
+
+def test_sync_official_snapshot_skips_a_broken_source_and_keeps_going(app_env, monkeypatch):
+    """학교 페이지 하나가 404 여도 나머지 데이터셋은 갱신돼야 한다.
+
+    실제로 tuition_fee_payment_schedule.do 가 404 가 되면서 registration_guides
+    에서 동기화가 통째로 멈췄고, 그 뒤에 오는 about_resource_guides 같은
+    데이터셋은 한 번도 채워지지 않은 채로 남아 있었다.
+    """
+    import httpx
+
+    def _boom(conn):
+        request = httpx.Request("GET", "https://www.catholic.ac.kr/ko/support/gone.do")
+        response = httpx.Response(404, request=request)
+        raise httpx.HTTPStatusError("404", request=request, response=response)
+
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_registration_guides_from_source", _boom
+    )
+    # 중단됐던 지점보다 뒤에 있는 데이터셋이 실제로 실행되는지 본다.
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_about_resource_guides_from_source",
+        lambda conn: [{"marker": "after-the-broken-source"}],
+    )
+
+    with connection() as conn:
+        summary = sync_official_snapshot(conn, year=2026, semester=1, notice_pages=1)
+
+    # 깨진 소스는 0 으로 남고,
+    assert summary["registration_guides"] == 0
+    # 그 뒤 데이터셋은 정상적으로 채워진다.
+    assert summary["about_resource_guides"] == 1
+    # 요약에는 운영시간 단계가 섞이지 않는다.
+    assert "library_hours" not in summary
+    assert "facility_hours" not in summary

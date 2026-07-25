@@ -583,6 +583,12 @@ CLASS_PERIODS = [
 ]
 
 logger = logging.getLogger(__name__)
+
+# 운영시간 갱신은 다른 데이터셋을 보정하려고 돌리는 단계라 행 수 요약에는 넣지 않는다.
+_SYNC_STEP_LIBRARY_HOURS = "library_hours"
+_SYNC_STEP_FACILITY_HOURS = "facility_hours"
+_SYNC_SUMMARY_EXCLUDED_STEPS = frozenset({_SYNC_STEP_LIBRARY_HOURS, _SYNC_STEP_FACILITY_HOURS})
+
 OBSERVABILITY_EVENT_LIMIT = ops_runtime.OBSERVABILITY_EVENT_LIMIT
 READINESS_CACHE_TTL_SECONDS = ops_runtime.READINESS_CACHE_TTL_SECONDS
 READINESS_CACHE_MAX_STALE_SECONDS = ops_runtime.READINESS_CACHE_MAX_STALE_SECONDS
@@ -6442,94 +6448,100 @@ def sync_official_snapshot(
     semester: int | None = None,
     notice_pages: int | None = None,
 ) -> dict[str, int]:
+    """공식 source 를 순회하며 스냅샷을 갱신한다.
+
+    학교 페이지 주소는 예고 없이 사라진다. 예전에는 순차 호출이라 소스 하나가
+    404 를 내면 거기서 전체 동기화가 멈췄고, 뒤쪽 데이터셋은 한 번도 채워지지
+    않았다. 실제로 tuition_fee_payment_schedule.do 가 404 가 되면서
+    about_resource_guides, service_policy_guides, newsroom_resource_guides,
+    anniversary_guides 가 계속 비어 있었다.
+
+    이제 소스별로 격리한다. 실패한 소스는 기록하고 건너뛰며 나머지는 갱신한다.
+    실패한 소스의 기존 데이터는 지우지 않는다.
+    """
     settings = get_settings()
+    resolved_campus = campus or settings.official_campus_id
     resolved_year = year or settings.official_course_year
     resolved_semester = semester or settings.official_course_semester
-    places = refresh_places_from_campus_map(
-        conn,
-        campus=campus or settings.official_campus_id,
-    )
-    campus_facilities = refresh_campus_facilities_from_source(conn)
-    refresh_library_hours_from_library_page(conn)
-    refresh_facility_hours_from_facilities_page(conn)
-    dining_menus = refresh_campus_dining_menus_from_facilities_page(conn)
-    courses = refresh_courses_from_subject_search(
-        conn,
-        year=resolved_year,
-        semester=resolved_semester,
-    )
-    notices = refresh_notices_from_notice_board(
-        conn,
-        pages=notice_pages or settings.official_notice_pages,
-    )
-    affiliated_notices = refresh_affiliated_notices_from_sources(conn)
-    campus_life_notices = refresh_campus_life_notices_from_source(conn)
-    academic_calendar = refresh_academic_calendar_from_source(conn)
-    certificate_guides = refresh_certificate_guides_from_certificate_page(conn)
-    leave_of_absence_guides = refresh_leave_of_absence_guides_from_source(conn)
-    academic_status_guides = refresh_academic_status_guides_from_source(conn)
-    registration_guides = refresh_registration_guides_from_source(conn)
-    class_guides = refresh_class_guides_from_source(conn)
-    seasonal_semester_guides = refresh_seasonal_semester_guides_from_source(conn)
-    academic_milestone_guides = refresh_academic_milestone_guides_from_source(conn)
-    student_activity_guides = refresh_student_activity_guides_from_source(conn)
-    student_activity_notices = refresh_student_activity_notices_from_source(
-        conn,
-        pages=notice_pages or settings.official_notice_pages,
-    )
-    about_resource_guides = refresh_about_resource_guides_from_source(conn)
-    service_policy_guides = refresh_service_policy_guides_from_source(conn)
-    service_policy_posts = refresh_service_policy_posts_from_source(conn)
-    newsroom_posts = refresh_newsroom_posts_from_source(conn)
-    research_posts = refresh_research_posts_from_source(conn)
-    newsroom_resource_guides = refresh_newsroom_resource_guides_from_source(conn)
-    anniversary_guides = refresh_anniversary_guides_from_source(conn)
-    student_exchange_guides = refresh_student_exchange_guides_from_source(conn)
-    dormitory_guides = refresh_dormitory_guides_from_source(conn)
-    phone_book_entries = refresh_phone_book_entries_from_source(conn)
-    campus_life_support_guides = refresh_campus_life_support_guides_from_source(conn)
-    pc_software_entries = refresh_pc_software_entries_from_source(conn)
-    student_exchange_partners = refresh_student_exchange_partners_from_source(conn)
-    scholarship_guides = refresh_scholarship_guides_from_source(conn)
-    academic_support_guides = refresh_academic_support_guides_from_source(conn)
-    wifi_guides = refresh_wifi_guides_from_source(conn)
-    transport_guides = refresh_transport_guides_from_location_page(conn)
-    return {
-        "places": len(places),
-        "campus_facilities": len(campus_facilities),
-        "dining_menus": len(dining_menus),
-        "courses": len(courses),
-        "notices": len(notices),
-        "affiliated_notices": len(affiliated_notices),
-        "campus_life_notices": len(campus_life_notices),
-        "academic_calendar": len(academic_calendar),
-        "certificate_guides": len(certificate_guides),
-        "leave_of_absence_guides": len(leave_of_absence_guides),
-        "academic_status_guides": len(academic_status_guides),
-        "registration_guides": len(registration_guides),
-        "class_guides": len(class_guides),
-        "seasonal_semester_guides": len(seasonal_semester_guides),
-        "academic_milestone_guides": len(academic_milestone_guides),
-        "student_activity_guides": len(student_activity_guides),
-        "student_activity_notices": len(student_activity_notices),
-        "about_resource_guides": len(about_resource_guides),
-        "service_policy_guides": len(service_policy_guides),
-        "service_policy_posts": len(service_policy_posts),
-        "newsroom_posts": len(newsroom_posts),
-        "research_posts": len(research_posts),
-        "newsroom_resource_guides": len(newsroom_resource_guides),
-        "anniversary_guides": len(anniversary_guides),
-        "student_exchange_guides": len(student_exchange_guides),
-        "student_exchange_partners": len(student_exchange_partners),
-        "dormitory_guides": len(dormitory_guides),
-        "phone_book_entries": len(phone_book_entries),
-        "campus_life_support_guides": len(campus_life_support_guides),
-        "pc_software_entries": len(pc_software_entries),
-        "scholarship_guides": len(scholarship_guides),
-        "academic_support_guides": len(academic_support_guides),
-        "wifi_guides": len(wifi_guides),
-        "transport_guides": len(transport_guides),
-    }
+    resolved_notice_pages = notice_pages or settings.official_notice_pages
+
+    # (요약 키, 갱신 함수). 순서는 유지한다. 운영시간 갱신이 과목/교통보다 먼저 와야 한다.
+    steps: list[tuple[str, Any]] = [
+        ("places", lambda: refresh_places_from_campus_map(conn, campus=resolved_campus)),
+        ("campus_facilities", lambda: refresh_campus_facilities_from_source(conn)),
+        (_SYNC_STEP_LIBRARY_HOURS, lambda: refresh_library_hours_from_library_page(conn)),
+        (_SYNC_STEP_FACILITY_HOURS, lambda: refresh_facility_hours_from_facilities_page(conn)),
+        ("dining_menus", lambda: refresh_campus_dining_menus_from_facilities_page(conn)),
+        (
+            "courses",
+            lambda: refresh_courses_from_subject_search(
+                conn, year=resolved_year, semester=resolved_semester
+            ),
+        ),
+        ("notices", lambda: refresh_notices_from_notice_board(conn, pages=resolved_notice_pages)),
+        ("affiliated_notices", lambda: refresh_affiliated_notices_from_sources(conn)),
+        ("campus_life_notices", lambda: refresh_campus_life_notices_from_source(conn)),
+        ("academic_calendar", lambda: refresh_academic_calendar_from_source(conn)),
+        ("certificate_guides", lambda: refresh_certificate_guides_from_certificate_page(conn)),
+        ("leave_of_absence_guides", lambda: refresh_leave_of_absence_guides_from_source(conn)),
+        ("academic_status_guides", lambda: refresh_academic_status_guides_from_source(conn)),
+        ("registration_guides", lambda: refresh_registration_guides_from_source(conn)),
+        ("class_guides", lambda: refresh_class_guides_from_source(conn)),
+        ("seasonal_semester_guides", lambda: refresh_seasonal_semester_guides_from_source(conn)),
+        (
+            "academic_milestone_guides",
+            lambda: refresh_academic_milestone_guides_from_source(conn),
+        ),
+        ("student_activity_guides", lambda: refresh_student_activity_guides_from_source(conn)),
+        (
+            "student_activity_notices",
+            lambda: refresh_student_activity_notices_from_source(
+                conn, pages=resolved_notice_pages
+            ),
+        ),
+        ("about_resource_guides", lambda: refresh_about_resource_guides_from_source(conn)),
+        ("service_policy_guides", lambda: refresh_service_policy_guides_from_source(conn)),
+        ("service_policy_posts", lambda: refresh_service_policy_posts_from_source(conn)),
+        ("newsroom_posts", lambda: refresh_newsroom_posts_from_source(conn)),
+        ("research_posts", lambda: refresh_research_posts_from_source(conn)),
+        ("newsroom_resource_guides", lambda: refresh_newsroom_resource_guides_from_source(conn)),
+        ("anniversary_guides", lambda: refresh_anniversary_guides_from_source(conn)),
+        ("student_exchange_guides", lambda: refresh_student_exchange_guides_from_source(conn)),
+        ("dormitory_guides", lambda: refresh_dormitory_guides_from_source(conn)),
+        ("phone_book_entries", lambda: refresh_phone_book_entries_from_source(conn)),
+        (
+            "campus_life_support_guides",
+            lambda: refresh_campus_life_support_guides_from_source(conn),
+        ),
+        ("pc_software_entries", lambda: refresh_pc_software_entries_from_source(conn)),
+        (
+            "student_exchange_partners",
+            lambda: refresh_student_exchange_partners_from_source(conn),
+        ),
+        ("scholarship_guides", lambda: refresh_scholarship_guides_from_source(conn)),
+        ("academic_support_guides", lambda: refresh_academic_support_guides_from_source(conn)),
+        ("wifi_guides", lambda: refresh_wifi_guides_from_source(conn)),
+        ("transport_guides", lambda: refresh_transport_guides_from_location_page(conn)),
+    ]
+
+    summary: dict[str, int] = {}
+    failed: list[str] = []
+    for name, refresh in steps:
+        try:
+            rows = refresh()
+        except Exception:
+            logger.exception("event=official_sync_source_failed source=%s", name)
+            failed.append(name)
+            rows = []
+        if name not in _SYNC_SUMMARY_EXCLUDED_STEPS:
+            summary[name] = len(rows)
+    if failed:
+        logger.warning(
+            "event=official_sync_partial failed_count=%d failed_sources=%s",
+            len(failed),
+            ",".join(failed),
+        )
+    return summary
 
 
 def get_place(conn: DBConnection, identifier: str) -> Place:
