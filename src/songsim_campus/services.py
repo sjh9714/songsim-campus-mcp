@@ -321,9 +321,7 @@ ANNIVERSARY_GUIDE_SOURCE_URLS = {
 RETURN_FROM_LEAVE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/return_from_leave_of_absence.do"
 DROPOUT_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/dropout.do"
 RE_ADMISSION_GUIDE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/re_admission.do"
-REGISTRATION_BILL_LOOKUP_SOURCE_URL = (
-    "https://www.catholic.ac.kr/ko/support/tuition_fee_payment_schedule.do"
-)
+REGISTRATION_BILL_LOOKUP_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/tuition_bill.do"
 REGISTRATION_PAYMENT_AND_RETURN_SOURCE_URL = (
     "https://www.catholic.ac.kr/ko/support/tuition_payment_and_returning.do"
 )

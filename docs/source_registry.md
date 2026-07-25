@@ -15,7 +15,7 @@
 | cuk_certificate_guides | 공식 | https://www.catholic.ac.kr/ko/support/certificate.do | 중간 | implemented | 증명서 발급 정적 안내를 `certificate_guides` current snapshot으로 정규화 |
 | cuk_leave_of_absence_guides | 공식 | https://www.catholic.ac.kr/ko/support/leave_of_absence.do | 중간 | implemented | 휴학 안내 정적 페이지를 `leave_of_absence_guides` current snapshot으로 정규화 |
 | cuk_academic_status_guides | 공식 | https://www.catholic.ac.kr/ko/support/return_from_leave_of_absence.do | 중간 | implemented | 복학, 자퇴, 재입학 정적 페이지 3개를 `academic_status_guides` current snapshot family로 정규화 |
-| cuk_registration_guides | 공식 | https://www.catholic.ac.kr/ko/support/tuition_fee_payment_schedule.do | 중간 | implemented | 등록 안내 정적 페이지 family(등록금 고지서 조회/출력, 등록금 납부·반환, 대상별 등록금 납부)를 `registration_guides` current snapshot으로 정규화 |
+| cuk_registration_guides | 공식 | https://www.catholic.ac.kr/ko/support/tuition_bill.do | 중간 | implemented | 등록 안내 정적 페이지 family(등록금 고지서 조회/출력, 등록금 납부·반환, 대상별 등록금 납부)를 `registration_guides` current snapshot으로 정규화 |
 | cuk_class_guides | 공식 | https://www.catholic.ac.kr/ko/support/register_for_class.do | 중간 | implemented | 수업 안내 정적 페이지 family(수강신청·변경, 재수강, 수강과목취소, 수업평가, 공결, 학번별 외국어강의 의무이수 요건)를 `class_guides` current snapshot으로 정규화 |
 | cuk_seasonal_semester_guides | 공식 | https://www.catholic.ac.kr/ko/support/class_summer_winter.do | 중간 | implemented | 계절학기 정적 안내 페이지를 `seasonal_semester_guides` current snapshot으로 정규화 |
 | cuk_academic_milestone_guides | 공식 | https://www.catholic.ac.kr/ko/support/grade_evaluation_system.do | 중간 | implemented | 성적평가, 성적확인, 수험자격, 학사경고, 졸업요건, 졸업논문/졸업종합시험 절차를 `academic_milestone_guides` current snapshot으로 정규화 |

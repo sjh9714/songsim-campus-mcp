@@ -1295,7 +1295,9 @@ class RegistrationBillLookupGuideSource(RegistrationGuideSourceBase):
 
     def __init__(
         self,
-        url: str = "https://www.catholic.ac.kr/ko/support/tuition_fee_payment_schedule.do",
+        # 학교가 tuition_fee_payment_schedule.do 를 없애고 tuition_bill.do 로 옮겼다.
+        # 학교 지원 메뉴의 "재학생 고지서 조회 · 출력 방법" 링크에서 확인한 주소다.
+        url: str = "https://www.catholic.ac.kr/ko/support/tuition_bill.do",
     ):
         super().__init__(url)
 
