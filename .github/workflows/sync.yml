@@ -116,11 +116,39 @@ jobs:
             --notice-pages "$TERM_NOTICE_PAGES"
 
       - name: Verify the service sees fresh data
+        env:
+          READYZ: https://songsim-public-api.onrender.com/readyz
         run: |
+          set -o pipefail
+
           # readiness 스냅샷은 30초 캐시된다.
           sleep 45
-          curl -sf --max-time 90 https://songsim-public-api.onrender.com/readyz \
-            | python -c "
+
+          # 이 서비스는 Render 무료 플랜이라 15분이면 잠든다. 잠든 인스턴스를
+          # 깨우는 첫 요청은 실측 77초가 걸렸고, 그날그날 더 걸리기도 한다.
+          # 예전에는 여기서 curl 한 번을 쏘고 그 출력을 python 으로 파이프했다.
+          # 그러면 curl 이 타임아웃으로 죽어도 파이프의 종료 코드는 python 것이라
+          # 실패가 JSONDecodeError 로 보고됐다. 서비스가 아직 안 깨어난 건지
+          # 데이터가 낡은 건지를 로그만 봐서는 구분할 수 없었다.
+          # 실패는 무엇이 실패했는지 말해야 한다.
+          body=""
+          for attempt in 1 2 3 4 5; do
+            if body=$(curl -sS --max-time 120 --fail-with-body "$READYZ"); then
+              break
+            fi
+            echo "attempt ${attempt}/5: readyz 응답 없음 (콜드 스타트 대기 중)"
+            [ -n "$body" ] && printf '  본문: %.200s\n' "$body"
+            body=""
+            sleep 30
+          done
+
+          if [ -z "$body" ]; then
+            echo "readyz 가 끝내 응답하지 않았다 — 서비스가 잠들어 있거나 죽었다."
+            echo "동기화 자체는 앞 단계에서 성공했으므로 DB 는 갱신됐을 수 있다."
+            exit 1
+          fi
+
+          printf '%s' "$body" | python -c "
           import json, sys
           data = json.load(sys.stdin)
           stale = [k for k, v in (data.get('tables') or {}).items() if not v.get('ok')]
