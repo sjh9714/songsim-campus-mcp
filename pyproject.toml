@@ -10,6 +10,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "beautifulsoup4>=4.12.3",
+  # 학교 서버가 주는 XML 을 파싱한다. 표준 ElementTree 는 entity 확장 공격에 노출된다.
+  "defusedxml>=0.7.1",
   "fastapi>=0.115.0",
   "httpx>=0.28.0",
   "pypdf>=5.3.0",

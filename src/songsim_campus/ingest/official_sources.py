@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from bs4 import BeautifulSoup
+from defusedxml.ElementTree import ParseError as DefusedXmlParseError
+from defusedxml.ElementTree import fromstring as defused_fromstring
 
 PLACE_LIST_PATTERN = re.compile(r"\?mode=getPlaceListByCondition&campus=\$\{campus\}")
 SCHEDULE_PATTERN = re.compile(
@@ -519,8 +521,16 @@ class LibraryHoursSource:
         ]
 
 
-class LibrarySeatStatusSource:
-    """Best-effort central-library reading-room seat-status parser."""
+class LibrarySeatStatusXmlSource:
+    """중앙도서관 열람실 좌석 현황 (mlibrary XML).
+
+    예전 소스(203.229.203.240 의 Domian5.asp)는 서버가 통째로 사라졌다. ping 도
+    안 되고 80/8080 둘 다 닫혀 있어서, 학생 화면에는 몇 주째 "확인할 수 없어요"만
+    떴다. 학교가 옮겨 간 mlibrary 쪽은 좌석 수를 XML 로 그대로 내려준다.
+
+    페이지(roomStatus.php)는 표를 자바스크립트로 채우므로 HTML 을 긁어도 빈 표만
+    나온다. 그 페이지가 부르는 XML 엔드포인트를 직접 쓴다.
+    """
 
     def __init__(self, url: str):
         self.url = url
@@ -530,112 +540,47 @@ class LibrarySeatStatusSource:
         response.raise_for_status()
         return response.text
 
-    def parse(self, html: str, *, fetched_at: str) -> list[dict]:
-        soup = BeautifulSoup(html, "html.parser")
+    def parse(self, payload: str, *, fetched_at: str) -> list[dict]:
+        # 응답이 BOM 으로 시작한다. 그대로 넘기면 XML 파서가 거절한다.
+        cleaned = payload.lstrip("﻿").strip()
+        try:
+            root = defused_fromstring(cleaned)
+        except DefusedXmlParseError:
+            return []
+
         rows: list[dict] = []
         seen_rooms: set[str] = set()
-
-        for table in soup.select("table"):
-            grid = _extract_table_grid(table)
-            if not grid:
+        for item in root.findall("item"):
+            room_name = _clean_text(item.findtext("strRoomNm") or "")
+            if not room_name or room_name in seen_rooms:
                 continue
-            header_map = self._detect_header_map(grid)
-            if header_map is None:
+            total_seats = self._parse_int(item.findtext("strTotalSeat"))
+            occupied_seats = self._parse_int(item.findtext("strUseSeat"))
+            remaining_seats = self._parse_int(item.findtext("strRemainSeat"))
+            if total_seats is None and occupied_seats is None and remaining_seats is None:
                 continue
-            header_row_index = int(header_map["_row_index"])
-            room_index = int(header_map["room_name"])
-            remaining_index = header_map.get("remaining_seats")
-            occupied_index = header_map.get("occupied_seats")
-            total_index = header_map.get("total_seats")
-
-            for row in grid[header_row_index + 1 :]:
-                if len(row) <= room_index:
-                    continue
-                room_name = _clean_text(row[room_index])
-                if not room_name or room_name in seen_rooms or "합계" in room_name:
-                    continue
-                remaining_seats = self._parse_int_cell(row, remaining_index)
-                occupied_seats = self._parse_int_cell(row, occupied_index)
-                total_seats = self._parse_int_cell(row, total_index)
-                if (
-                    remaining_seats is None
-                    and occupied_seats is None
-                    and total_seats is None
-                ):
-                    continue
-                rows.append(
-                    {
-                        "room_name": room_name,
-                        "remaining_seats": remaining_seats,
-                        "occupied_seats": occupied_seats,
-                        "total_seats": total_seats,
-                        "source_url": self.url,
-                        "source_tag": "cuk_library_seat_status",
-                        "last_synced_at": fetched_at,
-                    }
-                )
-                seen_rooms.add(room_name)
+            rows.append(
+                {
+                    "room_name": room_name,
+                    "remaining_seats": remaining_seats,
+                    "occupied_seats": occupied_seats,
+                    "total_seats": total_seats,
+                    "source_url": self.url,
+                    "source_tag": "cuk_library_seat_status",
+                    "last_synced_at": fetched_at,
+                }
+            )
+            seen_rooms.add(room_name)
         return rows
 
     @staticmethod
-    def _parse_int_cell(row: list[str], index: int | None) -> int | None:
-        if index is None or index >= len(row):
+    def _parse_int(value: str | None) -> int | None:
+        if value is None:
             return None
-        match = SEAT_STATUS_INTEGER_PATTERN.search(row[index] or "")
+        match = SEAT_STATUS_INTEGER_PATTERN.search(value)
         if match is None:
             return None
         return int(match.group(1).replace(",", ""))
-
-    @staticmethod
-    def _detect_header_map(grid: list[list[str]]) -> dict[str, int] | None:
-        for row_index, row in enumerate(grid[:5]):
-            normalized = [_compact_text(_clean_text(cell)).lower() for cell in row]
-            room_index = next(
-                (
-                    index
-                    for index, cell in enumerate(normalized)
-                    if any(keyword in cell for keyword in ("열람실", "실명", "room"))
-                ),
-                None,
-            )
-            total_index = next(
-                (
-                    index
-                    for index, cell in enumerate(normalized)
-                    if any(keyword in cell for keyword in ("전체", "총", "합계"))
-                    and "잔여" not in cell
-                    and "사용" not in cell
-                ),
-                None,
-            )
-            occupied_index = next(
-                (
-                    index
-                    for index, cell in enumerate(normalized)
-                    if any(keyword in cell for keyword in ("사용", "이용", "점유"))
-                ),
-                None,
-            )
-            remaining_index = next(
-                (
-                    index
-                    for index, cell in enumerate(normalized)
-                    if any(keyword in cell for keyword in ("잔여", "여석", "남은", "빈"))
-                ),
-                None,
-            )
-            if room_index is None:
-                continue
-            if total_index is None and occupied_index is None and remaining_index is None:
-                continue
-            return {
-                "_row_index": row_index,
-                "room_name": room_index,
-                "total_seats": total_index,
-                "occupied_seats": occupied_index,
-                "remaining_seats": remaining_index,
-            }
-        return None
 
 
 class CampusFacilitiesSource:

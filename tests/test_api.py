@@ -4214,7 +4214,7 @@ class ApiLibrarySeatStatusSource:
 
 
 def test_library_seats_endpoints_return_live_or_filtered_rows(client, monkeypatch):
-    monkeypatch.setattr(services, "LibrarySeatStatusSource", ApiLibrarySeatStatusSource)
+    monkeypatch.setattr(services, "LibrarySeatStatusXmlSource", ApiLibrarySeatStatusSource)
 
     response = client.get("/library-seats")
     filtered = client.get("/library-seats", params={"query": "제1자유열람실"})

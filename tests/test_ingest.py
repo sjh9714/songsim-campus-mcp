@@ -14,7 +14,7 @@ from songsim_campus.ingest.official_sources import (
     DropoutGuideSource,
     LeaveOfAbsenceGuideSource,
     LibraryHoursSource,
-    LibrarySeatStatusSource,
+    LibrarySeatStatusXmlSource,
     NoticeSource,
     ReAdmissionGuideSource,
     ReturnFromLeaveOfAbsenceGuideSource,
@@ -278,46 +278,54 @@ def test_library_hours_parser_extracts_room_labels_and_schedules():
     ]
 
 
-def test_library_seat_status_parser_extracts_room_counts():
-    source = LibrarySeatStatusSource("http://203.229.203.240/8080/Domian5.asp")
+SEAT_XML_URL = "https://mlibrary.catholic.ac.kr/mobile/PA/roomStatusListXML.php"
+
+
+def test_library_seat_status_parser_reads_every_reading_room():
+    """예전 소스(203.229.203.240)는 서버가 사라져 몇 주째 빈 화면만 나왔다.
+
+    학교가 옮겨 간 mlibrary 는 좌석 수를 XML 로 준다. 페이지 자체는 표를
+    자바스크립트로 채우므로 HTML 을 긁으면 빈 표만 나오고, XML 을 직접 써야 한다.
+    """
+    source = LibrarySeatStatusXmlSource(SEAT_XML_URL)
 
     rows = source.parse(
-        _fixture("library_seat_status.html"),
-        fetched_at="2026-03-16T09:00:00+09:00",
+        _fixture("library_seat_status.xml"),
+        fetched_at="2026-08-09T05:00:00+09:00",
     )
 
-    assert rows == [
-        {
-            "room_name": "제1자유열람실",
-            "remaining_seats": 28,
-            "occupied_seats": 72,
-            "total_seats": 100,
-            "source_url": "http://203.229.203.240/8080/Domian5.asp",
-            "source_tag": "cuk_library_seat_status",
-            "last_synced_at": "2026-03-16T09:00:00+09:00",
-        },
-        {
-            "room_name": "제2자유열람실",
-            "remaining_seats": 25,
-            "occupied_seats": 55,
-            "total_seats": 80,
-            "source_url": "http://203.229.203.240/8080/Domian5.asp",
-            "source_tag": "cuk_library_seat_status",
-            "last_synced_at": "2026-03-16T09:00:00+09:00",
-        },
+    assert [row["room_name"] for row in rows] == [
+        "제1자유열람실A",
+        "제1자유열람실B",
+        "대학원 열람실",
+        "제2자유열람실A",
+        "제2자유열람실B",
+        "메인스퀘어",
     ]
-
-
-def test_library_seat_status_parser_returns_empty_when_table_shape_is_unknown():
-    source = LibrarySeatStatusSource("http://203.229.203.240/8080/Domian5.asp")
-
-    rows = source.parse(
-        "<html><body><table><tr><td>broken</td></tr></table></body></html>",
-        fetched_at="2026-03-16T09:00:00+09:00",
+    assert rows[0] == {
+        "room_name": "제1자유열람실A",
+        "remaining_seats": 158,
+        "occupied_seats": 0,
+        "total_seats": 158,
+        "source_url": SEAT_XML_URL,
+        "source_tag": "cuk_library_seat_status",
+        "last_synced_at": "2026-08-09T05:00:00+09:00",
+    }
+    # 사용 중인 좌석이 있는 방도 제대로 읽는다.
+    occupied = next(row for row in rows if row["room_name"] == "제1자유열람실B")
+    assert (occupied["total_seats"], occupied["occupied_seats"], occupied["remaining_seats"]) == (
+        132,
+        1,
+        131,
     )
 
-    assert rows == []
 
+def test_library_seat_status_parser_survives_a_broken_payload():
+    """학교 서버가 XML 이 아닌 것을 돌려줘도 빈 결과일 뿐 터지지 않아야 한다."""
+    source = LibrarySeatStatusXmlSource(SEAT_XML_URL)
+
+    assert source.parse("<html>maintenance</html>", fetched_at="2026-08-09T05:00:00+09:00") == []
+    assert source.parse("", fetched_at="2026-08-09T05:00:00+09:00") == []
 
 def test_facility_hours_parser_extracts_cards_and_table_rows():
     source = CampusFacilitiesSource("https://www.catholic.ac.kr/ko/campuslife/restaurant.do")

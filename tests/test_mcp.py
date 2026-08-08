@@ -2068,7 +2068,7 @@ def test_mcp_public_library_seat_tool_returns_live_room_payload(app_env, monkeyp
             ]
 
     monkeypatch.setattr(
-        "songsim_campus.services.LibrarySeatStatusSource",
+        "songsim_campus.services.LibrarySeatStatusXmlSource",
         McpLibrarySeatStatusSource,
     )
 

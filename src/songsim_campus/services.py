@@ -102,7 +102,7 @@ from .ingest.official_sources import (
     InternationalStudiesAffiliatedNoticeBoardSource,
     LeaveOfAbsenceGuideSource,
     LibraryHoursSource,
-    LibrarySeatStatusSource,
+    LibrarySeatStatusXmlSource,
     NoticeSource,
     PhoneBookSource,
     ReAdmissionGuideSource,
@@ -221,7 +221,12 @@ COURSE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/subject.do"
 NOTICE_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/notice.do"
 CAMPUS_MAP_SOURCE_URL = "https://www.catholic.ac.kr/ko/about/campus-map.do"
 LIBRARY_HOURS_SOURCE_URL = "https://library.catholic.ac.kr/webcontent/info/45"
-LIBRARY_SEAT_STATUS_SOURCE_URL = "http://203.229.203.240/8080/Domian5.asp"
+# 예전 소스(203.229.203.240 의 Domian5.asp)는 서버가 사라졌다. ping 도 안 되고
+# 80/8080 둘 다 닫혀 있어 학생 화면에는 몇 주째 "확인할 수 없어요"만 떴다.
+# 학교가 옮겨 간 mlibrary 는 좌석 수를 XML 로 그대로 내려준다.
+LIBRARY_SEAT_STATUS_SOURCE_URL = (
+    "https://mlibrary.catholic.ac.kr/mobile/PA/roomStatusListXML.php"
+)
 FACILITIES_SOURCE_URL = "https://www.catholic.ac.kr/ko/campuslife/restaurant.do"
 TRANSPORT_SOURCE_URL = "https://www.catholic.ac.kr/ko/about/location_songsim.do"
 CERTIFICATE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/certificate.do"
@@ -2610,21 +2615,21 @@ def _build_library_seat_status_response(
 
 
 def _coerce_library_seat_status_source(
-    source: LibrarySeatStatusSource | Any | None = None,
-) -> LibrarySeatStatusSource | Any:
+    source: LibrarySeatStatusXmlSource | Any | None = None,
+) -> LibrarySeatStatusXmlSource | Any:
     if source is not None:
         return source
     try:
-        return LibrarySeatStatusSource(LIBRARY_SEAT_STATUS_SOURCE_URL)
+        return LibrarySeatStatusXmlSource(LIBRARY_SEAT_STATUS_SOURCE_URL)
     except TypeError:
-        return LibrarySeatStatusSource()
+        return LibrarySeatStatusXmlSource()
 
 
 def refresh_library_seat_status_cache(
     conn: DBConnection,
     *,
     fetched_at: str | None = None,
-    source: LibrarySeatStatusSource | Any | None = None,
+    source: LibrarySeatStatusXmlSource | Any | None = None,
 ) -> list[dict[str, Any]]:
     seat_source = _coerce_library_seat_status_source(source)
     checked_at = fetched_at or _now_iso()
@@ -3024,7 +3029,7 @@ def get_library_seat_status(
     conn: DBConnection,
     query: str | None = None,
     *,
-    source: LibrarySeatStatusSource | Any | None = None,
+    source: LibrarySeatStatusXmlSource | Any | None = None,
     now: datetime | None = None,
 ) -> LibrarySeatStatusResponse:
     current = now or _now()
