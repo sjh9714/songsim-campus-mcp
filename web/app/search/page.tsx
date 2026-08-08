@@ -76,6 +76,17 @@ export default async function SearchPage({
           <Link className="linkout" href="/find">
             건물·연락처 목록에서 둘러보기 ›
           </Link>
+          {/* 휴학·증명서 같은 절차는 이 앱이 답할 대상이 아니다. 학교로 보내되
+              막다른 길로 두지는 않는다. */}
+          <a
+            className="linkout"
+            href="https://www.catholic.ac.kr/ko/index.do"
+            target="_blank"
+            rel="noreferrer"
+            style={{ marginLeft: 14 }}
+          >
+            학교 홈페이지에서 찾기 ↗
+          </a>
         </section>
       ) : null}
 

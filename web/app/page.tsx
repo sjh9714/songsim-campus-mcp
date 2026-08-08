@@ -15,6 +15,7 @@ import { formatAgo, formatDate, todayInSeoul, truncate } from '@/lib/format';
 export const revalidate = 60;
 
 const QUICK_FINDS = ['복사실', '보건실', '학생회관', '중앙도서관', '학사지원팀'];
+const SCHOOL_NOTICE_URL = 'https://www.catholic.ac.kr/ko/campuslife/notice.do';
 
 export default async function HomePage() {
   const [dining, notices] = await Promise.all([getDiningMenus(3), getNotices({ limit: 3 })]);
@@ -74,10 +75,13 @@ export default async function HomePage() {
         <LibrarySeatsCard compact />
       </Suspense>
 
-      {/* --- 최신 공지 --- */}
+      {/* --- 최신 공지 ---
+           공지 화면은 두지 않는다. 학교가 이미 카톡·메일로 보내고, 전체 목록은
+           학교 공지사항이 원본이다. 여기서는 "새로 올라온 게 있나" 만 보여준다. */}
       <Card
         title="최신 공지"
-        href="/notices"
+        href={SCHOOL_NOTICE_URL}
+        moreLabel="학교 공지 전체"
         note={
           <>
             <StaleBadge state={notices} />{' '}

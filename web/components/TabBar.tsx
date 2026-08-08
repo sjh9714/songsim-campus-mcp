@@ -9,7 +9,6 @@ const TABS = [
   { href: '/', label: '홈' },
   { href: '/dining', label: '학식' },
   { href: '/study', label: '공부' },
-  { href: '/notices', label: '공지' },
   { href: '/find', label: '찾기' },
 ];
 

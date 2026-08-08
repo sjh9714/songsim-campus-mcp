@@ -73,15 +73,12 @@ jobs:
           import os
           from datetime import datetime, timedelta, timezone
 
-          # 학기를 하드코딩하면 9월에 2학기가 시작될 때 조용히 지난 학기 과목을 받는다.
-          # 한국 학사 기준 3~8월은 1학기, 9~2월은 2학기다.
+          # 규칙은 services.py 의 _current_year_and_semester 를 따른다.
+          # 여기에 다른 규칙을 적었다가 7~8월에 동기화는 1학기를 넣고 조회는 2학기를
+          # 찾는 상태가 됐고, 그동안 빈 강의실이 항상 0개로 나왔다.
+          #   7월 이후 = 2학기, 그 전 = 1학기
           now = datetime.now(timezone(timedelta(hours=9)))
-          if 3 <= now.month <= 8:
-              year, semester = now.year, 1
-          elif now.month >= 9:
-              year, semester = now.year, 2
-          else:  # 1~2월은 직전 연도의 2학기
-              year, semester = now.year - 1, 2
+          year, semester = now.year, 1 if now.month <= 6 else 2
 
           # 수동 실행 입력은 신뢰하지 않는다. 정수로 강제해서
           # GITHUB_OUTPUT 에 임의 문자열이 섞여 들어가지 못하게 한다.

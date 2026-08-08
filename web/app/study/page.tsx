@@ -79,11 +79,22 @@ export default async function StudyPage({
                 </>
               ) : (
                 <div style={{ marginTop: 12 }}>
-                  <EmptyState
-                    degraded={classrooms.degraded}
-                    message="지금 이 건물에 비어 있을 것으로 보이는 강의실이 없어요."
-                    hint="다른 건물을 눌러보세요."
-                  />
+                  {/* 시간표 자체가 없는 것과 정말 빈 강의실이 없는 것은 다른 말이다.
+                      방학이라 시간표가 없을 때 "없어요" 라고 하면 학생은 "꽉 찼구나" 로
+                      읽는다. 백엔드가 estimate_note 로 알려주니 그대로 갈라 쓴다. */}
+                  {classrooms.data.estimate_note?.includes('찾지 못했') ? (
+                    <EmptyState
+                      degraded={classrooms.degraded}
+                      message="이 건물의 강의실 시간표를 아직 받아오지 못했어요."
+                      hint="방학 중이거나 시간표가 아직 공개되지 않았을 수 있어요."
+                    />
+                  ) : (
+                    <EmptyState
+                      degraded={classrooms.degraded}
+                      message="지금 이 건물에 비어 있을 것으로 보이는 강의실이 없어요."
+                      hint="다른 건물을 눌러보세요."
+                    />
+                  )}
                 </div>
               )
             ) : (
