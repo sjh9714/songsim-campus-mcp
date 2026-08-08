@@ -6632,7 +6632,13 @@ def sync_official_snapshot(
     failed: list[str] = []
     for name, refresh in steps:
         try:
-            rows = refresh()
+            # 예외를 잡는 것만으로는 격리가 안 된다. source 하나가 DB 오류를 내면
+            # 트랜잭션이 abort 상태가 되고, 그 뒤 모든 문장이
+            # InFailedSqlTransaction 으로 죽는다. 실제로 컬럼 하나가 없어서
+            # 32개 source 가 연쇄로 무너졌다.
+            # savepoint 를 두면 실패한 source 만 되돌리고 나머지는 계속할 수 있다.
+            with conn.transaction():
+                rows = refresh()
         except Exception:
             logger.exception("event=official_sync_source_failed source=%s", name)
             failed.append(name)

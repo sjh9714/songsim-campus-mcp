@@ -540,6 +540,10 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS admission_type TEXT;
 ALTER TABLE restaurant_cache_items ADD COLUMN IF NOT EXISTS kakao_place_id TEXT;
 ALTER TABLE restaurant_cache_items ADD COLUMN IF NOT EXISTS source_url TEXT;
 ALTER TABLE affiliated_notices ADD COLUMN IF NOT EXISTS body_text TEXT NOT NULL DEFAULT '';
+-- CREATE TABLE IF NOT EXISTS 는 이미 있는 테이블을 건드리지 않는다. 위 정의에 컬럼을
+-- 적어 두는 것만으로는 기존 배포에 생기지 않아서, 실제로 동기화가 통째로 실패했다.
+ALTER TABLE campus_dining_menus
+    ADD COLUMN IF NOT EXISTS menu_days_json JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE TABLE IF NOT EXISTS sync_runs (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

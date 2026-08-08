@@ -6111,3 +6111,47 @@ def test_sync_official_snapshot_skips_a_broken_source_and_keeps_going(app_env, m
     # 요약에는 운영시간 단계가 섞이지 않는다.
     assert "library_hours" not in summary
     assert "facility_hours" not in summary
+
+
+def test_sync_official_snapshot_survives_a_database_error_in_one_source(app_env, monkeypatch):
+    """source 하나가 DB 오류를 내도 나머지는 갱신돼야 한다.
+
+    예외를 잡는 것만으로는 부족하다. Postgres 는 트랜잭션 안에서 오류가 나면
+    그 뒤 모든 문장을 InFailedSqlTransaction 으로 거절한다. 실제로 컬럼 하나가
+    없어서 32개 source 가 연쇄로 무너지고 동기화가 통째로 실패했다.
+    """
+    init_db()
+
+    # 학교 사이트를 실제로 때리지 않도록 모든 source 를 무해하게 만든다.
+    for attribute in dir(services_module):
+        if attribute.startswith("refresh_"):
+            monkeypatch.setattr(services_module, attribute, lambda conn, **kwargs: [])
+
+    def _breaks_the_transaction(conn, **kwargs):
+        # 없는 컬럼을 건드려 트랜잭션을 오염시킨다. 실제 사고와 같은 방식이다.
+        conn.execute("SELECT column_that_does_not_exist FROM places")
+        return []
+
+    def _writes_to_the_database(conn, **kwargs):
+        # 실제 refresh 들은 전부 SQL 을 실행한다. 트랜잭션이 오염된 채라면
+        # 여기서 InFailedSqlTransaction 이 난다 - 실제 사고가 그랬다.
+        conn.execute("TRUNCATE TABLE transport_guides RESTART IDENTITY CASCADE")
+        return [{"marker": "after-the-broken-source"}]
+
+    monkeypatch.setattr(
+        services_module, "refresh_campus_dining_menus_from_facilities_page", _breaks_the_transaction
+    )
+    monkeypatch.setattr(
+        services_module, "refresh_transport_guides_from_location_page", _writes_to_the_database
+    )
+
+    with connection() as conn:
+        summary = sync_official_snapshot(conn, year=2026, semester=1, notice_pages=1)
+
+    assert summary["dining_menus"] == 0
+    # 오염된 트랜잭션이 복구되지 않으면 여기가 0 이 된다.
+    assert summary["transport_guides"] == 1
+
+    # 그리고 커넥션은 계속 쓸 수 있어야 한다.
+    with connection() as conn:
+        assert conn.execute("SELECT 1 AS ok").fetchone()["ok"] == 1
