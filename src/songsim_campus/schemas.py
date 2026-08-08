@@ -561,6 +561,18 @@ class GptRestaurantSearchResult(BaseModel):
     location_hint: str | None = None
 
 
+class CampusDiningMeal(BaseModel):
+    items: list[str] = Field(default_factory=list)
+    kcal: int | None = None
+
+
+class CampusDiningDay(BaseModel):
+    date: str
+    weekday: str
+    # 끼니 이름("중식", "석식")을 그대로 키로 쓴다. 학교 표가 쓰는 말이라 그대로 보여준다.
+    meals: dict[str, CampusDiningMeal] = Field(default_factory=dict)
+
+
 class CampusDiningMenu(BaseModel):
     venue_slug: str
     venue_name: str
@@ -570,6 +582,7 @@ class CampusDiningMenu(BaseModel):
     week_start: str | None = None
     week_end: str | None = None
     menu_text: str | None = None
+    days: list[CampusDiningDay] = Field(default_factory=list)
     source_url: str | None = None
     source_tag: str = "demo"
     last_synced_at: str

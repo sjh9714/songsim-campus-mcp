@@ -39,6 +39,27 @@ export function formatAgo(iso: string | null | undefined, now = Date.now()): str
   return formatDate(iso);
 }
 
+/** 학교 기준(KST) 오늘 날짜. 서버가 어느 지역에서 렌더하든 같은 날을 가리켜야 한다. */
+export function todayInSeoul(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: KST,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+/** 끼니 표시 순서. 학교 표의 이름을 그대로 쓰되 시간 순으로 정렬한다. */
+const MEAL_ORDER = ['조식', '중식', '석식'];
+
+export function sortMeals(meals: Record<string, unknown>): string[] {
+  return Object.keys(meals).sort((a, b) => {
+    const left = MEAL_ORDER.indexOf(a);
+    const right = MEAL_ORDER.indexOf(b);
+    return (left === -1 ? MEAL_ORDER.length : left) - (right === -1 ? MEAL_ORDER.length : right);
+  });
+}
+
 /** 긴 본문을 카드에 들어갈 길이로 자른다. */
 export function truncate(text: string | null | undefined, limit: number): string {
   if (!text) return '';

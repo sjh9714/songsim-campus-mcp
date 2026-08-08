@@ -2227,6 +2227,101 @@ def _rank_campus_dining_menu_candidate(
     return None
 
 
+_DINING_DATE_CELL = re.compile(r"(\d{2})/(\d{2})\((.)\)")
+_DINING_KCAL_CELL = re.compile(r"^\d{2,4}\s*kcal$", re.IGNORECASE)
+_DINING_MEAL_LABELS = ("조식", "중식", "석식")
+
+
+def _extract_campus_dining_menu_days(pdf_bytes: bytes, *, year: int) -> list[dict[str, Any]]:
+    """주간 메뉴 PDF 를 요일 x 끼니 구조로 되돌린다.
+
+    이 PDF 는 행이 메뉴 칸, 열이 요일인 표다. 기본 extract_text() 는 표를 y 좌표
+    기준 줄로만 펴기 때문에 열 경계가 사라진다. 그러면 보기 나쁜 정도가 아니라
+    요일이 틀어진다 — 실제로 목요일 석식의 "멕시칸샐러드" 가 각주 뒤 별도 줄로
+    밀려나 어느 날 것인지 알 수 없었다.
+
+    layout 모드는 칸 위치를 공백으로 보존하므로, 머리글의 날짜 칸 위치에서
+    열 경계를 잡아 각 칸을 제자리에 돌려놓을 수 있다.
+    """
+    reader = PdfReader(BytesIO(pdf_bytes))
+    pages: list[str] = []
+    for page in reader.pages:
+        try:
+            pages.append(page.extract_text(extraction_mode="layout") or "")
+        except Exception:
+            # 학교가 올리는 PDF 는 형식이 제각각이다. 한 페이지를 못 읽는다고
+            # 나머지까지 버리지 않고, 못 읽은 만큼만 조용히 건너뛴다.
+            logger.warning("event=campus_dining_menu_page_unreadable")
+    lines = [line for line in "\n".join(pages).splitlines() if line.strip()]
+
+    header = next((line for line in lines if len(_DINING_DATE_CELL.findall(line)) >= 2), None)
+    if header is None:
+        return []
+
+    cells = [(m.start(), m.end(), m.group()) for m in _DINING_DATE_CELL.finditer(header)]
+    centers = [(start + end) // 2 for start, end, _ in cells]
+    # 첫 경계는 라벨 열("구 분", "중식", "석식")과 첫 요일 칸 사이 중간에 둔다.
+    # 날짜 시작점 바로 앞에 두면 첫 요일의 긴 메뉴명 앞글자가 잘린다.
+    label_end = len(header[: cells[0][0]].rstrip())
+    bounds = [(label_end + cells[0][0]) // 2]
+    bounds += [(centers[i] + centers[i + 1]) // 2 for i in range(len(centers) - 1)]
+    bounds.append(len(max(lines, key=len)) + 1)
+
+    days: list[dict[str, Any]] = []
+    for _, _, label in cells:
+        month, day, weekday = _DINING_DATE_CELL.match(label).groups()  # type: ignore[union-attr]
+        days.append(
+            {
+                "date": f"{year:04d}-{int(month):02d}-{int(day):02d}",
+                "weekday": weekday,
+                "meals": {},
+            }
+        )
+
+    def split_row(line: str) -> list[str]:
+        return [line[bounds[i] : bounds[i + 1]].strip() for i in range(len(cells))]
+
+    # kcal 행이 한 끼의 끝을 알린다. 끼니 라벨은 병합 셀이라 구간 가운데 한 줄에만 있다.
+    sections: list[tuple[str | None, list[list[str]]]] = []
+    pending: list[list[str]] = []
+    pending_label: str | None = None
+    for line in lines[lines.index(header) + 1 :]:
+        if line.lstrip().startswith("*"):
+            continue  # 각주는 표가 아니다
+        label_area = line[: bounds[0]]
+        for name in _DINING_MEAL_LABELS:
+            if name in label_area:
+                pending_label = name
+        row = split_row(line)
+        if not any(row):
+            continue
+        pending.append(row)
+        if any(_DINING_KCAL_CELL.match(value) for value in row if value):
+            sections.append((pending_label, pending))
+            pending, pending_label = [], None
+    if pending:
+        sections.append((pending_label, pending))
+
+    # 라벨 후보가 실제 구간 수보다 많을 수 있다(조식이 없는 식당). 짧은 쪽에 맞춘다.
+    for fallback, (name, rows) in zip(_DINING_MEAL_LABELS[1:], sections, strict=False):
+        meal = name or fallback
+        for column, day in enumerate(days):
+            items: list[str] = []
+            kcal: int | None = None
+            for row in rows:
+                value = row[column] if column < len(row) else ""
+                if not value:
+                    continue
+                if _DINING_KCAL_CELL.match(value):
+                    kcal = int(re.sub(r"[^0-9]", "", value))
+                else:
+                    items.append(value)
+            if items:
+                day["meals"][meal] = {"items": items, "kcal": kcal}
+
+    return [day for day in days if day["meals"]]
+
+
 def _extract_campus_dining_menu_text(pdf_bytes: bytes) -> str | None:
     reader = PdfReader(BytesIO(pdf_bytes))
     lines: list[str] = []
@@ -5744,14 +5839,20 @@ def refresh_campus_dining_menus_from_facilities_page(
         menu_text: str | None = None
         week_start: str | None = None
         week_end: str | None = None
+        menu_days: list[dict[str, Any]] = []
         try:
             pdf_bytes = source.fetch_menu_document(source_url)
             menu_text = _extract_campus_dining_menu_text(pdf_bytes)
             week_start, week_end = _extract_campus_dining_menu_week_range(menu_text)
+            # 표의 날짜 칸에는 연도가 없다. 주 시작일에서 가져오고, 없으면 동기화 시각을 쓴다.
+            menu_year = int((week_start or synced_at)[:4])
+            menu_days = _extract_campus_dining_menu_days(pdf_bytes, year=menu_year)
         except Exception:
+            logger.exception("event=campus_dining_menu_parse_failed source_url=%s", source_url)
             menu_text = None
             week_start = None
             week_end = None
+            menu_days = []
 
         menu_rows.append(
             {
@@ -5763,6 +5864,7 @@ def refresh_campus_dining_menus_from_facilities_page(
                 "week_start": week_start,
                 "week_end": week_end,
                 "menu_text": menu_text,
+                "days": menu_days,
                 "source_url": source_url,
                 "source_tag": "cuk_facilities_menu",
                 "last_synced_at": row.get("last_synced_at", synced_at),

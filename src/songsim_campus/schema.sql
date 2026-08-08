@@ -478,6 +478,8 @@ CREATE TABLE IF NOT EXISTS campus_dining_menus (
     week_start DATE,
     week_end DATE,
     menu_text TEXT,
+    -- 요일 x 끼니로 되돌린 구조. menu_text 는 원문 확인용으로 남긴다.
+    menu_days_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     source_url TEXT,
     source_tag TEXT NOT NULL DEFAULT 'demo',
     last_synced_at TIMESTAMPTZ NOT NULL
