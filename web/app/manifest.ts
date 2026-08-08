@@ -14,8 +14,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: '가톨릭대학교 성심교정 학식, 도서관 좌석, 빈 강의실, 공지, 건물과 연락처',
     start_url: '/',
     display: 'standalone',
-    background_color: '#f6f5f2',
-    theme_color: '#17527d',
+    background_color: '#ffffff',
+    theme_color: '#0c2e86',
     lang: 'ko',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
