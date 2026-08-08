@@ -7,6 +7,9 @@ import { truncate } from '@/lib/format';
 
 export const revalidate = 3600;
 
+// 검색이 빗나갔을 때 보여줄 출발점. 신입생이 첫 주에 가장 많이 찾는 것들이다.
+const COMMON_SEARCHES = ['보건실', '복사실', '학사지원팀', '중앙도서관', '학생회관'];
+
 /**
  * 통합 검색.
  *
@@ -50,19 +53,29 @@ export default async function SearchPage({
       <TopBar title="검색" subtitle={`"${query}" 결과 ${total}건`} query={query} />
 
       {total === 0 ? (
+        // 안내 두 줄만 남기면 화면이 텅 비어 막다른 길이 된다.
+        // 자주 찾는 것들을 같이 놓아 다음 행동을 만들어 준다.
         <section className="card">
           <EmptyState
             degraded={degraded}
             message={`"${query}"에 해당하는 결과를 못 찾았어요.`}
-            hint={
-              <>
-                건물·부서 이름으로 다시 찾아보거나,{' '}
-                <Link href="/find" style={{ textDecoration: 'underline' }}>
-                  목록에서 둘러보기
-                </Link>
-              </>
-            }
+            hint="건물, 부서, 과목 이름으로 찾을 수 있어요."
           />
+          <div className="section__title">이런 걸 많이 찾아요</div>
+          <div className="chips">
+            {COMMON_SEARCHES.map((keyword) => (
+              <Link
+                key={keyword}
+                className="chip"
+                href={`/search?q=${encodeURIComponent(keyword)}`}
+              >
+                {keyword}
+              </Link>
+            ))}
+          </div>
+          <Link className="linkout" href="/find">
+            건물·연락처 목록에서 둘러보기 ›
+          </Link>
         </section>
       ) : null}
 

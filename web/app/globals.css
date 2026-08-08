@@ -57,10 +57,9 @@ a {
   padding: 0 16px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px);
 }
 
+/* sticky 로 두면 제목+부제+검색창 138px 이 화면의 16% 를 영구 점유한다.
+   폰에서 그만큼 실제 내용이 깎인다. 제목은 같이 스크롤되게 둔다. */
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   background: var(--bg);
   padding: 14px 0 10px;
 }
@@ -364,6 +363,34 @@ a.row__value {
   font-size: 1rem;
 }
 
+/* 홈에서 훑는 형태. 끼니 이름과 주 메뉴를 한 줄에 둔다. */
+.daymenu--compact {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  gap: 0;
+}
+
+.daymenu--compact > li {
+  padding: 9px 0;
+}
+
+.daymenu--compact > li + li {
+  border-top: 1px solid var(--line);
+}
+
+.daymenu--compact .daymenu__name {
+  display: inline-block;
+  min-width: 2.4em; /* 중식/석식 이 세로로 맞아야 훑기 좋다 */
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.daymenu--compact .daymenu__main {
+  font-size: 0.98rem;
+}
+
 .daypicker {
   display: flex;
   flex-wrap: wrap;
@@ -436,9 +463,13 @@ a.row__value {
   color: var(--accent);
 }
 
-.tabbar__icon {
-  font-size: 1.15rem;
-  line-height: 1;
+.tabbar a {
+  font-size: 0.82rem;
+}
+
+/* 활성 탭을 색만으로 구분하면 약하다. 학교 탭처럼 윗선으로 짚어 준다. */
+.tabbar a[aria-current='page'] {
+  box-shadow: inset 0 2px 0 var(--accent);
 }
 
 /* --- 버튼 ----------------------------------------------------------- */

@@ -69,8 +69,10 @@ export default async function LibrarySeatsCard({ compact = false }: { compact?: 
     );
 
   if (compact) {
+    // "빈 강의실도 보기" 로 두면 좌석 카드인데 링크가 딴 데를 가리켜,
+    // 좌석을 더 보려는 학생이 갈 곳을 잃는다. /study 에 둘 다 있으므로 그렇게 적는다.
     return (
-      <Card title="도서관 좌석" href="/study" moreLabel="빈 강의실도 보기" note={note}>
+      <Card title="도서관 좌석" href="/study" moreLabel="좌석·빈 강의실" note={note}>
         {body}
       </Card>
     );

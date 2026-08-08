@@ -67,10 +67,13 @@ export default async function DiningPage({
                   <DayMenu day={selected} />
                 </>
               ) : menu.menu_text ? (
-                // 주간 표가 아닌 PDF(가격표 등)는 원문 그대로 둔다. 없는 구조를 지어내지 않는다.
-                <p className="menu-text" style={{ marginTop: 10 }}>
-                  {menu.menu_text}
-                </p>
+                // 주간 표가 아닌 PDF 는 원문을 싣지 않는다. 카페 멘사는 입점 업체의
+                // 가격표인데, 문서 안에 "무단 복제, 배포, 공개를 엄격히 금지합니다" 와
+                // 제3자 저작권 표기가 들어 있다. 학교 공개 자료가 아니므로 링크만 건다.
+                <EmptyState
+                  message="주간 메뉴표 형태가 아니라 여기서는 정리해 드릴 수 없어요."
+                  hint="아래 학교 원문에서 확인해 주세요."
+                />
               ) : (
                 <EmptyState message="이번 주 메뉴가 아직 올라오지 않았어요." />
               )}

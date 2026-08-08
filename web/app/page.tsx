@@ -36,9 +36,11 @@ export default async function HomePage() {
     <>
       <TopBar title="성심교정 도우미" subtitle="학교에서 헤매지 않게" />
 
-      {/* --- 오늘의 학식 --- */}
+      {/* --- 학식 --- */}
       <Card
-        title="오늘의 학식"
+        // 주말이면 이번 주 표에 오늘이 없어 다음 날을 보여준다.
+        // 그때도 "오늘의 학식"이라고 적으면 날짜와 어긋나 거짓말이 된다.
+        title={todayMenu && todayMenu.date !== today ? '다음 학식' : '오늘의 학식'}
         href="/dining"
         note={
           topMenu ? (
@@ -55,15 +57,11 @@ export default async function HomePage() {
                   {todayMenu.date === today ? '오늘 · ' : ''}
                   {formatDate(todayMenu.date)} ({todayMenu.weekday})
                 </div>
-                <DayMenu day={todayMenu} />
+                <DayMenu day={todayMenu} compact />
               </>
             ) : (
-              <>
-                {topMenu.week_label ? <div className="row__sub">{topMenu.week_label}</div> : null}
-                <p className="menu-text" style={{ marginTop: 8 }}>
-                  {truncate(topMenu.menu_text, 160) || '이번 주 메뉴가 아직 올라오지 않았어요.'}
-                </p>
-              </>
+              // 주간 표가 아닌 PDF 는 원문을 싣지 않는다. 제3자 저작물인 경우가 있다.
+              <EmptyState message="이번 주 메뉴가 아직 올라오지 않았어요." />
             )}
           </>
         ) : (
