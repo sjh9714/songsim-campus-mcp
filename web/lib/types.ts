@@ -92,6 +92,20 @@ export interface PCSoftwareEntry {
   last_synced_at: string;
 }
 
+export interface CampusDiningMeal {
+  items: string[];
+  kcal: number | null;
+}
+
+export interface CampusDiningDay {
+  /** YYYY-MM-DD */
+  date: string;
+  /** 월, 화, 수, 목, 금 */
+  weekday: string;
+  /** 끼니 이름("중식", "석식")이 키. 학교 표가 쓰는 말을 그대로 쓴다. */
+  meals: Record<string, CampusDiningMeal>;
+}
+
 export interface CampusDiningMenu {
   venue_slug: string;
   venue_name: string;
@@ -101,6 +115,8 @@ export interface CampusDiningMenu {
   week_start: string | null;
   week_end: string | null;
   menu_text: string | null;
+  /** 주간 표를 요일 x 끼니로 되돌린 것. 가격표처럼 표가 아닌 PDF 는 빈 배열이다. */
+  days: CampusDiningDay[];
   source_url: string | null;
   source_tag: string;
   last_synced_at: string;

@@ -44,6 +44,7 @@ JSON_COLUMNS = {
         "categories_json": "categories",
         "keywords_json": "keywords",
     },
+    "campus_dining_menus": {"menu_days_json": "days"},
     "profile_interests": {"tags_json": "tags"},
     "sync_runs": {
         "params_json": "params",
@@ -65,6 +66,7 @@ JSON_DEFAULTS = {
     "campuses_json": [],
     "categories_json": [],
     "keywords_json": [],
+    "menu_days_json": [],
     "params_json": {},
     "summary_json": {},
 }
@@ -1535,8 +1537,9 @@ def replace_campus_dining_menus(conn: psycopg.Connection, rows: list[dict[str, A
         """
         INSERT INTO campus_dining_menus (
             venue_slug, venue_name, place_slug, place_name, week_label,
-            week_start, week_end, menu_text, source_url, source_tag, last_synced_at
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            week_start, week_end, menu_text, menu_days_json,
+            source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         [
             (
@@ -1548,6 +1551,7 @@ def replace_campus_dining_menus(conn: psycopg.Connection, rows: list[dict[str, A
                 row.get("week_start"),
                 row.get("week_end"),
                 row.get("menu_text"),
+                Jsonb(row.get("days", [])),
                 row.get("source_url"),
                 row.get("source_tag", "demo"),
                 row["last_synced_at"],
@@ -1598,7 +1602,7 @@ def list_campus_dining_menus(
         """,
         (limit,),
     ).fetchall()
-    return [_normalize_record(dict(row)) for row in rows]
+    return [_row_to_dict("campus_dining_menus", dict(row)) for row in rows]
 
 
 def replace_library_seat_status_cache(
