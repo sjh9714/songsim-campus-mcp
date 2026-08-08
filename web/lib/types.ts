@@ -122,6 +122,16 @@ export interface CampusDiningMenu {
   last_synced_at: string;
 }
 
+/**
+ * 백엔드가 실제로 내려주는 모양.
+ *
+ * days 는 나중에 생긴 필드라 아직 갱신되지 않은 배포에는 아예 없다.
+ * lib/api.ts 의 getDiningMenus 가 이걸 메워서 CampusDiningMenu 로 넘긴다.
+ */
+export interface CampusDiningMenuResponse extends Omit<CampusDiningMenu, 'days'> {
+  days?: CampusDiningDay[];
+}
+
 export interface LibrarySeatStatus {
   room_name: string;
   remaining_seats: number | null;

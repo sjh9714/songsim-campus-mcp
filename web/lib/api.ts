@@ -2,7 +2,7 @@ import 'server-only';
 
 import type {
   AffiliatedNotice,
-  CampusDiningMenu,
+  CampusDiningMenuResponse,
   Course,
   EstimatedEmptyClassroomResponse,
   LibrarySeatStatusResponse,
@@ -124,12 +124,20 @@ async function getJson<T>(
 
 // --- 홈 카드 4종 ---------------------------------------------------------
 
-export function getDiningMenus(limit = 10) {
-  return getJson<CampusDiningMenu[]>('/dining-menus', {
+export async function getDiningMenus(limit = 10) {
+  const result = await getJson<CampusDiningMenuResponse[]>('/dining-menus', {
     revalidate: TTL.dining,
     fallback: [],
     params: { limit },
   });
+
+  // days 는 나중에 생긴 필드다. 백엔드가 먼저 배포되리라는 보장이 없고,
+  // 프론트만 먼저 올라가면 응답에 이 필드가 아예 없다. 없는 채로 두면
+  // 화면이 통째로 터지므로 여기서 한 번만 메워 둔다.
+  return {
+    ...result,
+    data: result.data.map((menu) => ({ ...menu, days: menu.days ?? [] })),
+  };
 }
 
 export function getLibrarySeats(options: { fresh?: boolean } = {}) {
