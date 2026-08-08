@@ -60,6 +60,25 @@ export function sortMeals(meals: Record<string, unknown>): string[] {
   });
 }
 
+/**
+ * 요약이 제목을 그대로 되풀이하는 부분을 걷어낸다.
+ *
+ * 학교 공지는 본문 첫 줄이 제목과 같은 경우가 많아서, 그대로 두면 목록에서
+ * 같은 문장을 두 번 읽게 된다. 겹치는 앞부분만 덜어내고 나머지를 남긴다.
+ */
+export function stripEchoedTitle(summary: string, title: string): string {
+  const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+  const cleanSummary = normalize(summary);
+  const cleanTitle = normalize(title);
+  if (!cleanTitle) return cleanSummary;
+
+  if (cleanSummary.startsWith(cleanTitle)) {
+    const rest = cleanSummary.slice(cleanTitle.length).replace(/^[\s\-–—·:,.]+/, '');
+    return rest || '';
+  }
+  return cleanSummary;
+}
+
 /** 긴 본문을 카드에 들어갈 길이로 자른다. */
 export function truncate(text: string | null | undefined, limit: number): string {
   if (!text) return '';

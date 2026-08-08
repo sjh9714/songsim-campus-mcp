@@ -172,31 +172,68 @@ a {
   list-style: none;
 }
 
-.list > li + li {
-  margin-top: 1px;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
+.list > li {
+  padding: 12px 0;
 }
 
-.list > li + li.row--plain {
-  padding-top: 10px;
+.list > li:first-child {
+  padding-top: 4px;
+}
+
+.list > li:last-child {
+  padding-bottom: 0;
+}
+
+.list > li + li {
+  border-top: 1px solid var(--line);
 }
 
 .row__title {
+  display: block;
   font-weight: 600;
   font-size: 0.95rem;
+  line-height: 1.45;
   color: var(--ink);
 }
 
 .row__sub {
-  margin-top: 2px;
+  display: block;
+  margin-top: 3px;
   font-size: 0.83rem;
+  line-height: 1.5;
   color: var(--muted);
+}
+
+/* 날짜처럼 항목을 여는 짧은 단서. 제목보다 먼저 오되 눈에 덜 띄어야 한다. */
+.row__meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+/* 공지 요약. 두 줄에서 자른다 — 그 이상은 제목을 훑는 걸 방해할 뿐이다. */
+.row__excerpt {
+  margin: 5px 0 0;
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .row__value {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 전화번호는 눌러서 걸 수 있다. 검은 숫자로 두면 아무도 누를 생각을 못 한다. */
+a.row__value {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .row--split {
@@ -224,9 +261,10 @@ a {
 }
 
 .empty {
-  padding: 18px 4px;
+  padding: 22px 4px;
   text-align: center;
   font-size: 0.9rem;
+  line-height: 1.6;
   color: var(--muted);
 }
 

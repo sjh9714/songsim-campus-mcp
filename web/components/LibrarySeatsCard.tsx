@@ -16,13 +16,15 @@ export default async function LibrarySeatsCard({ compact = false }: { compact?: 
   const withSeats = rooms.filter((room) => room.remaining_seats !== null);
   const totalRemaining = withSeats.reduce((sum, room) => sum + (room.remaining_seats ?? 0), 0);
 
+  // 좌석을 못 받았을 때 백엔드 note 는 "확인하지 못했습니다" 로, 아래 빈 상태와 같은 말이다.
+  // 셋이 겹쳐 같은 문장이 세 번 나오던 것을 정리한다. note 가 값을 더 설명할 때만 남긴다.
   const note = (
     <>
       {seats.data.checked_at ? `${formatAgo(seats.data.checked_at)} 기준` : null}
       {seats.data.availability_mode === 'stale_cache'
         ? ' · 실시간 조회에 실패해 직전에 받아둔 값이에요.'
         : null}
-      {seats.data.note ? ` ${seats.data.note}` : null}
+      {rooms.length > 0 && seats.data.note ? ` · ${seats.data.note}` : null}
     </>
   );
 
@@ -30,8 +32,8 @@ export default async function LibrarySeatsCard({ compact = false }: { compact?: 
     rooms.length === 0 ? (
       <EmptyState
         degraded={seats.degraded}
-        message="지금은 좌석 현황을 확인할 수 없어요."
-        hint="도서관 좌석 서버가 응답하지 않고 있어요."
+        message="도서관 좌석 서버가 응답하지 않고 있어요."
+        hint="잠시 후 다시 열어봐 주세요."
       />
     ) : compact ? (
       <>

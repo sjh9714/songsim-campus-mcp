@@ -5,7 +5,7 @@ import FreshnessBadge, { FRESHNESS_LIMIT } from '@/components/FreshnessBadge';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import { getNoticeCategories, getNotices } from '@/lib/api';
-import { formatAgo, truncate } from '@/lib/format';
+import { formatAgo, stripEchoedTitle } from '@/lib/format';
 
 export const revalidate = 600;
 
@@ -70,11 +70,14 @@ export default async function NoticesPage({
             {notices.data.map((notice) => (
               <li key={notice.id}>
                 <a href={notice.source_url ?? '#'} target="_blank" rel="noreferrer">
+                  <div className="row__meta">{formatAgo(notice.published_at)}</div>
                   <div className="row__title">{notice.title}</div>
-                  {notice.summary ? (
-                    <div className="row__sub">{truncate(notice.summary, 90)}</div>
-                  ) : null}
-                  <div className="row__sub">{formatAgo(notice.published_at)}</div>
+                  {/* 요약은 제목을 그대로 반복하는 경우가 많다. 제목만 훑는 걸 방해하지
+                      않도록 두 줄로 자르고 무게를 낮춘다. */}
+                  {(() => {
+                    const excerpt = stripEchoedTitle(notice.summary, notice.title);
+                    return excerpt ? <p className="row__excerpt">{excerpt}</p> : null;
+                  })()}
                 </a>
               </li>
             ))}
