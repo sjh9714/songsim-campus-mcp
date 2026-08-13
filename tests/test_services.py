@@ -4796,6 +4796,43 @@ def test_refresh_campus_dining_menus_extracts_menu_text_and_links(app_env):
     assert bona.source_tag == "cuk_facilities_menu"
 
 
+def test_refresh_campus_dining_menus_withholds_a_document_that_forbids_redistribution(
+    app_env, monkeypatch
+):
+    """스스로 재배포를 금지한 문서는 원문을 싣지 않는다.
+
+    카페 멘사 자리에 걸리는 문서는 입점 업체 가격표라 제3자 저작권 표기와
+    "무단 복제, 배포, 공개를 엄격히 금지합니다" 가 들어 있다. 화면에서는 이미
+    빼 두었지만 API 는 menu_text 와 menu_preview 로 그대로 내보내고 있었다.
+    소비자마다 따로 막을 게 아니라 여기서 담지 않는다. 링크는 남긴다.
+    """
+    init_db()
+    seed_demo(force=True)
+
+    priced_list = (
+        "카페 멘사 가격표\n아메리카노 2,000원\n라떼 3,000원\n"
+        "Copyright © 2024 LeeNK International Co., Ltd. All rights reserved.\n"
+        "무단 복제, 배포, 공개를 엄격히 금지합니다."
+    )
+    monkeypatch.setattr(
+        services_module, "_extract_campus_dining_menu_text", lambda *a, **k: priced_list
+    )
+
+    with connection() as conn:
+        refresh_campus_dining_menus_from_facilities_page(
+            conn,
+            source=FakeDiningMenuSource(),
+            fetched_at="2026-03-13T09:00:00+09:00",
+        )
+        stored = search_campus_dining_menus(conn, limit=10)
+
+    assert stored, "식당 목록 자체는 남아야 한다"
+    for item in stored:
+        assert item.menu_text is None
+        # 학생이 학교 원문으로 갈 길은 막지 않는다.
+        assert item.source_url
+
+
 def test_refresh_campus_dining_menus_preserves_link_when_pdf_extract_fails(app_env):
     init_db()
     seed_demo(force=True)

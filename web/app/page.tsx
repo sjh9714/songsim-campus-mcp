@@ -14,6 +14,11 @@ import { formatAgo, formatDate, todayInSeoul, truncate } from '@/lib/format';
 
 export const revalidate = 60;
 
+// 이 화면은 도서관 좌석 실시간 조회(최대 15초)를 안고 있다. 재검증이 도중에
+// 잘리면 좌석 카드가 영영 갱신되지 않으므로 넉넉히 둔다. 학생이 아니라
+// 백그라운드 재생성이 쓰는 시간이다.
+export const maxDuration = 60;
+
 const QUICK_FINDS = ['복사실', '보건실', '학생회관', '중앙도서관', '학사지원팀'];
 const SCHOOL_NOTICE_URL = 'https://www.catholic.ac.kr/ko/campuslife/notice.do';
 

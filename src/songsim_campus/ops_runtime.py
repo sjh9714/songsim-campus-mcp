@@ -8,7 +8,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any, Literal, TypedDict
 
-from . import repo
+from . import clock, repo
 from .db import DBConnection
 from .schemas import (
     AutomationJobObservability,
@@ -37,7 +37,7 @@ class DatasetSyncState(TypedDict, total=False):
 
 
 def _default_now() -> datetime:
-    return datetime.now().astimezone()
+    return clock.now()
 
 
 def _default_now_iso() -> str:

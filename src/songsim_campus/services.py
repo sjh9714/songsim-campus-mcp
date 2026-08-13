@@ -13,13 +13,13 @@ from importlib import import_module
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Protocol
-from zoneinfo import ZoneInfo
 
 import httpx
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 from . import (
+    clock,
     course_search_runtime,
     ops_runtime,
     place_search_runtime,
@@ -750,12 +750,14 @@ class OfficialClassroomAvailabilitySource(Protocol):
     ) -> list[dict[str, Any]]: ...
 
 
-# 학교 시계. 이 서비스가 다루는 시각은 전부 성심교정 기준이다.
-KST = ZoneInfo("Asia/Seoul")
+KST = clock.KST
 
 
+# 시간대 규칙은 clock 한 곳에만 둔다. 다만 아래 세 함수는 얇게 감싸 놓는다.
+# 테스트가 monkeypatch 로 갈아끼우는 이음매라, clock 함수를 그대로 별칭으로
+# 붙여 두면 패치를 비껴가기 때문이다.
 def _now() -> datetime:
-    return datetime.now(KST)
+    return clock.now()
 
 
 def _now_iso() -> str:
@@ -1701,20 +1703,14 @@ def _is_automation_job_due(
 
 
 def _current_year_and_semester(now: datetime | None = None) -> tuple[int, int]:
-    current = now or _now()
+    # 넘겨받은 시각도 학교 시계로 읽는다. UTC 로 적힌 6월 30일 밤은 이미 7월이다.
+    current = clock.coerce_datetime(now)
     semester = 1 if current.month <= 6 else 2
     return current.year, semester
 
 
 def _coerce_datetime(value: datetime | None = None) -> datetime:
-    current = value or _now()
-    # 시간대를 붙이는 데서 그치지 않고 서울로 환산까지 한다. 수업 교시, 시설
-    # 운영시간, 학사일정은 전부 한국 시간으로 적힌 값이라 시/분을 그대로 읽는데,
-    # 예전에는 호스트 시간대를 따라갔다. Render 는 UTC 로 돌기 때문에 9시간
-    # 어긋난 시각으로 판정했고, 목9교시 수업을 "오전 2:00" 이라고 답했다.
-    if current.tzinfo is None:
-        return current.replace(tzinfo=KST)
-    return current.astimezone(KST)
+    return clock.coerce_datetime(value if value is not None else _now())
 
 
 _normalize_place_key = place_search_runtime._normalize_place_key
@@ -2408,6 +2404,33 @@ def _resolve_campus_dining_menu_place(
     return None
 
 
+# 스스로 재배포를 금지한다고 적어 둔 문서의 표시들. 학교가 올린 주간 식단표에는
+# 나오지 않고, 입점 업체 가격표에는 나온다.
+_REDISTRIBUTION_FORBIDDEN_MARKERS = (
+    "무단 복제",
+    "무단복제",
+    "무단 배포",
+    "무단배포",
+    "무단 전재",
+    "무단전재",
+    "all rights reserved",
+    "copyright ©",
+    "copyright(c)",
+)
+
+
+def _forbids_redistribution(text: str | None) -> bool:
+    """문서가 스스로 재배포를 금지한다고 적어 두었는지.
+
+    이걸 그대로 실어 나르면 문서가 하지 말라고 적어 둔 일을 우리가 하는 셈이다.
+    판단은 보수적으로 한다. 표시가 하나라도 보이면 원문은 담지 않고 링크만 남긴다.
+    """
+    if not text:
+        return False
+    haystack = text.lower()
+    return any(marker in haystack for marker in _REDISTRIBUTION_FORBIDDEN_MARKERS)
+
+
 def _campus_dining_menu_preview(menu_text: str | None, *, limit: int = 220) -> str | None:
     if not menu_text:
         return None
@@ -2562,7 +2585,8 @@ def _library_seat_cache_status(last_synced_at: str, now: datetime) -> str:
     except ValueError:
         return "expired"
     if synced_at.tzinfo is None:
-        synced_at = synced_at.astimezone()
+        # 저장된 시각은 학교 기준으로 적힌 값이다. 호스트 시간대로 읽으면 안 된다.
+        synced_at = clock.coerce_datetime(synced_at)
     age_minutes = (now - synced_at).total_seconds() / 60
     settings = get_settings()
     if age_minutes <= settings.library_seat_cache_ttl_minutes:
@@ -5863,6 +5887,17 @@ def refresh_campus_dining_menus_from_facilities_page(
             # 표의 날짜 칸에는 연도가 없다. 주 시작일에서 가져오고, 없으면 동기화 시각을 쓴다.
             menu_year = int((week_start or synced_at)[:4])
             menu_days = _extract_campus_dining_menu_days(pdf_bytes, year=menu_year)
+            if _forbids_redistribution(menu_text):
+                # 이 자리에는 학교 주간 식단 대신 입점 업체 가격표가 걸리기도 한다.
+                # 그 문서에는 제3자 저작권 표기와 "무단 복제, 배포, 공개를 엄격히
+                # 금지합니다" 가 들어 있다. 화면에서만 빼 두었더니 API 와
+                # menu_preview 로는 그대로 나가고 있었다. 소비자마다 막을 게 아니라
+                # 여기서 담지 않는다.
+                #
+                # week_start/week_end 는 이미 뽑아낸 값이라 그대로 둔다. 링크도
+                # 남긴다. 학생이 학교 원문으로 갈 길까지 막을 이유는 없다.
+                logger.info("event=campus_dining_menu_body_withheld source_url=%s", source_url)
+                menu_text = None
         except Exception:
             logger.exception("event=campus_dining_menu_parse_failed source_url=%s", source_url)
             menu_text = None

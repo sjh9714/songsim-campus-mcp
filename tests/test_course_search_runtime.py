@@ -393,3 +393,25 @@ def test_investigate_course_query_coverage_reports_statuses_for_source_db_and_se
     assert search_gap_reports[0]["source_match_count"] == 1
     assert search_gap_reports[0]["db_match_count"] == 1
     assert search_gap_reports[0]["search_match_count"] == 0
+
+
+def test_current_year_and_semester_reads_the_clock_in_seoul():
+    """학기 경계는 학교 시계로 넘긴다.
+
+    current.month 를 그대로 쓰기 때문에, 6월 30일 밤 KST 를 UTC 로 읽으면
+    아직 6월이어서 1학기로 잡힌다. 반대편 경계도 마찬가지다.
+    """
+    from datetime import datetime
+
+    from songsim_campus.course_search_runtime import _current_year_and_semester
+
+    def term(iso: str) -> tuple[int, int]:
+        return _current_year_and_semester(datetime.fromisoformat(iso))
+
+    # 2026-07-01 01:00 KST = 2026-06-30 16:00 UTC. 학교 기준으로는 이미 2학기다.
+    assert term("2026-07-01T01:00:00+09:00") == (2026, 2)
+    assert term("2026-06-30T16:00:00+00:00") == (2026, 2)
+
+    # 2027-01-01 08:00 KST = 2026-12-31 23:00 UTC. 해가 바뀐 뒤다.
+    assert term("2027-01-01T08:00:00+09:00") == (2027, 1)
+    assert term("2026-12-31T23:00:00+00:00") == (2027, 1)

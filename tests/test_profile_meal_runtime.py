@@ -218,3 +218,29 @@ def test_build_profile_meal_response_returns_exact_open_now_reason_when_no_items
 
     assert response.items == []
     assert response.reason == "No currently open restaurants matched the filters."
+
+
+def test_compute_profile_meal_context_reads_the_clock_in_seoul():
+    """같은 순간을 UTC 로 적어 넘겨도 학교 시계로 읽어야 한다.
+
+    끼니 판정은 current.hour 를 그대로 쓴다. 예전에는 시간대가 붙어 있어도
+    환산하지 않아서, UTC 로 도는 서버에서는 아홉 시간 어긋난 시각으로
+    "다음 수업까지 몇 분 남았나" 를 계산했다.
+    """
+    # 2026-03-16 12:00 KST 와 같은 순간.
+    in_utc = datetime.fromisoformat("2026-03-16T03:00:00+00:00")
+
+    context = runtime.compute_profile_meal_context(
+        timetable=[
+            _course(code="CSE100", day="월", period_start=7, period_end=8, room="K201"),
+        ],
+        now=in_utc,
+        resolve_place_from_room=lambda room: _place(
+            slug="kim-sou-hwan-hall",
+            name="K관",
+        ),
+    )
+
+    assert context.next_course is not None
+    assert context.next_course.code == "CSE100"
+    assert context.available_minutes == 170

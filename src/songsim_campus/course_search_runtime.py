@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from . import repo
+from . import clock, repo
 from .db import DBConnection
 from .ingest.official_sources import CourseCatalogSource
 
@@ -13,11 +13,15 @@ COURSE_SOURCE_URL = "https://www.catholic.ac.kr/ko/support/subject.do"
 
 
 def _now() -> datetime:
-    return datetime.now().astimezone()
+    return clock.now()
 
 
 def _now_iso() -> str:
     return _now().isoformat(timespec="seconds")
+
+
+def _coerce_datetime(value: datetime | None = None) -> datetime:
+    return clock.coerce_datetime(value if value is not None else _now())
 
 
 def _normalize_optional_text(value: str | None) -> str | None:
@@ -228,7 +232,8 @@ def course_match_preview(
 
 
 def _current_year_and_semester(now: datetime | None = None) -> tuple[int, int]:
-    current = now or _now()
+    # 넘겨받은 시각도 학교 시계로 읽는다. UTC 로 적힌 6월 30일 밤은 이미 7월이다.
+    current = _coerce_datetime(now)
     semester = 1 if current.month <= 6 else 2
     return current.year, semester
 

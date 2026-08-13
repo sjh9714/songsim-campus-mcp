@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from . import repo
+from . import clock, repo
 from .db import DBConnection
 from .ingest.official_sources import CampusFacilitiesSource
 from .schemas import MatchedFacility, Place
@@ -42,7 +41,7 @@ class InvalidRequestError(ValueError):
 
 
 def _now_iso() -> str:
-    return datetime.now().astimezone().isoformat(timespec="seconds")
+    return clock.now_iso()
 
 
 def _normalize_optional_text(value: str | None) -> str | None:

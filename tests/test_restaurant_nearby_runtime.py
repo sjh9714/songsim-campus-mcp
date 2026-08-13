@@ -461,3 +461,23 @@ def test_build_nearby_restaurants_uses_stale_kakao_hours_cache_when_detail_fetch
         "restaurant_hours_live_fetch_error",
         "restaurant_hours_stale_hit",
     ]
+
+
+def test_evaluate_open_now_reads_the_clock_in_seoul():
+    """영업중 판정은 학교 시계로 한다.
+
+    at.hour 와 at.weekday() 를 그대로 쓰기 때문에, UTC 로 도는 서버에서는
+    아홉 시간 어긋난 시각으로 "지금 문 열었나" 를 답했다.
+    """
+    hours = "11:00 ~ 21:00"
+
+    def open_at(iso: str) -> bool | None:
+        return runtime._evaluate_open_now(hours, datetime.fromisoformat(iso))
+
+    # 2026-03-16 12:00 KST 는 영업 중. 같은 순간을 UTC 로 적어도 같아야 한다.
+    assert open_at("2026-03-16T12:00:00+09:00") is True
+    assert open_at("2026-03-16T03:00:00+00:00") is True
+
+    # 2026-03-16 22:00 KST 는 영업 종료.
+    assert open_at("2026-03-16T22:00:00+09:00") is False
+    assert open_at("2026-03-16T13:00:00+00:00") is False

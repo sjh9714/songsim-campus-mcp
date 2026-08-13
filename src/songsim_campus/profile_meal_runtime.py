@@ -4,6 +4,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
+from . import clock
 from .schemas import Course, MealRecommendation, MealRecommendationResponse, NearbyRestaurant, Place
 
 
@@ -43,7 +44,7 @@ def _period_start_minutes(period: int | None) -> int | None:
 
 
 def _coerce_datetime(value: datetime) -> datetime:
-    return value if value.tzinfo else value.astimezone()
+    return clock.coerce_datetime(value)
 
 
 def compute_profile_meal_context(

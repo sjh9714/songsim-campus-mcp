@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-from . import ops_runtime, place_search_runtime, repo
+from . import clock, ops_runtime, place_search_runtime, repo
 from .db import DBConnection
 from .ingest.kakao_places import (
     KakaoLocalClient,
@@ -33,7 +33,7 @@ CAMPUS_WALK_GRAPH_PATH = DATA_DIR / "campus_walk_graph.json"
 
 
 def _now() -> datetime:
-    return datetime.now().astimezone()
+    return clock.now()
 
 
 def _now_iso() -> str:
@@ -41,8 +41,7 @@ def _now_iso() -> str:
 
 
 def _coerce_datetime(value: datetime | None = None) -> datetime:
-    current = value or _now()
-    return current if current.tzinfo else current.astimezone()
+    return clock.coerce_datetime(value if value is not None else _now())
 
 
 def _record_cache_decision(
@@ -203,6 +202,9 @@ def _evaluate_open_now(hours_text: str, at: datetime) -> bool | None:
     if not hours_text.strip():
         return None
 
+    # 영업시간은 한국 시간으로 적힌 값이라 시/분/요일을 학교 시계로 읽어야 한다.
+    at = clock.coerce_datetime(at)
+
     compact = hours_text.strip().lower().replace(" ", "")
     if "24시간" in compact or "24hours" in compact:
         return True
@@ -233,7 +235,8 @@ def _hours_cache_status(fetched_at: str, now: datetime) -> str:
     except ValueError:
         return "expired"
     if fetched.tzinfo is None:
-        fetched = fetched.astimezone()
+        # 저장된 시각은 학교 기준으로 적힌 값이다. 호스트 시간대로 읽으면 안 된다.
+        fetched = clock.coerce_datetime(fetched)
     age_minutes = (now - fetched).total_seconds() / 60
     settings = get_settings()
     if age_minutes <= settings.restaurant_hours_cache_ttl_minutes:
@@ -603,7 +606,8 @@ def _cache_status(fetched_at: str, now: datetime) -> str:
     except ValueError:
         return "expired"
     if fetched.tzinfo is None:
-        fetched = fetched.astimezone()
+        # 저장된 시각은 학교 기준으로 적힌 값이다. 호스트 시간대로 읽으면 안 된다.
+        fetched = clock.coerce_datetime(fetched)
     age_minutes = (now - fetched).total_seconds() / 60
     settings = get_settings()
     if age_minutes <= settings.restaurant_cache_ttl_minutes:

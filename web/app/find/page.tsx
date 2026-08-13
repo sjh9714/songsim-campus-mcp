@@ -3,7 +3,9 @@ import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import { getPhoneBook, getPlaces, requireFreshOrKeepLastPage } from '@/lib/api';
 
-export const revalidate = 86400;
+// 데이터 캐시(TTL.places, TTL.phoneBook)가 1시간이다. 화면만 하루씩 붙잡아 두면
+// 학교가 전화번호를 고쳐도 학생은 하루 동안 옛 번호를 본다. 같은 주기로 맞춘다.
+export const revalidate = 3600;
 
 export default async function FindPage() {
   const [buildings, facilities, phones] = await Promise.all([
