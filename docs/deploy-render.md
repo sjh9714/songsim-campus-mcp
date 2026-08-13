@@ -4,11 +4,11 @@
 
 ## 구성
 
-- `songsim-public-api`
+- `songsim-api-sg`
   - `songsim-api`
   - 공개 landing page, `/docs`, read-only HTTP API
   - automation `OFF` in `public_readonly`
-- `songsim-public-mcp`
+- `songsim-mcp-sg`
   - `songsim-mcp --transport streamable-http`
   - 공개 원격 MCP URL
   - automation `OFF`
@@ -21,6 +21,33 @@
 2. Postgres 연결 문자열을 복사합니다.
 3. 필요하면 SSL 옵션을 포함한 연결 문자열을 `SONGSIM_DATABASE_URL`로 사용합니다.
 
+### 1-1. 서비스용 역할 분리 (권장)
+
+기본 연결 문자열은 데이터베이스 전체에 쓰기 권한을 가집니다. 그 값을 인터넷에
+열려 있는 Render 서비스 두 곳에 그대로 넣으면, 하나만 새도 데이터베이스 전체를
+쓸 수 있게 됩니다. 저장소가 공개돼 있다면 특히 그렇습니다.
+
+Render 두 서비스는 권한을 좁힌 역할로 붙입니다.
+
+1. Supabase SQL Editor 에서 역할을 만듭니다. 비밀번호는 직접 정합니다.
+
+   ```sql
+   CREATE ROLE songsim_app LOGIN PASSWORD '<직접 정한 값>';
+   ```
+
+2. [`src/songsim_campus/roles.sql`](../src/songsim_campus/roles.sql) 의 나머지를
+   실행합니다. 멱등하므로 여러 번 돌려도 됩니다.
+
+3. Render 두 서비스의 `SONGSIM_DATABASE_URL` 을 `songsim_app` 접속 문자열로
+   바꿉니다. Supabase pooler 는 사용자명이 `<role>.<project-ref>` 형식입니다.
+
+4. GitHub Actions 시크릿은 **기존 값 그대로 둡니다.** 동기화는 스키마 변경과
+   모든 테이블 쓰기가 필요합니다.
+
+역할이 읽기 전용이 아니라 "캐시 테이블만 쓰기" 인 이유는 `roles.sql` 주석에
+적어 두었습니다. 요약하면 도서관 좌석과 주변 식당이 요청을 처리하면서 캐시를
+채우기 때문입니다.
+
 ## 2. Render 배포
 
 1. GitHub 저장소를 Render에 연결합니다.
@@ -28,17 +55,17 @@
 3. 두 서비스 모두에 아래 secret env를 채웁니다.
    - `SONGSIM_DATABASE_URL`
    - `SONGSIM_KAKAO_REST_API_KEY`
-   - 공개 MCP를 OAuth로 보호할 때만 `songsim-public-mcp`에 아래 env를 추가합니다.
+   - 공개 MCP를 OAuth로 보호할 때만 `songsim-mcp-sg`에 아래 env를 추가합니다.
      - `SONGSIM_PUBLIC_MCP_AUTH_MODE=oauth`
      - `SONGSIM_MCP_OAUTH_ENABLED=true`
      - `SONGSIM_MCP_OAUTH_ISSUER=https://<your-auth0-domain>/`
      - `SONGSIM_MCP_OAUTH_AUDIENCE=https://<your-mcp-render-url>/mcp`
      - `SONGSIM_MCP_OAUTH_SCOPES=songsim.read`
-   - `songsim-public-api`는 기본 공개 배포에서 이 OAuth env가 필요하지 않습니다.
-   - `songsim-public-api`에 같은 값을 미러링하는 것은 선택 사항이고, API landing page에서 public MCP가 OAuth로 보호된 상태라는 문구를 보여 주는 cosmetic 용도에 가깝습니다.
+   - `songsim-api-sg`는 기본 공개 배포에서 이 OAuth env가 필요하지 않습니다.
+   - `songsim-api-sg`에 같은 값을 미러링하는 것은 선택 사항이고, API landing page에서 public MCP가 OAuth로 보호된 상태라는 문구를 보여 주는 cosmetic 용도에 가깝습니다.
 4. 배포가 생성되면 실제 Render URL을 보고 아래 값을 다시 채웁니다.
-   - `songsim-public-api`의 `SONGSIM_PUBLIC_HTTP_URL`
-   - `songsim-public-mcp`의 `SONGSIM_PUBLIC_MCP_URL`
+   - `songsim-api-sg`의 `SONGSIM_PUBLIC_HTTP_URL`
+   - `songsim-mcp-sg`의 `SONGSIM_PUBLIC_MCP_URL`
 5. 두 서비스를 한 번 더 재배포합니다.
 
 ## 3. 권장 공개 설정
@@ -46,12 +73,12 @@
 - `SONGSIM_APP_MODE=public_readonly`
 - `SONGSIM_SEED_DEMO_ON_START=false`
 - `SONGSIM_SYNC_OFFICIAL_ON_START=false`
-- `songsim-public-api`는 `SONGSIM_AUTOMATION_ENABLED=false`
-- `songsim-public-api`는 live query/cache 경로를 사용하고, snapshot 동기화는 배포 전 운영자가 별도로 실행합니다.
-- `songsim-public-mcp`는 `SONGSIM_AUTOMATION_ENABLED=false`
-- `songsim-public-mcp`는 기본적으로 익명 read-only
+- `songsim-api-sg`는 `SONGSIM_AUTOMATION_ENABLED=false`
+- `songsim-api-sg`는 live query/cache 경로를 사용하고, snapshot 동기화는 배포 전 운영자가 별도로 실행합니다.
+- `songsim-mcp-sg`는 `SONGSIM_AUTOMATION_ENABLED=false`
+- `songsim-mcp-sg`는 기본적으로 익명 read-only
 - 공개 MCP를 보호해야 하면 `SONGSIM_PUBLIC_MCP_AUTH_MODE=oauth`로 전환
-- `render.yaml` 기본값도 `songsim-public-mcp` 익명 read-only를 기준으로 둡니다.
+- `render.yaml` 기본값도 `songsim-mcp-sg` 익명 read-only를 기준으로 둡니다.
 
 ## 4. 배포 후 확인
 
@@ -61,7 +88,7 @@
 - API readiness: `https://.../readyz`
 - MCP endpoint: `https://.../mcp`
 
-Render Blueprint health check는 `songsim-public-api`에서 `/healthz`를 사용합니다.
+Render Blueprint health check는 `songsim-api-sg`에서 `/healthz`를 사용합니다.
 `/readyz`는 운영자 수동 확인용 cached readiness로 보고, public data freshness나 DB 연결 상태를 점검할 때 별도로 확인합니다.
 steady-state polling이 있어도 DB 부하가 커지지 않도록 readiness snapshot은 프로세스 로컬 stale-while-revalidate cache를 사용합니다.
 fresh TTL은 짧게 유지하고, 최근 정상 snapshot은 최대 10분까지 stale fallback으로 재사용합니다.
@@ -78,7 +105,7 @@ fresh TTL은 짧게 유지하고, 최근 정상 snapshot은 최대 10분까지 s
 - 공개 배포는 read-only입니다. profile/admin 경로는 숨겨집니다.
 - `public_readonly`에서는 automation loop가 실행되지 않습니다. Remote timeout은 `/healthz`, `/readyz`, 핵심 HTTP canary로 배포/DB/외부 source 문제를 분리해서 확인합니다.
 - ChatGPT Actions는 HTTP API를 쓰므로 MCP OAuth와 무관합니다. MCP OAuth는 원할 때만 켜면 됩니다.
-- `songsim-public-mcp`를 OAuth로 보호해도 `songsim-public-api`는 기본적으로 별도 OAuth env 없이 운영해도 됩니다. API 쪽에 같은 OAuth env를 넣는 경우는 landing status text를 MCP 보호 상태와 맞춰 보여 주고 싶을 때 정도입니다.
+- `songsim-mcp-sg`를 OAuth로 보호해도 `songsim-api-sg`는 기본적으로 별도 OAuth env 없이 운영해도 됩니다. API 쪽에 같은 OAuth env를 넣는 경우는 landing status text를 MCP 보호 상태와 맞춰 보여 주고 싶을 때 정도입니다.
 - `SONGSIM_OFFICIAL_COURSE_YEAR`, `SONGSIM_OFFICIAL_COURSE_SEMESTER`는 intentionally 비워 두고, 운영 시점의 대상 학기를 명시해서 넣는 편이 안전합니다.
 
 ## 6. Public Synthetic Smoke

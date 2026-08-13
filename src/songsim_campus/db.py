@@ -184,8 +184,26 @@ def connection() -> Iterator[DBConnection]:
         conn.close()
 
 
+def _normalize_schema_statement(statement: str) -> str:
+    """문장 앞에 붙은 주석 줄을 떼고 한 줄로 만든다.
+
+    schema.sql 을 세미콜론으로 자르면 직전 주석이 다음 문장 앞에 딸려 온다.
+    아래 정규식들은 ^CREATE / ^ALTER 로 시작하는지 보기 때문에 그 상태로는
+    매칭이 빗나가고, 이미 있는 객체에 대해서도 문장을 실행하게 된다.
+
+    소유자로 붙을 때는 전부 IF NOT EXISTS 라 조용히 넘어갔다. 권한을 좁힌
+    역할로 붙이자마자 "must be owner of table" 로 기동이 실패해서 드러났다.
+    """
+    lines = [
+        line
+        for line in (raw.strip() for raw in statement.splitlines())
+        if line and not line.startswith("--")
+    ]
+    return " ".join(" ".join(lines).split())
+
+
 def _schema_statement_needs_execution(conn: DBConnection, statement: str) -> bool:
-    normalized = " ".join(statement.split())
+    normalized = _normalize_schema_statement(statement)
     if match := _CREATE_EXTENSION_RE.match(normalized):
         return not _extension_exists(conn, match.group(1))
     if match := _CREATE_TABLE_RE.match(normalized):

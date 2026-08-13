@@ -77,6 +77,37 @@ def test_pooled_connection_is_returned_clean_after_an_error(app_env, monkeypatch
         clear_settings_cache()
 
 
+def test_init_db_skips_a_statement_that_has_a_comment_in_front_of_it(monkeypatch, tmp_path):
+    """앞에 붙은 주석 때문에 "이미 있으니 건너뛴다" 판정을 놓치면 안 된다.
+
+    schema.sql 을 세미콜론으로 자르면 직전 주석이 다음 문장 앞에 딸려 온다.
+    정규식이 ^ALTER 로 시작하는지 보기 때문에 매칭이 빗나가고, 이미 있는 컬럼에
+    대해서도 ALTER 를 실행했다. 소유자로 붙을 때는 IF NOT EXISTS 라 조용히
+    넘어갔지만, 권한을 좁힌 역할로 붙으면 "must be owner of table" 로 죽는다.
+    """
+    schema_path = tmp_path / "schema.sql"
+    schema_path.write_text(
+        "\n".join(
+            [
+                "CREATE TABLE IF NOT EXISTS existing_table (id INTEGER PRIMARY KEY);",
+                "-- 이 주석이 다음 문장에 딸려 붙는다.",
+                "-- 두 줄이어도 마찬가지다.",
+                "ALTER TABLE existing_table ADD COLUMN IF NOT EXISTS existing_column TEXT;",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    fake_connection = _FakeConnection()
+    monkeypatch.setattr(db_module, "SCHEMA_PATH", schema_path)
+    monkeypatch.setattr(db_module, "get_connection", lambda: fake_connection)
+
+    init_db()
+
+    assert fake_connection.executed == [], (
+        f"이미 있는 컬럼인데 실행했다: {fake_connection.executed}"
+    )
+
+
 def test_init_db_creates_postgis_schema(app_env):
     init_db()
 
