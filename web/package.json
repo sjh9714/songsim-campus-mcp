@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "next": "^15.1.0",
+    "next": "^15.5.23",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "^0.0.1"
@@ -22,5 +22,10 @@
     "@types/react-dom": "^19.0.0",
     "qrcode-generator": "^2.0.4",
     "typescript": "^5.7.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.26",
+    "nanoid": "^3.3.18",
+    "sharp": "^0.35.3"
   }
 }
