@@ -35,7 +35,7 @@ npx vercel link
 
 ```bash
 npx vercel env add SONGSIM_API_BASE production
-# 값: https://songsim-public-api.onrender.com
+# 값: https://songsim-api-sg.onrender.com
 ```
 
 선택 항목 (기본값으로 충분합니다)

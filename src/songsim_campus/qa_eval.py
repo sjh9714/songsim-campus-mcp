@@ -2481,14 +2481,14 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     sync_parser = subparsers.add_parser("sync-truth")
-    sync_parser.add_argument("--base-url", default="https://songsim-public-api.onrender.com")
+    sync_parser.add_argument("--base-url", default="https://songsim-api-sg.onrender.com")
     sync_parser.add_argument("--database-url", default=os.environ.get("SONGSIM_DATABASE_URL"))
     sync_parser.add_argument("--corpus", default=str(DEFAULT_CORPUS_PATH))
     sync_parser.add_argument("--watchlist", default=str(DEFAULT_WATCHLIST_PATH))
     sync_parser.add_argument("--output", required=True)
 
     run_parser = subparsers.add_parser("run")
-    run_parser.add_argument("--base-url", default="https://songsim-public-api.onrender.com")
+    run_parser.add_argument("--base-url", default="https://songsim-api-sg.onrender.com")
     run_parser.add_argument("--corpus", default=str(DEFAULT_CORPUS_PATH))
     run_parser.add_argument("--watchlist", default=str(DEFAULT_WATCHLIST_PATH))
     run_parser.add_argument("--truth", required=True)
