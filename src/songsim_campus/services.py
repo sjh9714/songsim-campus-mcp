@@ -6,6 +6,7 @@ import math
 import re
 import unicodedata
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date, datetime, timedelta
 from functools import lru_cache
@@ -591,6 +592,50 @@ logger = logging.getLogger(__name__)
 _SYNC_STEP_LIBRARY_HOURS = "library_hours"
 _SYNC_STEP_FACILITY_HOURS = "facility_hours"
 _SYNC_SUMMARY_EXCLUDED_STEPS = frozenset({_SYNC_STEP_LIBRARY_HOURS, _SYNC_STEP_FACILITY_HOURS})
+
+# 순서를 지켜야 하는 단계들. places 테이블을 함께 건드리기 때문이다.
+#   places            장소 목록을 통째로 갈아엎는다
+#   campus_facilities 그 장소 목록을 읽어 시설을 붙인다
+#   library/facility  같은 장소 행의 운영시간을 갱신한다
+# 나머지 단계는 각자 자기 테이블에만 쓴다. dining_menus 만 places 를 읽는데,
+# 이 네 단계가 끝나고 커밋된 뒤에 돌기 때문에 안전하다.
+_SYNC_ORDERED_STEPS = (
+    "places",
+    "campus_facilities",
+    _SYNC_STEP_LIBRARY_HOURS,
+    _SYNC_STEP_FACILITY_HOURS,
+)
+
+
+def _run_sync_step(conn: DBConnection, name: str, refresh: Any) -> tuple[str, int, bool]:
+    """소스 하나를 갱신한다. (이름, 행수, 성공여부) 를 돌려준다.
+
+    예외를 잡는 것만으로는 격리가 안 된다. source 하나가 DB 오류를 내면
+    트랜잭션이 abort 상태가 되고, 그 뒤 모든 문장이 InFailedSqlTransaction 으로
+    죽는다. 실제로 컬럼 하나가 없어서 32개 source 가 연쇄로 무너졌다.
+    savepoint 를 두면 실패한 source 만 되돌리고 나머지는 계속할 수 있다.
+    """
+    try:
+        with conn.transaction():
+            rows = refresh(conn)
+    except Exception:
+        logger.exception("event=official_sync_source_failed source=%s", name)
+        return name, 0, False
+    return name, len(rows), True
+
+
+def _run_sync_step_in_new_connection(name: str, refresh: Any) -> tuple[str, int, bool]:
+    """동시에 도는 단계는 각자 커넥션을 연다.
+
+    savepoint 는 커넥션 단위라, 여러 단계가 한 커넥션을 나눠 쓰면 격리가 깨진다.
+    커넥션을 여는 것 자체가 실패할 수도 있으므로 그것도 실패로 센다.
+    """
+    try:
+        with connection() as own:
+            return _run_sync_step(own, name, refresh)
+    except Exception:
+        logger.exception("event=official_sync_source_failed source=%s", name)
+        return name, 0, False
 
 OBSERVABILITY_EVENT_LIMIT = ops_runtime.OBSERVABILITY_EVENT_LIMIT
 READINESS_CACHE_TTL_SECONDS = ops_runtime.READINESS_CACHE_TTL_SECONDS
@@ -6620,82 +6665,105 @@ def sync_official_snapshot(
     resolved_semester = semester or settings.official_course_semester
     resolved_notice_pages = notice_pages or settings.official_notice_pages
 
-    # (요약 키, 갱신 함수). 순서는 유지한다. 운영시간 갱신이 과목/교통보다 먼저 와야 한다.
+    # (요약 키, 갱신 함수). 갱신 함수는 커넥션을 인자로 받는다. 뒤쪽 단계는 각자
+    # 다른 커넥션에서 돌기 때문에, 바깥 커넥션을 클로저로 잡아 두면 안 된다.
+    #
+    # 앞 네 단계는 순서를 지킨다. places 를 쓰거나(장소 목록, 운영시간 두 개)
+    # 읽는(campus_facilities) 것들이라 서로 겹친다. 나머지는 각자 자기 테이블에만
+    # 쓰므로 순서가 없어도 된다.
     steps: list[tuple[str, Any]] = [
-        ("places", lambda: refresh_places_from_campus_map(conn, campus=resolved_campus)),
-        ("campus_facilities", lambda: refresh_campus_facilities_from_source(conn)),
-        (_SYNC_STEP_LIBRARY_HOURS, lambda: refresh_library_hours_from_library_page(conn)),
-        (_SYNC_STEP_FACILITY_HOURS, lambda: refresh_facility_hours_from_facilities_page(conn)),
-        ("dining_menus", lambda: refresh_campus_dining_menus_from_facilities_page(conn)),
+        ("places", lambda c: refresh_places_from_campus_map(c, campus=resolved_campus)),
+        ("campus_facilities", lambda c: refresh_campus_facilities_from_source(c)),
+        (_SYNC_STEP_LIBRARY_HOURS, lambda c: refresh_library_hours_from_library_page(c)),
+        (_SYNC_STEP_FACILITY_HOURS, lambda c: refresh_facility_hours_from_facilities_page(c)),
+        ("dining_menus", lambda c: refresh_campus_dining_menus_from_facilities_page(c)),
         (
             "courses",
-            lambda: refresh_courses_from_subject_search(
-                conn, year=resolved_year, semester=resolved_semester
+            lambda c: refresh_courses_from_subject_search(
+                c, year=resolved_year, semester=resolved_semester
             ),
         ),
-        ("notices", lambda: refresh_notices_from_notice_board(conn, pages=resolved_notice_pages)),
-        ("affiliated_notices", lambda: refresh_affiliated_notices_from_sources(conn)),
-        ("campus_life_notices", lambda: refresh_campus_life_notices_from_source(conn)),
-        ("academic_calendar", lambda: refresh_academic_calendar_from_source(conn)),
-        ("certificate_guides", lambda: refresh_certificate_guides_from_certificate_page(conn)),
-        ("leave_of_absence_guides", lambda: refresh_leave_of_absence_guides_from_source(conn)),
-        ("academic_status_guides", lambda: refresh_academic_status_guides_from_source(conn)),
-        ("registration_guides", lambda: refresh_registration_guides_from_source(conn)),
-        ("class_guides", lambda: refresh_class_guides_from_source(conn)),
-        ("seasonal_semester_guides", lambda: refresh_seasonal_semester_guides_from_source(conn)),
+        ("notices", lambda c: refresh_notices_from_notice_board(c, pages=resolved_notice_pages)),
+        ("affiliated_notices", lambda c: refresh_affiliated_notices_from_sources(c)),
+        ("campus_life_notices", lambda c: refresh_campus_life_notices_from_source(c)),
+        ("academic_calendar", lambda c: refresh_academic_calendar_from_source(c)),
+        ("certificate_guides", lambda c: refresh_certificate_guides_from_certificate_page(c)),
+        ("leave_of_absence_guides", lambda c: refresh_leave_of_absence_guides_from_source(c)),
+        ("academic_status_guides", lambda c: refresh_academic_status_guides_from_source(c)),
+        ("registration_guides", lambda c: refresh_registration_guides_from_source(c)),
+        ("class_guides", lambda c: refresh_class_guides_from_source(c)),
+        ("seasonal_semester_guides", lambda c: refresh_seasonal_semester_guides_from_source(c)),
         (
             "academic_milestone_guides",
-            lambda: refresh_academic_milestone_guides_from_source(conn),
+            lambda c: refresh_academic_milestone_guides_from_source(c),
         ),
-        ("student_activity_guides", lambda: refresh_student_activity_guides_from_source(conn)),
+        ("student_activity_guides", lambda c: refresh_student_activity_guides_from_source(c)),
         (
             "student_activity_notices",
-            lambda: refresh_student_activity_notices_from_source(
-                conn, pages=resolved_notice_pages
+            lambda c: refresh_student_activity_notices_from_source(
+                c, pages=resolved_notice_pages
             ),
         ),
-        ("about_resource_guides", lambda: refresh_about_resource_guides_from_source(conn)),
-        ("service_policy_guides", lambda: refresh_service_policy_guides_from_source(conn)),
-        ("service_policy_posts", lambda: refresh_service_policy_posts_from_source(conn)),
-        ("newsroom_posts", lambda: refresh_newsroom_posts_from_source(conn)),
-        ("research_posts", lambda: refresh_research_posts_from_source(conn)),
-        ("newsroom_resource_guides", lambda: refresh_newsroom_resource_guides_from_source(conn)),
-        ("anniversary_guides", lambda: refresh_anniversary_guides_from_source(conn)),
-        ("student_exchange_guides", lambda: refresh_student_exchange_guides_from_source(conn)),
-        ("dormitory_guides", lambda: refresh_dormitory_guides_from_source(conn)),
-        ("phone_book_entries", lambda: refresh_phone_book_entries_from_source(conn)),
+        ("about_resource_guides", lambda c: refresh_about_resource_guides_from_source(c)),
+        ("service_policy_guides", lambda c: refresh_service_policy_guides_from_source(c)),
+        ("service_policy_posts", lambda c: refresh_service_policy_posts_from_source(c)),
+        ("newsroom_posts", lambda c: refresh_newsroom_posts_from_source(c)),
+        ("research_posts", lambda c: refresh_research_posts_from_source(c)),
+        ("newsroom_resource_guides", lambda c: refresh_newsroom_resource_guides_from_source(c)),
+        ("anniversary_guides", lambda c: refresh_anniversary_guides_from_source(c)),
+        ("student_exchange_guides", lambda c: refresh_student_exchange_guides_from_source(c)),
+        ("dormitory_guides", lambda c: refresh_dormitory_guides_from_source(c)),
+        ("phone_book_entries", lambda c: refresh_phone_book_entries_from_source(c)),
         (
             "campus_life_support_guides",
-            lambda: refresh_campus_life_support_guides_from_source(conn),
+            lambda c: refresh_campus_life_support_guides_from_source(c),
         ),
-        ("pc_software_entries", lambda: refresh_pc_software_entries_from_source(conn)),
+        ("pc_software_entries", lambda c: refresh_pc_software_entries_from_source(c)),
         (
             "student_exchange_partners",
-            lambda: refresh_student_exchange_partners_from_source(conn),
+            lambda c: refresh_student_exchange_partners_from_source(c),
         ),
-        ("scholarship_guides", lambda: refresh_scholarship_guides_from_source(conn)),
-        ("academic_support_guides", lambda: refresh_academic_support_guides_from_source(conn)),
-        ("wifi_guides", lambda: refresh_wifi_guides_from_source(conn)),
-        ("transport_guides", lambda: refresh_transport_guides_from_location_page(conn)),
+        ("scholarship_guides", lambda c: refresh_scholarship_guides_from_source(c)),
+        ("academic_support_guides", lambda c: refresh_academic_support_guides_from_source(c)),
+        ("wifi_guides", lambda c: refresh_wifi_guides_from_source(c)),
+        ("transport_guides", lambda c: refresh_transport_guides_from_location_page(c)),
     ]
+
+    ordered = [step for step in steps if step[0] in _SYNC_ORDERED_STEPS]
+    rest = [step for step in steps if step[0] not in _SYNC_ORDERED_STEPS]
 
     summary: dict[str, int] = {}
     failed: list[str] = []
-    for name, refresh in steps:
-        try:
-            # 예외를 잡는 것만으로는 격리가 안 된다. source 하나가 DB 오류를 내면
-            # 트랜잭션이 abort 상태가 되고, 그 뒤 모든 문장이
-            # InFailedSqlTransaction 으로 죽는다. 실제로 컬럼 하나가 없어서
-            # 32개 source 가 연쇄로 무너졌다.
-            # savepoint 를 두면 실패한 source 만 되돌리고 나머지는 계속할 수 있다.
-            with conn.transaction():
-                rows = refresh()
-        except Exception:
-            logger.exception("event=official_sync_source_failed source=%s", name)
-            failed.append(name)
-            rows = []
-        if name not in _SYNC_SUMMARY_EXCLUDED_STEPS:
-            summary[name] = len(rows)
+
+    # 1단계. places 를 건드리는 것들은 서로 겹치므로 순서대로, 한 커넥션에서 돈다.
+    for name, refresh in ordered:
+        step_name, rows, ok = _run_sync_step(conn, name, refresh)
+        if not ok:
+            failed.append(step_name)
+        if step_name not in _SYNC_SUMMARY_EXCLUDED_STEPS:
+            summary[step_name] = rows
+
+    # 여기서 한 번 커밋한다. 2단계는 각자 다른 커넥션에서 도는데, 커밋하지 않으면
+    # 방금 채운 places 를 그쪽에서 볼 수 없다. dining_menus 가 건물을 해석하려고
+    # places 를 읽는다.
+    conn.commit()
+
+    # 2단계. 나머지는 각자 자기 테이블에만 쓰므로 동시에 돌려도 된다.
+    # 동시성은 학교 서버 부하와 맞바꾸는 값이라 낮게 잡는다. 1이면 순차와 같다.
+    concurrency = max(1, min(settings.official_sync_concurrency, len(rest) or 1))
+    if concurrency == 1:
+        results = [_run_sync_step_in_new_connection(name, refresh) for name, refresh in rest]
+    else:
+        with ThreadPoolExecutor(max_workers=concurrency) as pool:
+            results = list(
+                pool.map(lambda step: _run_sync_step_in_new_connection(*step), rest)
+            )
+
+    for step_name, rows, ok in results:
+        if not ok:
+            failed.append(step_name)
+        if step_name not in _SYNC_SUMMARY_EXCLUDED_STEPS:
+            summary[step_name] = rows
     if failed:
         logger.warning(
             "event=official_sync_partial failed_count=%d failed_sources=%s",

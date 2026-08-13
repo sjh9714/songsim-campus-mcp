@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -6111,40 +6112,45 @@ def test_sync_official_snapshot_runs_opening_hours_before_courses_and_transport(
     with connection() as conn:
         summary = sync_official_snapshot(conn, year=2026, semester=1, notice_pages=1)
 
-    assert call_order == [
-        'places',
-        'campus_facilities',
-        'library',
-        'facilities',
-        'dining_menus',
-        'courses',
-        'notices',
-        'affiliated_notices',
-        'campus_life_notices',
-        'academic_calendar',
-        'certificate_guides',
-        'leave_of_absence_guides',
-        'academic_status_guides',
-        'registration_guides',
-        'class_guides',
-        'seasonal_semester_guides',
-        'academic_milestone_guides',
-        'student_activity_guides',
-        'student_activity_notices',
-        'about_resource_guides',
-        'service_policy_guides',
-        'newsroom_posts',
-        'student_exchange_guides',
-        'dormitory_guides',
-        'phone_book_entries',
-        'campus_life_support_guides',
-        'pc_software_entries',
-        'student_exchange_partners',
-        'scholarship_guides',
-        'academic_support_guides',
-        'wifi_guides',
-        'transport',
-    ]
+    # places 를 함께 건드리는 네 단계는 순서를 지켜야 한다.
+    assert call_order[:4] == ['places', 'campus_facilities', 'library', 'facilities']
+
+    # 나머지는 각자 자기 테이블에만 쓰므로 동시에 돈다. 순서는 정해지지 않는다.
+    # 대신 하나도 빠지지 않았는지, 그리고 전부 장소 그룹 뒤에 왔는지를 본다.
+    rest = call_order[4:]
+    assert sorted(rest) == sorted(
+        [
+            'dining_menus',
+            'courses',
+            'notices',
+            'affiliated_notices',
+            'campus_life_notices',
+            'academic_calendar',
+            'certificate_guides',
+            'leave_of_absence_guides',
+            'academic_status_guides',
+            'registration_guides',
+            'class_guides',
+            'seasonal_semester_guides',
+            'academic_milestone_guides',
+            'student_activity_guides',
+            'student_activity_notices',
+            'about_resource_guides',
+            'service_policy_guides',
+            'newsroom_posts',
+            'student_exchange_guides',
+            'dormitory_guides',
+            'phone_book_entries',
+            'campus_life_support_guides',
+            'pc_software_entries',
+            'student_exchange_partners',
+            'scholarship_guides',
+            'academic_support_guides',
+            'wifi_guides',
+            'transport',
+        ]
+    )
+
     assert summary['campus_facilities'] == 0
     assert summary['dining_menus'] == 0
     assert summary['academic_calendar'] == 0
@@ -6169,6 +6175,81 @@ def test_sync_official_snapshot_runs_opening_hours_before_courses_and_transport(
     assert summary['academic_support_guides'] == 0
     assert summary['wifi_guides'] == 0
     assert summary['transport_guides'] == 0
+
+
+def test_sync_official_snapshot_runs_the_rest_concurrently(app_env, monkeypatch):
+    """뒤쪽 단계는 실제로 동시에 돈다.
+
+    러너에서 16~26분 걸렸다. 29개 소스를 하나씩 순차로 요청하는데 GitHub 러너가
+    미국에 있어 왕복 지연이 누적된다. timeout 은 40분이라 여유가 크지 않았다.
+
+    동시에 돌고 있는 단계의 최대 개수를 세서, 설정한 동시성만큼 겹치는지 본다.
+    """
+    import threading
+
+    lock = threading.Lock()
+    running = 0
+    peak = 0
+
+    def _slow(conn):
+        nonlocal running, peak
+        with lock:
+            running += 1
+            peak = max(peak, running)
+        time.sleep(0.05)
+        with lock:
+            running -= 1
+        return []
+
+    for name in (
+        "refresh_notices_from_notice_board",
+        "refresh_affiliated_notices_from_sources",
+        "refresh_campus_life_notices_from_source",
+        "refresh_academic_calendar_from_source",
+        "refresh_certificate_guides_from_certificate_page",
+        "refresh_leave_of_absence_guides_from_source",
+    ):
+        monkeypatch.setattr(f"songsim_campus.services.{name}", _slow)
+
+    with connection() as conn:
+        sync_official_snapshot(conn, year=2026, semester=1, notice_pages=1)
+
+    assert peak > 1, f"동시에 돌지 않았다 (최대 {peak}개)"
+
+
+def test_sync_official_snapshot_isolates_a_failure_when_running_concurrently(
+    app_env, monkeypatch
+):
+    """동시에 돌 때도 실패한 소스만 되돌아가야 한다.
+
+    savepoint 는 커넥션 단위다. 여러 단계가 한 커넥션을 나눠 쓰면 하나가 DB 오류를
+    내는 순간 나머지가 InFailedSqlTransaction 으로 같이 죽는다. 실제로 컬럼 하나가
+    없어서 32개 소스가 연쇄로 무너진 적이 있다.
+    """
+
+    def _database_error(conn):
+        conn.execute("SELECT * FROM 존재하지_않는_테이블")
+        return []
+
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_notices_from_notice_board",
+        lambda conn, pages=None: _database_error(conn),
+    )
+    monkeypatch.setattr(
+        "songsim_campus.services.refresh_about_resource_guides_from_source",
+        lambda conn: [{"marker": "still-ran"}],
+    )
+
+    failed: list[str] = []
+    with connection() as conn:
+        summary = sync_official_snapshot(
+            conn, year=2026, semester=1, notice_pages=1, failed_sources=failed
+        )
+
+    assert "notices" in failed
+    assert summary["notices"] == 0
+    # 같이 돌던 다른 소스는 멀쩡해야 한다.
+    assert summary["about_resource_guides"] == 1
 
 
 def test_sync_official_snapshot_skips_a_broken_source_and_keeps_going(app_env, monkeypatch):
