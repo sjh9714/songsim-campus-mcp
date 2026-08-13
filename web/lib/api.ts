@@ -57,6 +57,27 @@ export interface Fetched<T> {
 }
 
 /**
+ * 화면의 뼈대가 되는 데이터를 못 받았으면 렌더를 포기시킨다.
+ *
+ * getJson 은 실패를 삼키고 빈 값으로 "성공" 한다. 카드 하나가 비는 건 그래도
+ * 되지만, 프리렌더된 화면이 재검증될 때는 얘기가 다르다. 백엔드가 잠든 사이
+ * 재검증이 돌면 멀쩡하던 화면이 빈 화면으로 통째로 교체되어 캐시에 굳는다.
+ * 다음에 들어온 학생이 그 빈 화면을 본다.
+ *
+ * 여기서 예외를 던지면 Next 는 새 화면을 만들지 않고 직전에 만들어 둔 것을
+ * 그대로 둔다. 낡은 화면이 빈 화면보다 낫다.
+ *
+ * 빌드 때는 던지지 않는다. 그때는 지켜 줄 직전 화면이 없어서, 던지면 배포가
+ * 통째로 실패한다.
+ */
+export function requireFreshOrKeepLastPage(state: Fetched<unknown>, what: string): void {
+  if (process.env.NEXT_PHASE === 'phase-production-build') return;
+  if (state.degraded && !state.servedFromSnapshot) {
+    throw new Error(`${what} 데이터를 받지 못해 이 화면을 다시 만들지 않습니다.`);
+  }
+}
+
+/**
  * 마지막으로 성공한 응답을 프로세스 메모리에 들고 있는다.
  *
  * Next 의 fetch 캐시는 재검증이 실패하면 빈 결과를 그대로 캐시에 밀어 넣는다.

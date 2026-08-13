@@ -13,6 +13,7 @@ from importlib import import_module
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Protocol
+from zoneinfo import ZoneInfo
 
 import httpx
 from bs4 import BeautifulSoup
@@ -749,8 +750,12 @@ class OfficialClassroomAvailabilitySource(Protocol):
     ) -> list[dict[str, Any]]: ...
 
 
+# 학교 시계. 이 서비스가 다루는 시각은 전부 성심교정 기준이다.
+KST = ZoneInfo("Asia/Seoul")
+
+
 def _now() -> datetime:
-    return datetime.now().astimezone()
+    return datetime.now(KST)
 
 
 def _now_iso() -> str:
@@ -1703,7 +1708,13 @@ def _current_year_and_semester(now: datetime | None = None) -> tuple[int, int]:
 
 def _coerce_datetime(value: datetime | None = None) -> datetime:
     current = value or _now()
-    return current if current.tzinfo else current.astimezone()
+    # 시간대를 붙이는 데서 그치지 않고 서울로 환산까지 한다. 수업 교시, 시설
+    # 운영시간, 학사일정은 전부 한국 시간으로 적힌 값이라 시/분을 그대로 읽는데,
+    # 예전에는 호스트 시간대를 따라갔다. Render 는 UTC 로 돌기 때문에 9시간
+    # 어긋난 시각으로 판정했고, 목9교시 수업을 "오전 2:00" 이라고 답했다.
+    if current.tzinfo is None:
+        return current.replace(tzinfo=KST)
+    return current.astimezone(KST)
 
 
 _normalize_place_key = place_search_runtime._normalize_place_key

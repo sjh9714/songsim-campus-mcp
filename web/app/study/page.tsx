@@ -5,7 +5,7 @@ import EmptyClassrooms, { type BuildingClassrooms } from '@/components/EmptyClas
 import EmptyState from '@/components/EmptyState';
 import LibrarySeatsCard from '@/components/LibrarySeatsCard';
 import TopBar from '@/components/TopBar';
-import { getBuildings, getEmptyClassrooms } from '@/lib/api';
+import { getBuildings, getEmptyClassrooms, requireFreshOrKeepLastPage } from '@/lib/api';
 
 export const revalidate = 60;
 
@@ -18,6 +18,7 @@ const FETCH_CONCURRENCY = 5;
 
 export default async function StudyPage() {
   const buildings = await getBuildings();
+  requireFreshOrKeepLastPage(buildings, '건물 목록');
 
   // 건물 열 곳치를 미리 받아 둔다. searchParams 를 읽지 않으므로 이 화면은
   // 프리렌더되고, 백엔드가 잠들어 있어도 학생은 직전 화면을 그대로 받는다.

@@ -9,7 +9,7 @@ import FreshnessBadge, { FRESHNESS_LIMIT } from '@/components/FreshnessBadge';
 import LibrarySeatsCard from '@/components/LibrarySeatsCard';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
-import { getDiningMenus, getNotices } from '@/lib/api';
+import { getDiningMenus, getNotices, requireFreshOrKeepLastPage } from '@/lib/api';
 import { formatAgo, formatDate, todayInSeoul, truncate } from '@/lib/format';
 
 export const revalidate = 60;
@@ -19,6 +19,7 @@ const SCHOOL_NOTICE_URL = 'https://www.catholic.ac.kr/ko/campuslife/notice.do';
 
 export default async function HomePage() {
   const [dining, notices] = await Promise.all([getDiningMenus(3), getNotices({ limit: 3 })]);
+  requireFreshOrKeepLastPage(dining, '학식');
 
   // 주간 표가 있는 식당을 먼저 고른다. 어떤 곳은 가격표 PDF 라 요일 구조가 없다.
   const today = todayInSeoul();

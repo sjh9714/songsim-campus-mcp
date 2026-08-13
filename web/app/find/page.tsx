@@ -1,7 +1,7 @@
 import EmptyState from '@/components/EmptyState';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
-import { getPhoneBook, getPlaces } from '@/lib/api';
+import { getPhoneBook, getPlaces, requireFreshOrKeepLastPage } from '@/lib/api';
 
 export const revalidate = 86400;
 
@@ -11,6 +11,7 @@ export default async function FindPage() {
     getPlaces({ category: 'facility', limit: 50 }),
     getPhoneBook({ limit: 30 }),
   ]);
+  requireFreshOrKeepLastPage(buildings, '건물 목록');
 
   return (
     <>

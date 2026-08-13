@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -2037,6 +2037,62 @@ def test_list_estimated_empty_classrooms_resolves_building_alias_and_sorts_avail
     assert by_name.items[1].next_occupied_at == "2026-03-16T13:00:00+09:00"
     assert "데이터베이스" in (by_name.items[1].next_course_summary or "")
     assert "월5~6(N201)" in (by_name.items[1].next_course_summary or "")
+
+
+def test_list_estimated_empty_classrooms_reads_the_clock_in_seoul_not_the_host_timezone(app_env):
+    """같은 순간을 UTC 로 적어 넘겨도 학교 시계로 읽어야 한다.
+
+    수업 시간표의 교시는 한국 시간이다. 그런데 판정은 넘어온 datetime 의
+    시/분을 그대로 썼기 때문에, UTC 로 도는 서버에서는 9시간 어긋난 시각으로
+    빈 강의실을 계산했다. 프로덕션이 "목9교시" 를 "오전 2:00" 이라고 답한
+    것도 이것 때문이다.
+    """
+    init_db()
+    seed_demo(force=True)
+    with connection() as conn:
+        repo.replace_courses(
+            conn,
+            [
+                {
+                    "year": 2026,
+                    "semester": 1,
+                    "code": "CSE332",
+                    "title": "데이터베이스",
+                    "professor": "김가톨",
+                    "department": "컴퓨터정보공학부",
+                    "section": "01",
+                    "day_of_week": "월",
+                    "period_start": 5,
+                    "period_end": 6,
+                    "room": "N201",
+                    "raw_schedule": "월5~6(N201)",
+                    "source_tag": "test",
+                    "last_synced_at": "2026-03-13T09:00:00+09:00",
+                },
+            ],
+        )
+        # 2026-03-16 10:15 KST 와 같은 순간을 UTC 로 적은 것.
+        in_utc = datetime.fromisoformat("2026-03-16T01:15:00+00:00")
+        payload = list_estimated_empty_classrooms(conn, building="니콜스관", at=in_utc)
+
+    assert payload.evaluated_at == "2026-03-16T10:15:00+09:00"
+    assert [item.room for item in payload.items] == ["N201"]
+    # 월 5교시는 13:00 KST 다. UTC 시계로 읽으면 이 값이 나오지 않는다.
+    assert payload.items[0].next_occupied_at == "2026-03-16T13:00:00+09:00"
+
+
+def test_coerce_datetime_pins_the_clock_to_seoul(app_env):
+    """naive 입력은 학교 시간으로, aware 입력은 학교 시간으로 환산해서 읽는다."""
+    naive = services_module._coerce_datetime(datetime.fromisoformat("2026-03-16T10:15:00"))
+    assert naive.isoformat(timespec="seconds") == "2026-03-16T10:15:00+09:00"
+
+    in_utc = services_module._coerce_datetime(
+        datetime.fromisoformat("2026-03-16T01:15:00+00:00")
+    )
+    assert in_utc.isoformat(timespec="seconds") == "2026-03-16T10:15:00+09:00"
+
+    # 호스트가 어느 시간대든 지금은 서울 기준이어야 한다.
+    assert services_module._now().utcoffset() == timedelta(hours=9)
 
 
 def test_list_estimated_empty_classrooms_returns_empty_with_note_when_building_has_no_room_data(

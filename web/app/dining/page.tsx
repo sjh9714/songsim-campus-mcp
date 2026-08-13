@@ -3,7 +3,7 @@ import FreshnessBadge, { FRESHNESS_LIMIT } from '@/components/FreshnessBadge';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import VenueDays from '@/components/VenueDays';
-import { getDiningMenus } from '@/lib/api';
+import { getDiningMenus, requireFreshOrKeepLastPage } from '@/lib/api';
 import { todayInSeoul } from '@/lib/format';
 
 // 메뉴 자체는 주 단위로만 바뀌지만(TTL.dining 1시간), "오늘" 표시는 날짜가 넘어가면
@@ -12,6 +12,7 @@ export const revalidate = 60;
 
 export default async function DiningPage() {
   const dining = await getDiningMenus(20);
+  requireFreshOrKeepLastPage(dining, '학식');
   const today = todayInSeoul();
 
   return (
