@@ -50,7 +50,11 @@ services:
         value: "720"
 
   - type: web
-    name: songsim-public-mcp
+    # API 와 같은 이유로 싱가포르로 옮겼다. 자세한 배경은 위 서비스 주석 참고.
+    # 이 주소는 AI 클라이언트에 등록되는 값이라 바꾸면 이미 연결해 둔 쪽이
+    # 끊긴다. 등록된 사용자가 없다는 확인을 받고 옮겼다.
+    name: songsim-mcp-sg
+    region: singapore
     runtime: python
     plan: free
     buildFilter:
