@@ -12,16 +12,30 @@ export function formatDate(iso: string | null | undefined): string | null {
   }).format(date);
 }
 
-/** "2026-07-25T09:00:00+09:00" -> "오전 9:00" */
+/**
+ * "2026-07-25T09:00:00+09:00" -> "오전 9:00"
+ *
+ * 오전/오후는 직접 붙인다. ko-KR 로케일에 맡기면 결과가 실행 환경마다 다르다.
+ * Node 22 는 "PM 7:00" 을, 브라우저는 "오후 7:00" 을 낸다(CLDR 판 차이).
+ * 서버에서 그린 글자와 하이드레이션 후 글자가 어긋나면 안 되고,
+ * 애초에 학생에게 "PM 7:00" 을 보여주고 있었다.
+ */
 export function formatTime(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat('ko-KR', {
+
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: KST,
-    hour: 'numeric',
+    hour: '2-digit',
     minute: '2-digit',
-  }).format(date);
+    hour12: false,
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value);
+  const minute = parts.find((part) => part.type === 'minute')?.value;
+  if (Number.isNaN(hour) || minute === undefined) return null;
+
+  return `${hour < 12 ? '오전' : '오후'} ${hour % 12 === 0 ? 12 : hour % 12}:${minute}`;
 }
 
 /** 지금으로부터 얼마나 지났는지. "방금", "12분 전", "3시간 전", "7월 20일" */

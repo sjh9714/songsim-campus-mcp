@@ -1,26 +1,44 @@
 import { Suspense } from 'react';
 
-import BuildingPicker from '@/components/BuildingPicker';
 import CardSkeleton from '@/components/CardSkeleton';
+import EmptyClassrooms, { type BuildingClassrooms } from '@/components/EmptyClassrooms';
 import EmptyState from '@/components/EmptyState';
 import LibrarySeatsCard from '@/components/LibrarySeatsCard';
 import TopBar from '@/components/TopBar';
 import { getBuildings, getEmptyClassrooms } from '@/lib/api';
-import { formatTime } from '@/lib/format';
 
 export const revalidate = 60;
 
-export default async function StudyPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ building?: string }>;
-}) {
-  const { building } = await searchParams;
+// 아래 건물별 조회가 백엔드 사정에 따라 길어질 수 있다. 이 시간은 학생이 아니라
+// 백그라운드 재생성이 쓰는 것이고, 학생은 그동안 직전 화면을 받는다.
+export const maxDuration = 60;
 
+/** 건물을 한 번에 몇 개씩 조회할지. 백엔드가 감당할 수 있는 만큼만 보낸다. */
+const FETCH_CONCURRENCY = 5;
+
+export default async function StudyPage() {
   const buildings = await getBuildings();
 
-  const selected = building ?? buildings.data[0]?.slug;
-  const classrooms = selected ? await getEmptyClassrooms(selected) : null;
+  // 건물 열 곳치를 미리 받아 둔다. searchParams 를 읽지 않으므로 이 화면은
+  // 프리렌더되고, 백엔드가 잠들어 있어도 학생은 직전 화면을 그대로 받는다.
+  //
+  // 열 곳을 한꺼번에 요청했더니 무료 플랜 백엔드가 밀려서 두 곳이 5초 제한에
+  // 걸렸다. 단독으로는 2초면 끝나는 요청이다. 그래서 몇 개씩 끊어서 보낸다.
+  const withClassrooms: BuildingClassrooms[] = [];
+  for (let index = 0; index < buildings.data.length; index += FETCH_CONCURRENCY) {
+    const batch = await Promise.all(
+      buildings.data.slice(index, index + FETCH_CONCURRENCY).map(async (place) => {
+        const classrooms = await getEmptyClassrooms(place.slug);
+        return {
+          slug: place.slug,
+          name: place.name,
+          data: classrooms.data,
+          degraded: classrooms.degraded,
+        };
+      }),
+    );
+    withClassrooms.push(...batch);
+  }
 
   return (
     <>
@@ -37,72 +55,10 @@ export default async function StudyPage({
           <h2 className="card__title">지금 빈 강의실</h2>
         </div>
 
-        {buildings.data.length === 0 ? (
+        {withClassrooms.length === 0 ? (
           <EmptyState degraded={buildings.degraded} message="등록된 건물이 없어요." />
         ) : (
-          <>
-            <BuildingPicker
-              buildings={buildings.data.map((place) => ({ slug: place.slug, name: place.name }))}
-              selected={selected}
-              hasExplicitSelection={Boolean(building)}
-            />
-
-            {classrooms?.data ? (
-              classrooms.data.items.length > 0 ? (
-                <>
-                  <ul className="list" style={{ marginTop: 12 }}>
-                    {classrooms.data.items.map((item) => (
-                      <li key={item.room} className="row--split">
-                        <span>
-                          <span className="row__title">{item.room}</span>
-                          {item.next_course_summary ? (
-                            <span className="row__sub">다음 수업 {item.next_course_summary}</span>
-                          ) : null}
-                        </span>
-                        <span className="row__sub">
-                          {item.next_occupied_at
-                            ? `${formatTime(item.next_occupied_at)}까지`
-                            : item.availability_mode === 'realtime'
-                              ? '실시간'
-                              : '예상'}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <p className="card__note">
-                    {classrooms.data.availability_mode === 'realtime'
-                      ? '실시간 사용 현황 기준이에요.'
-                      : '시간표 기준 예상이라 실제로는 사용 중일 수 있어요.'}
-                    {classrooms.data.estimate_note ? ` ${classrooms.data.estimate_note}` : null}
-                  </p>
-                </>
-              ) : (
-                <div style={{ marginTop: 12 }}>
-                  {/* 시간표 자체가 없는 것과 정말 빈 강의실이 없는 것은 다른 말이다.
-                      방학이라 시간표가 없을 때 "없어요" 라고 하면 학생은 "꽉 찼구나" 로
-                      읽는다. 백엔드가 estimate_note 로 알려주니 그대로 갈라 쓴다. */}
-                  {classrooms.data.estimate_note?.includes('찾지 못했') ? (
-                    <EmptyState
-                      degraded={classrooms.degraded}
-                      message="이 건물의 강의실 시간표를 아직 받아오지 못했어요."
-                      hint="방학 중이거나 시간표가 아직 공개되지 않았을 수 있어요."
-                    />
-                  ) : (
-                    <EmptyState
-                      degraded={classrooms.degraded}
-                      message="지금 이 건물에 비어 있을 것으로 보이는 강의실이 없어요."
-                      hint="다른 건물을 눌러보세요."
-                    />
-                  )}
-                </div>
-              )
-            ) : (
-              <div style={{ marginTop: 12 }}>
-                <EmptyState degraded />
-              </div>
-            )}
-          </>
+          <EmptyClassrooms buildings={withClassrooms} />
         )}
       </section>
     </>
