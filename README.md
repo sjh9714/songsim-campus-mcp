@@ -20,6 +20,8 @@
 
 홈 화면에 추가하면 앱처럼 열립니다. 소스는 [`web/`](web/), 배포 방법은 [학생용 웹 배포 가이드](docs/deploy-web.md).
 
+주소를 치기 번거로우면 [QR 코드](https://songsim-web.vercel.app/qr.svg)를 인쇄해 붙여 두세요. 빌드할 때마다 실제 주소로 다시 만들어지므로 주소와 어긋나지 않습니다.
+
 ## AI 앱에서 쓰려면
 
 ChatGPT나 Claude 같은 LLM 클라이언트에서 직접 연결하는 경로입니다. 공개 MCP URL을 연결한 뒤 `songsim://usage-guide`를 먼저 읽으면, 서버가 지원하는 질문 범위와 제한을 바로 확인할 수 있습니다. HTTP API는 같은 결과를 직접 검증하거나 외부 앱에서 붙이는 companion layer입니다.
