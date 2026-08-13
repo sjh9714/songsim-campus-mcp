@@ -9,6 +9,7 @@ from typing import Any
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 
 from .settings import get_settings
 
@@ -36,78 +37,119 @@ _CREATE_INDEX_RE = re.compile(
 
 
 class _ManagedConnection:
+    """연결 하나를 감싸서, 다 쓰면 닫거나 풀에 돌려준다."""
+
     def __init__(
         self,
         conn: psycopg.Connection,
         *,
-        limiter: threading.BoundedSemaphore | None = None,
+        pool: ConnectionPool | None = None,
     ) -> None:
         self._conn = conn
-        self._limiter = limiter
-        self._closed = False
+        self._pool = pool
+        self._released = False
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._conn, name)
 
     def __enter__(self) -> _ManagedConnection:
-        self._conn.__enter__()
         return self
 
     def __exit__(self, exc_type, exc, tb) -> bool | None:
+        # psycopg 의 Connection.__exit__ 는 커밋/롤백까지 하고 연결을 닫는다.
+        # 풀에서 빌린 연결을 닫아 버리면 풀을 쓰는 의미가 없으므로 여기서 직접 한다.
         try:
-            return self._conn.__exit__(exc_type, exc, tb)
+            if exc_type is None:
+                self._conn.commit()
+            else:
+                self._conn.rollback()
         finally:
-            self._release_limiter()
+            self.close()
+        return None
 
     def close(self) -> None:
-        try:
-            self._conn.close()
-        finally:
-            self._release_limiter()
-
-    def _release_limiter(self) -> None:
-        if self._closed:
+        if self._released:
             return
-        self._closed = True
-        if self._limiter is not None:
-            self._limiter.release()
+        self._released = True
+        if self._pool is not None:
+            # 풀이 트랜잭션 상태를 되돌리고 다음 요청을 위해 연결을 살려 둔다.
+            self._pool.putconn(self._conn)
+        else:
+            self._conn.close()
 
 
-_CONNECTION_LIMITERS: dict[str, threading.BoundedSemaphore] = {}
+_POOLS: dict[str, ConnectionPool] = {}
+_POOL_LOCK = threading.Lock()
 
 
-def _connection_limiter_key(settings: Any) -> str:
-    return f"{settings.app_mode}:{settings.database_url}"
+def _get_pool(settings: Any) -> ConnectionPool | None:
+    """배포된 공개 서비스에서만 연결을 재사용한다.
 
+    이 서비스는 요청마다 psycopg.connect() 를 새로 열고 있었다. 그런데 앱은
+    미국에서 돌고 데이터베이스는 서울에 있어서, TCP + TLS + 인증만 대여섯 왕복이
+    붙는다. 실측으로 DB 를 쓰는 엔드포인트는 limit=1 이든 limit=50 이든 똑같이
+    1.4초가 걸렸고, DB 를 안 쓰는 /healthz 는 0.3초였다. 1.1초가 통째로 연결
+    수립 비용이었다는 뜻이다.
 
-def _get_connection_limiter(settings: Any) -> threading.BoundedSemaphore | None:
+    로컬과 CLI, 테스트는 풀을 쓰지 않는다. 테스트는 케이스마다 새 데이터베이스를
+    만들기 때문에 URL 이 계속 바뀌고, 그때마다 풀을 만들면 열린 연결만 쌓인다.
+    실제로 이득이 있는 곳은 같은 URL 로 오래 사는 배포 서비스뿐이다.
+    """
     if settings.app_mode != "public_readonly":
         return None
-    key = _connection_limiter_key(settings)
-    limiter = _CONNECTION_LIMITERS.get(key)
-    if limiter is None:
-        limiter = threading.BoundedSemaphore(PUBLIC_READONLY_DB_CONNECTION_LIMIT)
-        _CONNECTION_LIMITERS[key] = limiter
-    return limiter
+    key = str(settings.database_url)
+    pool = _POOLS.get(key)
+    if pool is not None:
+        return pool
+    with _POOL_LOCK:
+        pool = _POOLS.get(key)
+        if pool is None:
+            pool = ConnectionPool(
+                key,
+                min_size=1,
+                # 예전 세마포어와 같은 상한이다. Supabase 무료 플랜의 연결 수를
+                # 넘지 않으려고 낮게 잡아 둔 값이라 그대로 따른다.
+                max_size=PUBLIC_READONLY_DB_CONNECTION_LIMIT,
+                kwargs={
+                    "row_factory": dict_row,
+                    "connect_timeout": 5,
+                    "options": "-c timezone=Asia/Seoul",
+                },
+                timeout=10,
+                # 빌려주기 전에 살아 있는지 한 번 확인한다. Supabase 쪽에서 유휴
+                # 연결을 끊으면 죽은 연결이 요청에 그대로 나가 500 이 된다.
+                # 확인 비용은 왕복 한 번이고, 새로 붙는 값(대여섯 왕복)보다 훨씬 싸다.
+                check=ConnectionPool.check_connection,
+                open=False,
+            )
+            # 백엔드가 잠들어 있어도 여기서 죽지 않는다. 실제 실패는 getconn 에서
+            # 드러나고, API 는 그걸 503 으로 돌려준다.
+            pool.open(wait=False)
+            _POOLS[key] = pool
+    return pool
 
 
 def get_connection() -> DBConnection:
     settings = get_settings()
-    limiter = _get_connection_limiter(settings)
-    if limiter is not None:
-        limiter.acquire()
-    try:
-        conn = psycopg.connect(
-            settings.database_url,
-            row_factory=dict_row,
-            connect_timeout=5,
-            options="-c timezone=Asia/Seoul",
-        )
-    except Exception:
-        if limiter is not None:
-            limiter.release()
-        raise
-    return _ManagedConnection(conn, limiter=limiter)
+    pool = _get_pool(settings)
+    if pool is not None:
+        return _ManagedConnection(pool.getconn(), pool=pool)
+    conn = psycopg.connect(
+        settings.database_url,
+        row_factory=dict_row,
+        connect_timeout=5,
+        options="-c timezone=Asia/Seoul",
+    )
+    return _ManagedConnection(conn)
+
+
+def close_pools() -> None:
+    """열려 있는 풀을 모두 닫는다. 프로세스를 내릴 때와 테스트 정리에 쓴다."""
+    with _POOL_LOCK:
+        pools = list(_POOLS.values())
+        _POOLS.clear()
+    for pool in pools:
+        pool.close()
 
 
 def init_db() -> None:
@@ -116,10 +158,17 @@ def init_db() -> None:
     with get_connection() as conn:
         # Serialize schema bootstrap so API/MCP cold starts don't race on CREATE TABLE.
         conn.execute("SELECT pg_advisory_lock(%s)", (SCHEMA_INIT_LOCK_KEY,))
-        for statement in statements:
-            if _schema_statement_needs_execution(conn, statement):
-                conn.execute(statement)
-        conn.commit()
+        try:
+            for statement in statements:
+                if _schema_statement_needs_execution(conn, statement):
+                    conn.execute(statement)
+            conn.commit()
+        finally:
+            # 세션 단위 락이라 예전에는 연결이 닫히면서 같이 풀렸다. 이제 연결은
+            # 풀로 돌아가 계속 살아 있으므로, 여기서 직접 풀지 않으면 락이 남는다.
+            # 그러면 다음에 뜨는 서비스가 스키마 준비 단계에서 그대로 멈춘다.
+            conn.execute("SELECT pg_advisory_unlock(%s)", (SCHEMA_INIT_LOCK_KEY,))
+            conn.commit()
 
 
 @contextmanager

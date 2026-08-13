@@ -10,6 +10,7 @@ import psycopg
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from psycopg_pool import PoolTimeout
 
 from .api_docs import (
     build_gpt_actions_openapi,
@@ -22,7 +23,7 @@ from .api_pages import (
     render_landing_page,
     render_privacy_page,
 )
-from .db import connection, get_connection, init_db
+from .db import close_pools, connection, get_connection, init_db
 from .schemas import (
     AboutResourceGuide,
     AcademicCalendarEvent,
@@ -233,6 +234,8 @@ async def lifespan(_: FastAPI):
         stop_event.set()
         if automation_task is not None:
             await automation_task
+        # 배포 서비스는 연결을 풀에 살려 둔다. 내려갈 때는 정리하고 나간다.
+        close_pools()
 
 
 def create_app() -> FastAPI:
@@ -388,6 +391,23 @@ def create_app() -> FastAPI:
     def database_unavailable(_: Request, exc: psycopg.OperationalError) -> JSONResponse:
         """데이터베이스에 못 붙었을 때 500 대신 이유가 붙은 503 을 돌려준다."""
         logger.error("event=database_unavailable error=%s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "데이터베이스에 연결할 수 없어 지금은 조회할 수 없습니다.",
+                "retryable": True,
+            },
+        )
+
+    @app.exception_handler(PoolTimeout)
+    def database_pool_exhausted(_: Request, exc: PoolTimeout) -> JSONResponse:
+        """풀에서 연결을 못 얻었을 때도 같은 503 으로 돌려준다.
+
+        연결이 전부 나가 있거나 데이터베이스가 응답하지 않으면 psycopg 의
+        OperationalError 가 아니라 PoolTimeout 이 올라온다. 위 처리기만 두면
+        같은 상황이 500 으로 나가서, 학생 화면에서 재시도 안내가 사라진다.
+        """
+        logger.error("event=database_pool_timeout error=%s", exc)
         return JSONResponse(
             status_code=503,
             content={

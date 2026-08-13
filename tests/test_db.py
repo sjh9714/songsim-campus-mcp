@@ -17,69 +17,64 @@ def test_get_connection_uses_configured_database_url(app_env):
     assert row["name"].startswith("songsim_test_")
 
 
-def test_get_connection_releases_public_readonly_limiter_on_close(monkeypatch):
+def test_get_connection_reuses_one_connection_in_public_readonly(app_env, monkeypatch):
+    """배포 모드에서는 요청마다 새로 붙지 않고 연결을 재사용한다.
+
+    앱은 미국에서 돌고 데이터베이스는 서울에 있다. 요청마다 새로 붙으면
+    TCP + TLS + 인증만 대여섯 왕복이 붙는데, 실측으로 그게 요청당 1.1초였다.
+    같은 백엔드 프로세스로 붙는지를 pid 로 확인한다.
+    """
     monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
-    monkeypatch.setenv("SONGSIM_DATABASE_URL", "postgresql://songsim:songsim@127.0.0.1:55432/fake")
     clear_settings_cache()
-    db_module._CONNECTION_LIMITERS.clear()
-
-    events: list[str] = []
-
-    class FakeLimiter:
-        def acquire(self) -> None:
-            events.append("acquire")
-
-        def release(self) -> None:
-            events.append("release")
-
-    class FakeConnection:
-        closed = False
-
-        def close(self) -> None:
-            self.closed = True
-
-    monkeypatch.setattr(db_module, "_get_connection_limiter", lambda settings: FakeLimiter())
-    monkeypatch.setattr(db_module.psycopg, "connect", lambda *args, **kwargs: FakeConnection())
-
-    conn = get_connection()
-    conn.close()
-    conn.close()
-
-    assert events == ["acquire", "release"]
-    clear_settings_cache()
-
-
-def test_get_connection_releases_public_readonly_limiter_when_connect_fails(monkeypatch):
-    monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
-    monkeypatch.setenv("SONGSIM_DATABASE_URL", "postgresql://songsim:songsim@127.0.0.1:55432/fake")
-    clear_settings_cache()
-    db_module._CONNECTION_LIMITERS.clear()
-
-    events: list[str] = []
-
-    class FakeLimiter:
-        def acquire(self) -> None:
-            events.append("acquire")
-
-        def release(self) -> None:
-            events.append("release")
-
-    monkeypatch.setattr(db_module, "_get_connection_limiter", lambda settings: FakeLimiter())
-
-    def broken_connect(*args, **kwargs):
-        raise RuntimeError("db connect failed")
-
-    monkeypatch.setattr(db_module.psycopg, "connect", broken_connect)
-
+    db_module.close_pools()
     try:
-        get_connection()
-    except RuntimeError as exc:
-        assert str(exc) == "db connect failed"
-    else:
-        raise AssertionError("expected connect failure")
+        pids = []
+        for _ in range(6):
+            with connection() as conn:
+                pids.append(conn.execute("SELECT pg_backend_pid() AS pid").fetchone()["pid"])
 
-    assert events == ["acquire", "release"]
+        # 정확히 한 개라고 못 박지는 않는다. 풀이 min_size 를 채우는 동안 두 개가
+        # 잠깐 생길 수 있다. 중요한 건 요청 수만큼 새로 붙지 않는다는 것이다.
+        assert len(set(pids)) < len(pids), f"요청마다 새로 붙었다: {pids}"
+        assert len(set(pids)) <= db_module.PUBLIC_READONLY_DB_CONNECTION_LIMIT, pids
+    finally:
+        db_module.close_pools()
+        clear_settings_cache()
+
+
+def test_get_connection_does_not_pool_outside_public_readonly(app_env):
+    """로컬과 CLI, 테스트는 풀을 쓰지 않는다.
+
+    테스트는 케이스마다 새 데이터베이스를 만들기 때문에 URL 이 계속 바뀐다.
+    거기까지 풀을 만들면 쓰지도 않을 연결만 쌓인다.
+    """
+    db_module.close_pools()
+    pids = []
+    for _ in range(2):
+        with connection() as conn:
+            pids.append(conn.execute("SELECT pg_backend_pid() AS pid").fetchone()["pid"])
+
+    assert not db_module._POOLS
+    assert len(set(pids)) == 2, "풀을 쓰지 않는데 같은 연결이 돌아왔다"
+
+
+def test_pooled_connection_is_returned_clean_after_an_error(app_env, monkeypatch):
+    """실패한 트랜잭션을 그대로 풀에 돌려주면 다음 요청이 같이 죽는다."""
+    monkeypatch.setenv("SONGSIM_APP_MODE", "public_readonly")
     clear_settings_cache()
+    db_module.close_pools()
+    try:
+        try:
+            with connection() as conn:
+                conn.execute("SELECT * FROM 존재하지_않는_테이블")
+        except Exception:
+            pass
+
+        with connection() as conn:
+            assert conn.execute("SELECT 1 AS ok").fetchone()["ok"] == 1
+    finally:
+        db_module.close_pools()
+        clear_settings_cache()
 
 
 def test_init_db_creates_postgis_schema(app_env):
@@ -252,6 +247,7 @@ class _FakeResult:
 class _FakeConnection:
     def __init__(self) -> None:
         self.executed: list[str] = []
+        self.lock_calls: list[str] = []
         self.committed = False
 
     def __enter__(self):
@@ -261,7 +257,11 @@ class _FakeConnection:
         return None
 
     def execute(self, statement: str, params=None):
-        if statement == "SELECT pg_advisory_lock(%s)":
+        if statement in {
+            "SELECT pg_advisory_lock(%s)",
+            "SELECT pg_advisory_unlock(%s)",
+        }:
+            self.lock_calls.append(statement)
             return _FakeResult((1,))
         if statement == "SELECT 1 FROM pg_extension WHERE extname = %s":
             return _FakeResult((1,))
@@ -317,3 +317,11 @@ def test_init_db_executes_only_missing_schema_statements(
         "CREATE INDEX IF NOT EXISTS missing_idx ON missing_table(id)",
     ]
     assert fake_connection.committed is True
+
+    # 스키마 락은 세션 단위다. 예전에는 연결이 닫히면서 같이 풀렸지만, 이제 연결은
+    # 풀에 살아남으므로 직접 풀어야 한다. 안 그러면 다음에 뜨는 서비스가 스키마
+    # 준비 단계에서 그대로 멈춘다.
+    assert fake_connection.lock_calls == [
+        "SELECT pg_advisory_lock(%s)",
+        "SELECT pg_advisory_unlock(%s)",
+    ]
