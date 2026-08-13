@@ -8,3 +8,7 @@ __pycache__/
 *.egg-info/
 coverage.xml
 htmlcov/
+
+# 세션 간 인수인계 메모. 저장소가 공개라 운영 식별자와 진행 중인 보안 작업을
+# 올리지 않는다. 작업이 끝나면 지운다.
+HANDOFF.md
