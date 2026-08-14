@@ -6,6 +6,7 @@ import type {
   Course,
   EstimatedEmptyClassroomResponse,
   LibrarySeatStatusResponse,
+  NearbyRestaurant,
   Notice,
   NoticeCategoryInfo,
   PCSoftwareEntry,
@@ -44,6 +45,7 @@ export const TTL = {
   pcSoftware: 3600,
   librarySeats: 60,
   classrooms: 300,
+  restaurants: 3600,
 } as const;
 
 export interface Fetched<T> {
@@ -173,6 +175,21 @@ export function getLibrarySeats(options: { fresh?: boolean } = {}) {
       source_url: null,
       rooms: [],
     },
+  });
+}
+
+/**
+ * 학교 밖 식당. Kakao Local 을 백엔드가 대신 부르고 결과를 캐시해 둔다.
+ *
+ * 캐시가 있어도 실측 3.4초라 기본 제한시간(5초)에 아슬아슬하게 걸린다.
+ * 도서관 좌석과 같은 이유로 LIVE_TIMEOUT_MS 를 쓴다.
+ */
+export function getNearbyRestaurants(origin: string, limit = 5) {
+  return getJson<NearbyRestaurant[]>('/restaurants/nearby', {
+    revalidate: TTL.restaurants,
+    timeoutMs: LIVE_TIMEOUT_MS,
+    fallback: [],
+    params: { origin, limit },
   });
 }
 

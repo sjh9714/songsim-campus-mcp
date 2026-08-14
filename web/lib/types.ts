@@ -25,6 +25,28 @@ export interface Place {
   last_synced_at: string;
 }
 
+export interface Restaurant {
+  id: number;
+  slug: string;
+  name: string;
+  category: string;
+  min_price: number | null;
+  max_price: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  tags: string[];
+  description: string;
+  source_tag: string;
+  last_synced_at: string;
+}
+
+export interface NearbyRestaurant extends Restaurant {
+  distance_meters: number | null;
+  estimated_walk_minutes: number | null;
+  origin: string;
+  open_now: boolean | null;
+}
+
 export interface Course {
   id: number;
   year: number;
