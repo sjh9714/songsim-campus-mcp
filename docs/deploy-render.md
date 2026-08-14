@@ -21,13 +21,14 @@
 2. Postgres 연결 문자열을 복사합니다.
 3. 필요하면 SSL 옵션을 포함한 연결 문자열을 `SONGSIM_DATABASE_URL`로 사용합니다.
 
-### 1-1. 서비스용 역할 분리 (권장)
+### 1-1. 서비스용 역할 분리 (적용 완료)
 
 기본 연결 문자열은 데이터베이스 전체에 쓰기 권한을 가집니다. 그 값을 인터넷에
 열려 있는 Render 서비스 두 곳에 그대로 넣으면, 하나만 새도 데이터베이스 전체를
 쓸 수 있게 됩니다. 저장소가 공개돼 있다면 특히 그렇습니다.
 
-Render 두 서비스는 권한을 좁힌 역할로 붙입니다.
+프로덕션의 `songsim-api-sg` 와 `songsim-mcp-sg` 는 `songsim_app` 역할로 붙습니다.
+아래는 같은 상태를 다시 만들 때의 절차입니다.
 
 1. Supabase SQL Editor 에서 역할을 만듭니다. 비밀번호는 직접 정합니다.
 
@@ -36,7 +37,8 @@ Render 두 서비스는 권한을 좁힌 역할로 붙입니다.
    ```
 
 2. [`src/songsim_campus/roles.sql`](../src/songsim_campus/roles.sql) 의 나머지를
-   실행합니다. 멱등하므로 여러 번 돌려도 됩니다.
+   실행합니다. 멱등하므로 여러 번 돌려도 됩니다. GRANT 뿐 아니라 RLS 정책까지
+   만듭니다. 이유는 아래 "빠지기 쉬운 곳" 을 보세요.
 
 3. Render 두 서비스의 `SONGSIM_DATABASE_URL` 을 `songsim_app` 접속 문자열로
    바꿉니다. Supabase pooler 는 사용자명이 `<role>.<project-ref>` 형식입니다.
@@ -47,6 +49,26 @@ Render 두 서비스는 권한을 좁힌 역할로 붙입니다.
 역할이 읽기 전용이 아니라 "캐시 테이블만 쓰기" 인 이유는 `roles.sql` 주석에
 적어 두었습니다. 요약하면 도서관 좌석과 주변 식당이 요청을 처리하면서 캐시를
 채우기 때문입니다.
+
+#### 빠지기 쉬운 곳
+
+**RLS 는 GRANT 로 안 풀립니다.** Supabase 대시보드에서 public 스키마 44개
+테이블에 RLS 가 켜져 있고, 정책은 PostgREST 용 역할(`anon`, `authenticated`)
+앞으로만 쓰여 있습니다. 이 설정은 저장소의 `schema.sql` 에 없습니다. 기존
+자격증명이 못 느낀 이유는 `postgres` 가 `rolbypassrls = t` 이기 때문입니다.
+정책 없이 `songsim_app` 으로 붙이면 **모든 테이블이 0행으로 보입니다.**
+질의는 성공하고 결과만 비어서, 권한 오류가 하나도 안 뜬 채 `/places` 는 빈
+배열, 건물 조회는 404, `/library-seats` 는 500 이 됩니다. `roles.sql` 4절이
+이 정책을 만듭니다.
+
+**검증은 값을 봐야 합니다.** 위 실패는 종료 코드가 0 입니다. `SELECT count(*)
+FROM places` 가 통과했다고 넘어가면 안 되고 그 수가 0 보다 큰지를 봐야 합니다.
+
+**Render API 로 환경변수를 바꾸면 재배포되지 않습니다.** 대시보드에서 고칠
+때와 다릅니다. `PUT /v1/services/{id}/env-vars/{key}` 뒤에
+`POST /v1/services/{id}/deploys` 를 따로 불러야 하고, 그 전까지 서비스는 옛
+접속정보로 계속 돕니다. 배포를 안 걸고 확인하면 옛 자격증명의 응답을 보고
+성공했다고 착각하게 됩니다.
 
 ## 2. Render 배포
 

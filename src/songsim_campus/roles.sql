@@ -66,10 +66,82 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT USAGE, SELECT ON SEQUENCES TO songsim_app;
 
 -- --------------------------------------------------------------------------
--- 4. 확인
+-- 4. Row Level Security
 -- --------------------------------------------------------------------------
+-- GRANT 만으로는 부족하다. Supabase 대시보드에서 public 스키마 44개 테이블에
+-- RLS 가 켜져 있는데, 그 정책은 전부 PostgREST 용 역할(anon, authenticated)
+-- 앞으로만 쓰여 있다. 이 설정은 레포의 schema.sql 에 없다. 대시보드에서
+-- 켠 것이라 코드만 읽어서는 보이지 않는다.
+--
+-- 기존 자격증명이 이걸 못 느낀 이유는 postgres 역할이 rolbypassrls = t 이기
+-- 때문이다. songsim_app 은 아니다. 그래서 정책 없이 붙이면 모든 테이블이
+-- 0행으로 보이고, 질의는 성공한 채 빈 결과를 준다. 실제로 이 상태로 한 번
+-- 배포했다가 /places 가 200 에 빈 배열, 건물 조회가 404, /library-seats 가
+-- 500 이 됐다. 권한 오류가 아니라 "데이터가 없는 것처럼" 보이는 실패라
+-- 종료 코드만 보면 통과한 것처럼 읽힌다.
+--
+-- 노출 범위는 늘리지 않는다. public_read 정책이 이미 anon 에게 열어 둔 것과
+-- 같은 테이블만 songsim_app 이 읽는다. profiles 계열 4개는 뺀다. 개인 데이터고,
+-- public_readonly 모드에서는 해당 엔드포인트가 아예 등록되지 않는다
+-- (api.py 의 `if not public_readonly:`).
+DO $$
+DECLARE
+    t text;
+BEGIN
+    FOR t IN
+        SELECT c.relname
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relkind = 'r'
+          AND c.relrowsecurity
+          AND c.relname NOT IN (
+              'profiles',
+              'profile_courses',
+              'profile_interests',
+              'profile_notice_preferences'
+          )
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS songsim_app_read ON public.%I', t);
+        EXECUTE format(
+            'CREATE POLICY songsim_app_read ON public.%I FOR SELECT TO songsim_app USING (true)',
+            t
+        );
+    END LOOP;
+
+    -- 캐시 테이블은 읽기만으로 부족하다. 3절에서 준 INSERT/UPDATE/DELETE 도
+    -- RLS 아래에서는 정책이 있어야 통과한다. TRUNCATE 는 RLS 적용 대상이
+    -- 아니라 3절의 GRANT 만으로 충분하다.
+    FOREACH t IN ARRAY ARRAY[
+        'library_seat_status_cache',
+        'restaurant_hours_cache',
+        'restaurant_cache_items',
+        'restaurant_cache_snapshots'
+    ]
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS songsim_app_write ON public.%I', t);
+        EXECUTE format(
+            'CREATE POLICY songsim_app_write ON public.%I FOR ALL TO songsim_app '
+            'USING (true) WITH CHECK (true)',
+            t
+        );
+    END LOOP;
+END $$;
+
+-- 앞으로 테이블이 늘고 거기에 RLS 를 켜면 이 파일을 다시 실행해야 한다.
+-- ALTER DEFAULT PRIVILEGES 는 GRANT 만 물려주지 정책까지 만들어 주지 않는다.
+
+-- --------------------------------------------------------------------------
+-- 5. 확인
+-- --------------------------------------------------------------------------
+-- 종료 코드만 보면 안 된다. RLS 로 막히면 질의는 성공하고 행 수만 0이 된다.
+-- 반드시 값을 본다.
+--
 --   SET ROLE songsim_app;
---   SELECT count(*) FROM places;                        -- 되어야 한다
+--   SELECT count(*) FROM places;                        -- 0 보다 커야 한다
 --   INSERT INTO places (slug, name) VALUES ('x','x');   -- permission denied 여야 한다
 --   TRUNCATE TABLE library_seat_status_cache;           -- 되어야 한다
 --   RESET ROLE;
+--
+-- SET ROLE 은 postgres 로 붙었을 때만 된다. 실제 접속정보로 확인하려면
+-- songsim_app 으로 직접 붙어야 한다.
