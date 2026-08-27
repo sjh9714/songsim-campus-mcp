@@ -1000,6 +1000,13 @@ def _build_searchable_campus_facilities(
     return searchable
 
 
+def list_campus_facilities_with_source_fallback(
+    conn: DBConnection,
+) -> list[dict[str, Any]]:
+    """Return the facility snapshot, using the existing public-runtime fallback."""
+    return _build_searchable_campus_facilities(conn, place_rows=repo.list_places(conn))
+
+
 def search_places(
     conn: DBConnection,
     *,

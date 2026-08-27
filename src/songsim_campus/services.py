@@ -3170,6 +3170,23 @@ def search_campus_dining_menus(
     limit: int = 10,
 ) -> list[CampusDiningMenu]:
     rows = repo.list_campus_dining_menus(conn, limit=max(limit, 10))
+    if any(not row.get("location_text") for row in rows):
+        locations_by_venue_slug = {
+            _slugify_text(str(facility.get("facility_name") or "")): location_text
+            for facility in place_search_runtime.list_campus_facilities_with_source_fallback(conn)
+            if (location_text := _normalize_optional_text(facility.get("location_text")))
+        }
+        rows = [
+            {
+                **row,
+                "location_text": row.get("location_text")
+                or locations_by_venue_slug.get(str(row.get("venue_slug") or ""))
+                or locations_by_venue_slug.get(
+                    _slugify_text(str(row.get("venue_name") or ""))
+                ),
+            }
+            for row in rows
+        ]
     normalized_query, compact_query, is_generic = _normalize_dining_menu_query(query)
     if is_generic or normalized_query is None:
         return [CampusDiningMenu.model_validate(item) for item in rows[:limit]]

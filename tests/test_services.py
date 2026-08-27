@@ -4891,6 +4891,66 @@ def test_refresh_campus_dining_menus_extracts_menu_text_and_links(app_env):
     assert bona.source_tag == "cuk_facilities_menu"
 
 
+def test_search_campus_dining_menus_uses_official_location_fallback_when_snapshot_is_empty(
+    app_env,
+    monkeypatch,
+):
+    class FakeLiveFacilitiesSource:
+        def __init__(self, _url: str):
+            pass
+
+        def fetch(self) -> str:
+            return "<live-facilities></live-facilities>"
+
+        def parse(self, html: str, *, fetched_at: str):
+            assert html == "<live-facilities></live-facilities>"
+            return [
+                {
+                    "facility_name": "부온 프란조 Buon Pranzo",
+                    "location": "학생미래인재관 2층",
+                    "last_synced_at": fetched_at,
+                },
+                {
+                    "facility_name": "카페 보나 Café Bona",
+                    "location": "학생미래인재관 1층",
+                    "last_synced_at": fetched_at,
+                },
+                {
+                    "facility_name": "카페 멘사 Café Mensa",
+                    "location": "김수환관 1층",
+                    "last_synced_at": fetched_at,
+                },
+            ]
+
+    init_db()
+    seed_demo(force=True)
+    monkeypatch.setattr(
+        services_module.place_search_runtime,
+        "_should_use_live_campus_facility_fallback",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        services_module.place_search_runtime,
+        "CampusFacilitiesSource",
+        FakeLiveFacilitiesSource,
+    )
+
+    with connection() as conn:
+        conn.execute("TRUNCATE campus_facilities RESTART IDENTITY CASCADE")
+        refresh_campus_dining_menus_from_facilities_page(
+            conn,
+            source=FakeDiningMenuSource(),
+            fetched_at="2026-03-13T09:00:00+09:00",
+        )
+        stored = search_campus_dining_menus(conn, limit=10)
+
+    assert {item.venue_slug: item.location_text for item in stored} == {
+        "buon-pranzo": "학생미래인재관 2층",
+        "cafe-bona": "학생미래인재관 1층",
+        "cafe-mensa": "김수환관 1층",
+    }
+
+
 def test_refresh_campus_dining_menus_derives_week_range_from_structured_days(
     app_env,
     monkeypatch,
