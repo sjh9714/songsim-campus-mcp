@@ -4,6 +4,11 @@ import Card from './Card';
 import { getLibrarySeats } from '@/lib/api';
 import { formatAgo } from '@/lib/format';
 
+// XML 데이터 주소는 브라우저에서 내용이 보이지 않는다. 사용자가 누르는 링크는
+// 학교 도서관이 따로 제공하는 사람용 좌석 현황 화면으로 보낸다.
+const LIBRARY_SEAT_STATUS_PAGE_URL =
+  'https://mlibrary.catholic.ac.kr/mobile/PA/roomStatus.php';
+
 /**
  * 도서관 좌석 카드.
  *
@@ -81,11 +86,14 @@ export default async function LibrarySeatsCard({ compact = false }: { compact?: 
   return (
     <Card title="도서관 좌석" action={<StaleBadge state={seats} />} note={note}>
       {body}
-      {seats.data.source_url ? (
-        <a className="linkout" href={seats.data.source_url} target="_blank" rel="noreferrer">
-          도서관 좌석 페이지 ›
-        </a>
-      ) : null}
+      <a
+        className="linkout"
+        href={LIBRARY_SEAT_STATUS_PAGE_URL}
+        target="_blank"
+        rel="noreferrer"
+      >
+        공식 좌석 현황 페이지 ›
+      </a>
     </Card>
   );
 }
