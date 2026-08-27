@@ -133,6 +133,7 @@ export interface CampusDiningMenu {
   venue_name: string;
   place_slug: string | null;
   place_name: string | null;
+  location_text?: string | null;
   week_label: string | null;
   week_start: string | null;
   week_end: string | null;

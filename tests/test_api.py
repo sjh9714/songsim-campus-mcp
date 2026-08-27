@@ -33,6 +33,7 @@ from songsim_campus.services import (
     refresh_academic_support_guides_from_source,
     refresh_affiliated_notices_from_sources,
     refresh_campus_dining_menus_from_facilities_page,
+    refresh_campus_facilities_from_source,
     refresh_certificate_guides_from_certificate_page,
     refresh_facility_hours_from_facilities_page,
     refresh_leave_of_absence_guides_from_source,
@@ -4150,6 +4151,7 @@ def test_place_detail_returns_merged_opening_hours(client):
 
 def test_dining_menus_endpoint_returns_current_week_rows(client):
     with connection() as conn:
+        refresh_campus_facilities_from_source(conn, source=ApiDiningMenusSource())
         refresh_campus_dining_menus_from_facilities_page(conn, source=ApiDiningMenusSource())
 
     response = client.get('/dining-menus')
@@ -4163,6 +4165,7 @@ def test_dining_menus_endpoint_returns_current_week_rows(client):
     }
     bona = next(item for item in payload if item['venue_slug'] == 'cafe-bona')
     assert bona['place_name'] == '학생회관'
+    assert bona['location_text'] == '학생미래인재관 1층'
     assert bona['week_label'] == '3월 3주차 메뉴표 확인하기'
     assert bona['week_start'] == '2026-03-16'
     assert bona['source_url'] == 'https://www.catholic.ac.kr/menu/bona.pdf'
@@ -4171,6 +4174,7 @@ def test_dining_menus_endpoint_returns_current_week_rows(client):
 
 def test_dining_menus_endpoint_supports_generic_and_specific_queries(client):
     with connection() as conn:
+        refresh_campus_facilities_from_source(conn, source=ApiDiningMenusSource())
         refresh_campus_dining_menus_from_facilities_page(conn, source=ApiDiningMenusSource())
 
     generic_response = client.get('/dining-menus', params={'query': '학생식당 메뉴'})
@@ -4181,6 +4185,7 @@ def test_dining_menus_endpoint_supports_generic_and_specific_queries(client):
     assert len(generic_response.json()) == 3
     assert [item['venue_slug'] for item in specific_response.json()] == ['cafe-bona']
     assert gpt_response.status_code == 200
+    assert all(item['location_text'] for item in gpt_response.json())
     assert gpt_response.json()[0]['menu_preview']
     assert gpt_response.json()[0]['source_url']
 

@@ -38,6 +38,7 @@ export default async function HomePage() {
     .find((entry) => entry.day);
   const topMenu = withDay?.menu ?? dining.data[0] ?? null;
   const todayMenu = withDay?.day ?? null;
+  const topMenuLocation = topMenu?.location_text ?? topMenu?.place_name ?? null;
 
   return (
     <>
@@ -57,7 +58,17 @@ export default async function HomePage() {
       >
         {topMenu ? (
           <>
-            <div className="row__title">{topMenu.venue_name}</div>
+            <div className="row__title dining-venue">
+              <span>{topMenu.venue_name}</span>
+              {topMenuLocation ? (
+                <span
+                  className="dining-venue__location"
+                  aria-label={`위치 ${topMenuLocation}`}
+                >
+                  {topMenuLocation}
+                </span>
+              ) : null}
+            </div>
             {todayMenu ? (
               <>
                 <div className="row__sub">

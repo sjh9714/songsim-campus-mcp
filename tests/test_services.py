@@ -4859,6 +4859,11 @@ def test_refresh_campus_dining_menus_extracts_menu_text_and_links(app_env):
     seed_demo(force=True)
 
     with connection() as conn:
+        refresh_campus_facilities_from_source(
+            conn,
+            source=FakeDiningMenuSource(),
+            fetched_at='2026-03-13T09:00:00+09:00',
+        )
         menus = refresh_campus_dining_menus_from_facilities_page(
             conn,
             source=FakeDiningMenuSource(),
@@ -4868,6 +4873,12 @@ def test_refresh_campus_dining_menus_extracts_menu_text_and_links(app_env):
 
     assert {item.venue_slug for item in menus} == {"buon-pranzo", "cafe-bona", "cafe-mensa"}
     assert len(stored) == 3
+    locations = {item.venue_slug: item.location_text for item in stored}
+    assert locations == {
+        "buon-pranzo": "학생미래인재관 2층",
+        "cafe-bona": "학생미래인재관 1층",
+        "cafe-mensa": "김수환관 1층",
+    }
     bona = next(item for item in stored if item.venue_slug == "cafe-bona")
     assert bona.place_slug == "student-center"
     assert bona.place_name == "학생회관"

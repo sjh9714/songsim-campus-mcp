@@ -163,6 +163,24 @@ a {
   color: var(--muted);
 }
 
+/* 식당명과 공식 시설 위치를 한 묶음으로 읽되, 좁은 화면에서는 자연스럽게 줄바꿈한다. */
+.dining-venue {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.dining-venue__location {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
 /* --- 리스트 --------------------------------------------------------- */
 
 .list {

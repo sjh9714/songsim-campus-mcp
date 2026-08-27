@@ -578,6 +578,7 @@ class CampusDiningMenu(BaseModel):
     venue_name: str
     place_slug: str | None = None
     place_name: str | None = None
+    location_text: str | None = None
     week_label: str | None = None
     week_start: str | None = None
     week_end: str | None = None
@@ -591,6 +592,7 @@ class CampusDiningMenu(BaseModel):
 class GptCampusDiningMenuResult(BaseModel):
     venue_name: str
     place_name: str | None = None
+    location_text: str | None = None
     week_label: str | None = None
     menu_preview: str | None = None
     source_url: str | None = None

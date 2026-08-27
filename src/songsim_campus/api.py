@@ -354,6 +354,7 @@ def create_app() -> FastAPI:
         return GptCampusDiningMenuResult(
             venue_name=menu.venue_name,
             place_name=menu.place_name,
+            location_text=menu.location_text,
             week_label=menu.week_label,
             menu_preview=_campus_dining_menu_preview(menu.menu_text),
             source_url=menu.source_url,

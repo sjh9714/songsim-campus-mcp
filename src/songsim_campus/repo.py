@@ -1621,9 +1621,17 @@ def list_campus_dining_menus(
 ) -> list[dict[str, Any]]:
     rows = conn.execute(
         """
-        SELECT *
-        FROM campus_dining_menus
-        ORDER BY venue_name, venue_slug
+        SELECT menu.*, facility.location_text
+        FROM campus_dining_menus AS menu
+        LEFT JOIN LATERAL (
+            SELECT location_text
+            FROM campus_facilities
+            WHERE facility_name = menu.venue_name
+              AND location_text IS NOT NULL
+            ORDER BY last_synced_at DESC, id DESC
+            LIMIT 1
+        ) AS facility ON TRUE
+        ORDER BY menu.venue_name, menu.venue_slug
         LIMIT %s
         """,
         (limit,),
