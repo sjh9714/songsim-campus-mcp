@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS library_seat_status_cache (
     remaining_seats INTEGER,
     occupied_seats INTEGER,
     total_seats INTEGER,
+    map_url TEXT,
     source_url TEXT,
     source_tag TEXT NOT NULL DEFAULT 'demo',
     last_synced_at TIMESTAMPTZ NOT NULL
@@ -540,6 +541,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS admission_type TEXT;
 ALTER TABLE restaurant_cache_items ADD COLUMN IF NOT EXISTS kakao_place_id TEXT;
 ALTER TABLE restaurant_cache_items ADD COLUMN IF NOT EXISTS source_url TEXT;
 ALTER TABLE affiliated_notices ADD COLUMN IF NOT EXISTS body_text TEXT NOT NULL DEFAULT '';
+ALTER TABLE library_seat_status_cache ADD COLUMN IF NOT EXISTS map_url TEXT;
 -- CREATE TABLE IF NOT EXISTS 는 이미 있는 테이블을 건드리지 않는다. 위 정의에 컬럼을
 -- 적어 두는 것만으로는 기존 배포에 생기지 않아서, 실제로 동기화가 통째로 실패했다.
 ALTER TABLE campus_dining_menus

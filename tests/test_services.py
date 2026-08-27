@@ -293,6 +293,7 @@ class FakeLibrarySeatStatusSource:
                 "remaining_seats": 28,
                 "occupied_seats": 72,
                 "total_seats": 100,
+                "map_url": "https://library.example/rooms/1/map",
                 "source_url": "http://203.229.203.240/8080/Domian5.asp",
                 "source_tag": "cuk_library_seat_status",
                 "last_synced_at": fetched_at,
@@ -302,6 +303,7 @@ class FakeLibrarySeatStatusSource:
                 "remaining_seats": 25,
                 "occupied_seats": 55,
                 "total_seats": 80,
+                "map_url": "https://library.example/rooms/2/map",
                 "source_url": "http://203.229.203.240/8080/Domian5.asp",
                 "source_tag": "cuk_library_seat_status",
                 "last_synced_at": fetched_at,
@@ -325,6 +327,7 @@ def test_get_library_seat_status_uses_fresh_cache_without_live_fetch(app_env):
                     "remaining_seats": 12,
                     "occupied_seats": 88,
                     "total_seats": 100,
+                    "map_url": "https://library.example/rooms/1/map",
                     "source_url": "http://203.229.203.240/8080/Domian5.asp",
                     "source_tag": "cuk_library_seat_status",
                     "last_synced_at": "2026-03-16T08:59:00+09:00",
@@ -341,6 +344,7 @@ def test_get_library_seat_status_uses_fresh_cache_without_live_fetch(app_env):
     assert response.availability_mode == "live"
     assert response.checked_at == "2026-03-16T08:59:00+09:00"
     assert response.rooms[0].remaining_seats == 12
+    assert response.rooms[0].map_url == "https://library.example/rooms/1/map"
 
 
 def test_get_library_seat_status_fetches_live_rows_and_filters_room_query(app_env):
@@ -357,6 +361,7 @@ def test_get_library_seat_status_fetches_live_rows_and_filters_room_query(app_en
     assert response.source_url == "http://203.229.203.240/8080/Domian5.asp"
     assert [room.room_name for room in response.rooms] == ["제1자유열람실"]
     assert response.rooms[0].remaining_seats == 28
+    assert response.rooms[0].map_url == "https://library.example/rooms/1/map"
 
 
 def test_get_library_seat_status_falls_back_to_stale_cache_on_live_failure(app_env):
@@ -370,6 +375,7 @@ def test_get_library_seat_status_falls_back_to_stale_cache_on_live_failure(app_e
                     "remaining_seats": 10,
                     "occupied_seats": 90,
                     "total_seats": 100,
+                    "map_url": "https://library.example/rooms/1/map",
                     "source_url": "http://203.229.203.240/8080/Domian5.asp",
                     "source_tag": "cuk_library_seat_status",
                     "last_synced_at": "2026-03-16T08:50:00+09:00",
@@ -386,6 +392,7 @@ def test_get_library_seat_status_falls_back_to_stale_cache_on_live_failure(app_e
     assert response.availability_mode == "stale_cache"
     assert response.checked_at == "2026-03-16T08:50:00+09:00"
     assert response.rooms[0].remaining_seats == 10
+    assert response.rooms[0].map_url == "https://library.example/rooms/1/map"
     assert response.note
 
 
@@ -417,6 +424,7 @@ def test_refresh_library_seat_status_cache_replaces_existing_rows_on_success(app
 
     assert len(rows) == 2
     assert [row["room_name"] for row in cached] == ["제1자유열람실", "제2자유열람실"]
+    assert cached[0]["map_url"] == "https://library.example/rooms/1/map"
     assert cached[0]["last_synced_at"] == "2026-03-16T09:00:00+09:00"
 
 

@@ -1641,8 +1641,8 @@ def replace_library_seat_status_cache(
         """
         INSERT INTO library_seat_status_cache (
             room_name, remaining_seats, occupied_seats, total_seats,
-            source_url, source_tag, last_synced_at
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            map_url, source_url, source_tag, last_synced_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """,
         [
             (
@@ -1650,6 +1650,7 @@ def replace_library_seat_status_cache(
                 row.get("remaining_seats"),
                 row.get("occupied_seats"),
                 row.get("total_seats"),
+                row.get("map_url"),
                 row.get("source_url"),
                 row.get("source_tag", "demo"),
                 row["last_synced_at"],

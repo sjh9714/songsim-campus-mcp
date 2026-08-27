@@ -159,6 +159,7 @@ export interface LibrarySeatStatus {
   remaining_seats: number | null;
   occupied_seats: number | null;
   total_seats: number | null;
+  map_url?: string | null;
 }
 
 export interface LibrarySeatStatusResponse {

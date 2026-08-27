@@ -242,6 +242,30 @@ a.row__value {
   gap: 10px;
 }
 
+/* 방 이름을 누르면 학교가 제공하는 실제 좌석 배치도를 연다. */
+.room-map-link {
+  display: inline-flex;
+  min-width: 0;
+  flex-direction: column;
+  border-radius: var(--radius);
+}
+
+.room-map-link > .row__title,
+.room-map-link--compact > .row__sub {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.room-map-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.room-map-link:active {
+  transform: translateY(1px);
+}
+
 /* --- 상태 표시 ------------------------------------------------------ */
 
 .badge {

@@ -601,6 +601,7 @@ class LibrarySeatStatus(BaseModel):
     remaining_seats: int | None = None
     occupied_seats: int | None = None
     total_seats: int | None = None
+    map_url: str | None = None
 
 
 class LibrarySeatStatusResponse(BaseModel):

@@ -4197,6 +4197,7 @@ class ApiLibrarySeatStatusSource:
                 "remaining_seats": 28,
                 "occupied_seats": 72,
                 "total_seats": 100,
+                "map_url": "https://library.example/rooms/1/map",
                 "source_url": "http://203.229.203.240/8080/Domian5.asp",
                 "source_tag": "cuk_library_seat_status",
                 "last_synced_at": fetched_at,
@@ -4206,6 +4207,7 @@ class ApiLibrarySeatStatusSource:
                 "remaining_seats": 25,
                 "occupied_seats": 55,
                 "total_seats": 80,
+                "map_url": "https://library.example/rooms/2/map",
                 "source_url": "http://203.229.203.240/8080/Domian5.asp",
                 "source_tag": "cuk_library_seat_status",
                 "last_synced_at": fetched_at,
@@ -4228,6 +4230,7 @@ def test_library_seats_endpoints_return_live_or_filtered_rows(client, monkeypatc
         "제1자유열람실",
         "제2자유열람실",
     ]
+    assert payload["rooms"][0]["map_url"] == "https://library.example/rooms/1/map"
     assert filtered.status_code == 200
     assert [item["room_name"] for item in filtered.json()["rooms"]] == ["제1자유열람실"]
     assert gpt_response.status_code == 200

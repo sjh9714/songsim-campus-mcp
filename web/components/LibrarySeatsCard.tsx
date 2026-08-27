@@ -3,11 +3,47 @@ import StaleBadge from './StaleBadge';
 import Card from './Card';
 import { getLibrarySeats } from '@/lib/api';
 import { formatAgo } from '@/lib/format';
+import type { LibrarySeatStatus } from '@/lib/types';
 
-// XML 데이터 주소는 브라우저에서 내용이 보이지 않는다. 사용자가 누르는 링크는
-// 학교 도서관이 따로 제공하는 사람용 좌석 현황 화면으로 보낸다.
+// XML 데이터 주소는 브라우저에서 내용이 보이지 않는다. 카드 아래의 전체 현황은
+// 학교 도서관이 따로 제공하는 사람용 화면으로 보내고, 방 이름은 API의 좌석 맵을 쓴다.
 const LIBRARY_SEAT_STATUS_PAGE_URL =
   'https://mlibrary.catholic.ac.kr/mobile/PA/roomStatus.php';
+
+function RoomMapLink({
+  room,
+  compact = false,
+}: {
+  room: LibrarySeatStatus;
+  compact?: boolean;
+}) {
+  const label = compact ? (
+    <span className="row__sub">{room.room_name}</span>
+  ) : (
+    <>
+      <span className="row__title">{room.room_name}</span>
+      {room.total_seats !== null ? (
+        <span className="row__sub">전체 {room.total_seats}석</span>
+      ) : null}
+    </>
+  );
+
+  if (!room.map_url) {
+    return <span>{label}</span>;
+  }
+
+  return (
+    <a
+      className={`room-map-link${compact ? ' room-map-link--compact' : ''}`}
+      href={room.map_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`${room.room_name} 좌석 맵 열기 (새 탭)`}
+    >
+      {label}
+    </a>
+  );
+}
 
 /**
  * 도서관 좌석 카드.
@@ -49,7 +85,7 @@ export default async function LibrarySeatsCard({ compact = false }: { compact?: 
         <ul className="list">
           {withSeats.slice(0, 3).map((room) => (
             <li key={room.room_name} className="row--split">
-              <span className="row__sub">{room.room_name}</span>
+              <RoomMapLink room={room} compact />
               <span className="row__value">{room.remaining_seats}석</span>
             </li>
           ))}
@@ -59,12 +95,7 @@ export default async function LibrarySeatsCard({ compact = false }: { compact?: 
       <ul className="list">
         {rooms.map((room) => (
           <li key={room.room_name} className="row--split">
-            <span>
-              <span className="row__title">{room.room_name}</span>
-              {room.total_seats !== null ? (
-                <span className="row__sub">전체 {room.total_seats}석</span>
-              ) : null}
-            </span>
+            <RoomMapLink room={room} />
             <span className="row__value">
               {room.remaining_seats !== null ? `${room.remaining_seats}석` : '—'}
             </span>

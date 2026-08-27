@@ -4,7 +4,7 @@ import json
 import re
 from datetime import datetime
 from html import unescape
-from urllib.parse import urlencode, urljoin
+from urllib.parse import urlencode, urljoin, urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -54,6 +54,20 @@ def _unique(items: list[str]) -> list[str]:
         seen.add(normalized)
         result.append(normalized)
     return result
+
+
+def _same_origin_url(base_url: str, value: str | None) -> str | None:
+    raw_url = (value or "").strip()
+    if not raw_url:
+        return None
+    resolved_url = urljoin(base_url, raw_url)
+    base = urlsplit(base_url)
+    resolved = urlsplit(resolved_url)
+    if resolved.scheme not in {"http", "https"}:
+        return None
+    if (resolved.scheme, resolved.netloc) != (base.scheme, base.netloc):
+        return None
+    return resolved_url
 
 
 def _date_from_epoch_millis(value: int | str | None) -> str | None:
@@ -557,6 +571,7 @@ class LibrarySeatStatusXmlSource:
             total_seats = self._parse_int(item.findtext("strTotalSeat"))
             occupied_seats = self._parse_int(item.findtext("strUseSeat"))
             remaining_seats = self._parse_int(item.findtext("strRemainSeat"))
+            map_url = _same_origin_url(self.url, item.findtext("strMapUrl"))
             if total_seats is None and occupied_seats is None and remaining_seats is None:
                 continue
             rows.append(
@@ -565,6 +580,7 @@ class LibrarySeatStatusXmlSource:
                     "remaining_seats": remaining_seats,
                     "occupied_seats": occupied_seats,
                     "total_seats": total_seats,
+                    "map_url": map_url,
                     "source_url": self.url,
                     "source_tag": "cuk_library_seat_status",
                     "last_synced_at": fetched_at,

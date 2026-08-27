@@ -307,6 +307,10 @@ def test_library_seat_status_parser_reads_every_reading_room():
         "remaining_seats": 158,
         "occupied_seats": 0,
         "total_seats": 158,
+        "map_url": (
+            "https://mlibrary.catholic.ac.kr/mobile/PA/xml_seat_map.php"
+            "?param_room_no=1&call_page=admin&room_gb="
+        ),
         "source_url": SEAT_XML_URL,
         "source_tag": "cuk_library_seat_status",
         "last_synced_at": "2026-08-09T05:00:00+09:00",
@@ -326,6 +330,23 @@ def test_library_seat_status_parser_survives_a_broken_payload():
 
     assert source.parse("<html>maintenance</html>", fetched_at="2026-08-09T05:00:00+09:00") == []
     assert source.parse("", fetched_at="2026-08-09T05:00:00+09:00") == []
+
+
+def test_library_seat_status_parser_rejects_a_map_from_another_origin():
+    source = LibrarySeatStatusXmlSource(SEAT_XML_URL)
+    payload = """
+        <root><item>
+          <strRoomNm>제1자유열람실A</strRoomNm>
+          <strTotalSeat>158</strTotalSeat>
+          <strRemainSeat>158</strRemainSeat>
+          <strMapUrl>https://example.com/not-the-library</strMapUrl>
+        </item></root>
+    """
+
+    rows = source.parse(payload, fetched_at="2026-08-09T05:00:00+09:00")
+
+    assert rows[0]["map_url"] is None
+
 
 def test_facility_hours_parser_extracts_cards_and_table_rows():
     source = CampusFacilitiesSource("https://www.catholic.ac.kr/ko/campuslife/restaurant.do")
