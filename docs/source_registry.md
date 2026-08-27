@@ -6,6 +6,7 @@
 |---|---|---|---|---|---|
 | cuk_campus_map | 공식 | https://www.catholic.ac.kr/ko/about/campus-map.do | 높음 | implemented | `mode=getPlaceListByCondition` 공개 JSON을 정규화하여 장소 동기화 |
 | cuk_subject_search | 공식 | https://www.catholic.ac.kr/ko/support/subject.do | 높음 | implemented | 개설과목조회 HTML 테이블 + 팝업 상세 파싱 |
+| cuk_classroom_rental_policy | 공식 | https://www.catholic.ac.kr/ko/campuslife/notice.do?articleNo=274409&mode=view | 중간 | manual policy | 2026-2학기 공식 대여 공지의 평일 09:00~22:00 기본 이용 시간을 학생용 웹 표시 제한에 사용합니다. 주말·공휴일·시험기간 제한과 실제 개방/점유는 별도이며, 실시간 공실 source로 취급하지 않습니다. |
 | cuk_campus_notices | 공식 | https://www.catholic.ac.kr/ko/campuslife/notice.do | 높음 | implemented | 목록 HTML + 상세 HTML 조합으로 설정된 페이지 수(기본 5페이지)의 최신 공지 동기화 |
 | cuk_affiliated_notice_boards | 공식 | https://is.catholic.ac.kr/is/community/notice.do, https://dorm.catholic.ac.kr/dormitory/board/comm_notice.do, https://dorm.catholic.ac.kr/dormitory/board/checkin-out_notice1.do, https://dorm.catholic.ac.kr/dormitory/board/comm_notice3.do, https://dorm.catholic.ac.kr/dormitory/board/checkin-out_notice.do | 중간 | implemented | 국제학부 학과공지와 기숙사 board notice bundle을 설정된 페이지 수(기본 5페이지)의 `affiliated_notices` current snapshot family로 정규화하며, 상세 본문은 searchable body text로 보존하고 본문 전용 검색어는 공개 summary에 매치 주변 스니펫으로 노출 |
 | cuk_library_hours | 공식 | https://library.catholic.ac.kr/webcontent/info/45 | 중간 | implemented | 중앙도서관 개관시간 표를 `중앙도서관` place의 `opening_hours`로 병합 |
@@ -44,7 +45,7 @@
 
 ## 실시간 강의실 조사 메모
 
-- 조사일: `2026-03-15`
+- 최근 재확인일: `2026-08-27`
 - 조사 범위: 가톨릭대학교 공식 캠퍼스맵, 개설과목조회, 교내 시설/대관 관련 공개 페이지
 - 결과: 공개 접근 가능한 `현재 강의실 점유/예약/배정 현황` 공식 feed나 API는 확인하지 못했습니다.
 - 현재 정책: `/classrooms/empty`, `/gpt/classrooms/empty`, `tool_list_estimated_empty_classrooms`는 공식 실시간 source adapter를 먼저 시도하고, 기본 배포에서는 시간표 기준 예상 공실로 폴백합니다.

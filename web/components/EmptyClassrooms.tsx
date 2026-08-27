@@ -3,15 +3,39 @@
 import { useEffect, useState } from 'react';
 
 import EmptyState from './EmptyState';
+import {
+  CLASSROOM_USE_WINDOW_LABEL,
+  isWithinClassroomUseWindow,
+} from '@/lib/classrooms';
 import { formatTime } from '@/lib/format';
 import { getPreferredBuilding, setPreferredBuilding } from '@/lib/prefs';
-import type { EstimatedEmptyClassroomResponse } from '@/lib/types';
+import type {
+  EstimatedEmptyClassroom,
+  EstimatedEmptyClassroomResponse,
+} from '@/lib/types';
 
 export interface BuildingClassrooms {
   slug: string;
   name: string;
   data: EstimatedEmptyClassroomResponse | null;
   degraded: boolean;
+}
+
+function roomAvailabilityLabel(item: EstimatedEmptyClassroom): string {
+  const nextOccupiedAt = formatTime(item.next_occupied_at);
+  if (nextOccupiedAt) return `${nextOccupiedAt}까지`;
+  if (item.availability_mode === 'realtime') return '실시간 공실';
+  return '오늘 남은 수업 없음';
+}
+
+function availabilityNote(data: EstimatedEmptyClassroomResponse): string {
+  if (data.availability_mode === 'realtime') {
+    return '학교 실시간 사용 현황 기준입니다.';
+  }
+  if (data.availability_mode === 'mixed') {
+    return '일부 강의실은 실시간 현황, 나머지는 공식 시간표를 기준으로 표시합니다.';
+  }
+  return '공식 시간표에서 현재 수업이 없는 강의실입니다. 행사·대여·실제 점유는 반영되지 않습니다.';
 }
 
 /**
@@ -35,6 +59,9 @@ export default function EmptyClassrooms({ buildings }: { buildings: BuildingClas
   }, [buildings]);
 
   const current = buildings.find((building) => building.slug === selected) ?? buildings[0];
+  const withinUseWindow = current?.data
+    ? isWithinClassroomUseWindow(current.data.evaluated_at)
+    : true;
 
   return (
     <>
@@ -56,7 +83,14 @@ export default function EmptyClassrooms({ buildings }: { buildings: BuildingClas
       </div>
 
       {current?.data ? (
-        current.data.items.length > 0 ? (
+        !withinUseWindow ? (
+          <div style={{ marginTop: 12 }}>
+            <EmptyState
+              message="지금은 공식 강의실 대여 시간 밖이에요."
+              hint={`공식 대여 안내 기준 기본 이용 시간은 ${CLASSROOM_USE_WINDOW_LABEL}입니다. 학교 일정과 실제 개방 여부는 다를 수 있어요.`}
+            />
+          </div>
+        ) : current.data.items.length > 0 ? (
           <>
             <ul className="list" style={{ marginTop: 12 }}>
               {current.data.items.map((item) => (
@@ -67,23 +101,12 @@ export default function EmptyClassrooms({ buildings }: { buildings: BuildingClas
                       <span className="row__sub">다음 수업 {item.next_course_summary}</span>
                     ) : null}
                   </span>
-                  <span className="row__sub">
-                    {item.next_occupied_at
-                      ? `${formatTime(item.next_occupied_at)}까지`
-                      : item.availability_mode === 'realtime'
-                        ? '실시간'
-                        : '예상'}
-                  </span>
+                  <span className="row__sub">{roomAvailabilityLabel(item)}</span>
                 </li>
               ))}
             </ul>
 
-            <p className="card__note">
-              {current.data.availability_mode === 'realtime'
-                ? '실시간 사용 현황 기준이에요.'
-                : '시간표 기준 예상이라 실제로는 사용 중일 수 있어요.'}
-              {current.data.estimate_note ? ` ${current.data.estimate_note}` : null}
-            </p>
+            <p className="card__note">{availabilityNote(current.data)}</p>
           </>
         ) : (
           <div style={{ marginTop: 12 }}>

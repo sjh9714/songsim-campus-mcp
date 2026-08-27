@@ -43,7 +43,7 @@ export default async function StudyPage() {
 
   return (
     <>
-      <TopBar title="공부할 곳" subtitle="도서관 좌석과 빈 강의실" />
+      <TopBar title="공부할 곳" subtitle="도서관 좌석과 강의실 시간표" />
 
       {/* --- 도서관 좌석 (실시간 조회라 느리므로 나머지 화면과 분리해서 그린다) --- */}
       <Suspense fallback={<CardSkeleton title="도서관 좌석" />}>
@@ -53,7 +53,7 @@ export default async function StudyPage() {
       {/* --- 빈 강의실 --- */}
       <section className="card">
         <div className="card__head">
-          <h2 className="card__title">지금 빈 강의실</h2>
+          <h2 className="card__title">시간표상 빈 강의실</h2>
         </div>
 
         {withClassrooms.length === 0 ? (
