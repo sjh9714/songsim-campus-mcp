@@ -7,7 +7,7 @@
     "prebuild": "node scripts/wait-for-api.mjs && node scripts/make-qr.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,9 +17,12 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.6",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "15.5.23",
     "qrcode-generator": "^2.0.4",
     "typescript": "^5.7.0"
   },

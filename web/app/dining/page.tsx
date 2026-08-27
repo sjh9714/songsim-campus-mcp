@@ -5,7 +5,7 @@ import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import VenueDays from '@/components/VenueDays';
 import { getDiningMenus, getNearbyRestaurants, requireFreshOrKeepLastPage } from '@/lib/api';
-import { todayInSeoul } from '@/lib/format';
+import { formatDate, todayInSeoul } from '@/lib/format';
 
 // 메뉴 자체는 주 단위로만 바뀌지만(TTL.dining 1시간), "오늘" 표시는 날짜가 넘어가면
 // 틀린 말이 된다. 화면은 1분마다 다시 그리고 데이터는 캐시에서 가져다 쓴다.
@@ -42,7 +42,13 @@ export default async function DiningPage() {
             </div>
             <FreshnessBadge syncedAt={menu.last_synced_at} maxAgeHours={FRESHNESS_LIMIT.dining} />
 
-            {menu.week_label ? <div className="row__sub">{menu.week_label}</div> : null}
+            {menu.week_start && menu.week_end ? (
+              <div className="row__sub">
+                {formatDate(menu.week_start)} ~ {formatDate(menu.week_end)}
+              </div>
+            ) : menu.week_label ? (
+              <div className="row__sub">{menu.week_label}</div>
+            ) : null}
 
             {menu.days.length > 0 ? (
               <VenueDays days={menu.days} today={today} />

@@ -97,10 +97,16 @@ def parse_place_detail_opening_hours(payload: dict[str, Any]) -> dict[str, str]:
     open_hours = payload.get("open_hours")
     if not isinstance(open_hours, dict):
         return {}
+
     all_hours = open_hours.get("all")
-    if not isinstance(all_hours, dict):
-        return {}
-    periods = all_hours.get("periods")
+    periods = all_hours.get("periods") if isinstance(all_hours, dict) else None
+    if not isinstance(periods, list):
+        week_from_today = open_hours.get("week_from_today")
+        periods = (
+            week_from_today.get("week_periods")
+            if isinstance(week_from_today, dict)
+            else None
+        )
     if not isinstance(periods, list):
         return {}
 
@@ -129,7 +135,11 @@ def parse_place_detail_opening_hours(payload: dict[str, Any]) -> dict[str, str]:
         for day in days:
             if not isinstance(day, dict):
                 continue
-            day_key = day_keys.get(str(day.get("day_of_the_week") or "").strip())
+            day_label = str(
+                day.get("day_of_the_week") or day.get("day_of_the_week_desc") or ""
+            ).strip()
+            day_match = re.match(r"([월화수목금토일])", day_label)
+            day_key = day_keys.get(day_match.group(1) if day_match else "")
             if not day_key:
                 continue
             on_days = day.get("on_days")
@@ -142,7 +152,11 @@ def parse_place_detail_opening_hours(payload: dict[str, Any]) -> dict[str, str]:
             if off_desc:
                 normalized[f"{day_key}{suffix}"] = "휴무"
 
-    holiday_notice = str(all_hours.get("all_days_off_info") or "").strip()
+    holiday_notice = (
+        str(all_hours.get("all_days_off_info") or "").strip()
+        if isinstance(all_hours, dict)
+        else ""
+    )
     if holiday_notice:
         normalized["holiday_notice"] = holiday_notice
     return normalized

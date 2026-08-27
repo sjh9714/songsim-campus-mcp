@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -3271,7 +3272,7 @@ def test_find_nearby_restaurants_reuses_fresh_kakao_hours_cache(app_env, monkeyp
     assert calls["detail"] == 0
 
 
-def test_find_nearby_restaurants_fetches_and_reuses_kakao_detail_hours(app_env):
+def test_find_nearby_restaurants_fetches_and_reuses_kakao_detail_hours(app_env, monkeypatch):
     init_db()
     seed_demo(force=True)
 
@@ -3307,6 +3308,8 @@ def test_find_nearby_restaurants_fetches_and_reuses_kakao_detail_hours(app_env):
             type(self).calls += 1
             raise AssertionError("hours cache should be reused on the second call")
 
+    monkeypatch.setattr("songsim_campus.services.KakaoPlaceDetailClient", DetailClient)
+
     with connection() as conn:
         first = find_nearby_restaurants(
             conn,
@@ -3315,7 +3318,6 @@ def test_find_nearby_restaurants_fetches_and_reuses_kakao_detail_hours(app_env):
             walk_minutes=15,
             at=datetime.fromisoformat("2026-03-17T10:00:00+09:00"),
             kakao_client=DetailAwareKakaoClient(),
-            kakao_place_detail_client=DetailClient(),
         )
         second = find_nearby_restaurants(
             conn,
@@ -3763,10 +3765,27 @@ def test_refresh_places_from_campus_map_applies_place_alias_overrides(app_env):
     assert kim_place.category == 'building'
 
 
-def test_refresh_courses_from_subject_search_replaces_course_rows(app_env):
+def test_refresh_courses_from_subject_search_replaces_only_target_term(app_env):
     init_db()
 
     with connection() as conn:
+        repo.replace_courses(
+            conn,
+            [
+                _course_row(
+                    year=2025,
+                    semester=2,
+                    code="HIS100",
+                    title="지난학기과목",
+                ),
+                _course_row(
+                    year=2026,
+                    semester=1,
+                    code="OLD100",
+                    title="교체될과목",
+                ),
+            ],
+        )
         refresh_courses_from_subject_search(
             conn,
             source=FakeCourseSource(),
@@ -3774,10 +3793,12 @@ def test_refresh_courses_from_subject_search_replaces_course_rows(app_env):
             semester=1,
             fetched_at='2026-03-13T09:00:00+09:00',
         )
-        courses = search_courses(conn, query='자료')
+        target_courses = repo.search_courses(conn, year=2026, semester=1, limit=10)
+        previous_courses = repo.search_courses(conn, year=2025, semester=2, limit=10)
 
-    assert len(courses) == 1
-    assert courses[0].source_tag == 'cuk_subject_search'
+    assert [course["code"] for course in target_courses] == ["03149"]
+    assert target_courses[0]["source_tag"] == "cuk_subject_search"
+    assert [course["code"] for course in previous_courses] == ["HIS100"]
 
 
 def test_refresh_courses_from_subject_search_ingests_paginated_snapshot_and_dedupes(app_env):
@@ -4164,6 +4185,32 @@ def test_refresh_notices_from_notice_board_preserves_list_board_category_over_ge
     assert len(notices) == 1
     assert notices[0].category == 'academic'
     assert notices[0].labels == ['학사']
+
+
+def test_list_latest_notices_uses_official_article_number_for_same_day_order(app_env):
+    init_db()
+    rows = [
+        {
+            "title": f"학사 공지 {article_no}",
+            "category": "academic",
+            "published_at": "2026-08-26",
+            "summary": "",
+            "labels": ["학사"],
+            "source_url": (
+                "https://www.catholic.ac.kr/ko/campuslife/notice.do"
+                f"?mode=view&articleNo={article_no}"
+            ),
+            "source_tag": "cuk_campus_notices",
+            "last_synced_at": "2026-08-27T12:00:00+09:00",
+        }
+        for article_no in (102, 100, 101)
+    ]
+
+    with connection() as conn:
+        repo.replace_notices(conn, rows)
+        notices = list_latest_notices(conn, category="academic", limit=2)
+
+    assert [notice.title for notice in notices] == ["학사 공지 102", "학사 공지 101"]
 
 
 class FakeLibraryHoursSource:
@@ -4596,6 +4643,34 @@ class FakeAffiliatedNoticeSource:
         }
 
 
+class FakePaginatedCampusLifeNoticeSource(FakeAffiliatedNoticeSource):
+    def __init__(self):
+        super().__init__("outside_agencies", [])
+        self.fetched_offsets: list[int] = []
+
+    def fetch_list(self, *, offset: int = 0, limit: int = 10):
+        assert limit == 10
+        self.fetched_offsets.append(offset)
+        return f"<outside_agencies-list offset={offset}>"
+
+    def parse_list(self, html: str):
+        match = re.search(r"offset=(\d+)", html)
+        assert match is not None
+        offset = int(match.group(1))
+        return [
+            {
+                "article_no": str(offset + 1),
+                "title": f"외부기관 공지 {offset // 10 + 1}",
+                "published_at": f"2026-03-{20 - offset // 10:02d}",
+                "summary": "지원 안내",
+                "source_url": (
+                    "https://www.catholic.ac.kr/ko/campuslife/notice_outside.do"
+                    f"?articleNo={offset + 1}"
+                ),
+            }
+        ]
+
+
 def test_refresh_affiliated_notices_dedupes_within_topic_and_preserves_cross_topic_duplicates(
     app_env,
 ):
@@ -4795,6 +4870,38 @@ def test_refresh_campus_dining_menus_extracts_menu_text_and_links(app_env):
     assert "Bulgogi Rice Bowl" in bona.menu_text
     assert bona.source_url == "https://www.catholic.ac.kr/menu/bona.pdf"
     assert bona.source_tag == "cuk_facilities_menu"
+
+
+def test_refresh_campus_dining_menus_derives_week_range_from_structured_days(
+    app_env,
+    monkeypatch,
+):
+    init_db()
+    seed_demo(force=True)
+    monkeypatch.setattr(
+        services_module,
+        "_extract_campus_dining_menu_week_range",
+        lambda _menu_text: (None, None),
+    )
+    monkeypatch.setattr(
+        services_module,
+        "_extract_campus_dining_menu_days",
+        lambda _pdf_bytes, *, year: [
+            {"date": f"{year}-03-16", "weekday": "월", "meals": {"중식": {}}},
+            {"date": f"{year}-03-20", "weekday": "금", "meals": {"중식": {}}},
+        ],
+    )
+
+    with connection() as conn:
+        menus = refresh_campus_dining_menus_from_facilities_page(
+            conn,
+            source=FakeDiningMenuSource(),
+            fetched_at="2026-03-13T09:00:00+09:00",
+        )
+
+    bona = next(item for item in menus if item.venue_slug == "cafe-bona")
+    assert bona.week_start == "2026-03-16"
+    assert bona.week_end == "2026-03-20"
 
 
 def test_refresh_campus_dining_menus_withholds_a_document_that_forbids_redistribution(
@@ -5237,6 +5344,40 @@ def test_list_affiliated_notices_exposes_body_match_snippet(app_env):
     assert len(rows[0].summary) <= 220
 
 
+def test_list_affiliated_notices_treats_checkin_out_board_name_as_neutral_query(app_env):
+    init_db()
+
+    with connection() as conn:
+        repo.replace_affiliated_notices(
+            conn,
+            [
+                _affiliated_notice_row(
+                    topic="dorm_francis_checkin_out",
+                    title="프란치스코관 입사 안내",
+                    published_at="2026-08-26",
+                    summary="입사 일정",
+                ),
+                _affiliated_notice_row(
+                    topic="dorm_francis_checkin_out",
+                    title="프란치스코관 합격자 발표",
+                    published_at="2026-07-03",
+                    summary="합격자 확인",
+                ),
+            ],
+        )
+        rows = list_affiliated_notices(
+            conn,
+            topic="dorm_francis_checkin_out",
+            query="입퇴사공지",
+            limit=5,
+        )
+
+    assert [row.title for row in rows] == [
+        "프란치스코관 입사 안내",
+        "프란치스코관 합격자 발표",
+    ]
+
+
 def test_refresh_campus_life_notices_replaces_rows_and_orders_by_query_and_date(app_env):
     init_db()
 
@@ -5299,6 +5440,26 @@ def test_refresh_campus_life_notices_replaces_rows_and_orders_by_query_and_date(
     ]
     assert all_notices[0].source_tag == "cuk_campus_life_notices"
     assert all_notices[0].source_url == "https://www.catholic.ac.kr/ko/campuslife/notice_outside.do?articleNo=2"
+
+
+def test_refresh_campus_life_notices_collects_requested_pages(app_env):
+    init_db()
+    source = FakePaginatedCampusLifeNoticeSource()
+
+    with connection() as conn:
+        notices = refresh_campus_life_notices_from_source(
+            conn,
+            source=source,
+            pages=3,
+            fetched_at="2026-03-20T00:00:00+09:00",
+        )
+
+    assert source.fetched_offsets == [0, 10, 20]
+    assert [item.title for item in notices] == [
+        "외부기관 공지 1",
+        "외부기관 공지 2",
+        "외부기관 공지 3",
+    ]
 
 
 def test_refresh_campus_life_notices_merges_sources_with_topic_local_dedupe(app_env):
@@ -6013,7 +6174,7 @@ def test_sync_official_snapshot_runs_opening_hours_before_courses_and_transport(
     )
     monkeypatch.setattr(
         'songsim_campus.services.refresh_campus_life_notices_from_source',
-        lambda conn: call_order.append('campus_life_notices') or [],
+        lambda conn, pages=None: call_order.append('campus_life_notices') or [],
     )
     monkeypatch.setattr(
         'songsim_campus.services.refresh_academic_calendar_from_source',

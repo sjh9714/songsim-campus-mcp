@@ -2026,7 +2026,7 @@ def build_truth_rows(
             if cached_payload is None:
                 payload: Any | None = None
                 summary_kind = str(row.pass_rule.get("summary_kind") or "")
-                prefer_official_source = row.api_request.path == "/notices" or (
+                prefer_official_source = row.api_request.path in {"/notices", "/courses"} or (
                     row.api_request.path == "/places"
                     and summary_kind == "places_top1_alias_display"
                 )

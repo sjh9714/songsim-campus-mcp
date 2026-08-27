@@ -696,6 +696,19 @@ def test_kakao_place_detail_parser_normalizes_weekdays_breaks_and_holidays():
     assert opening_hours["holiday_notice"] == "매주 일요일, 공휴일"
 
 
+def test_kakao_place_detail_parser_supports_current_week_from_today_contract():
+    opening_hours = parse_place_detail_opening_hours(
+        _fixture_json("kakao_place_detail_week_from_today.json")
+    )
+
+    assert opening_hours == {
+        "thu": "14:30 ~ 05:30",
+        "fri": "14:30 ~ 05:30",
+        "sat": "12:00 ~ 24:00",
+        "sun": "휴무",
+    }
+
+
 def test_kakao_place_detail_parser_preserves_24_hour_days():
     opening_hours = parse_place_detail_opening_hours(
         {

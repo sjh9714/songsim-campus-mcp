@@ -24,7 +24,7 @@ on:
       notice_pages:
         description: "가져올 공지 목록 페이지 수"
         required: false
-        default: "3"
+        default: "5"
         type: string
 
 concurrency:
@@ -95,7 +95,7 @@ jobs:
 
           year = _override("INPUT_YEAR", year)
           semester = _override("INPUT_SEMESTER", semester, allowed={1, 2})
-          notice_pages = _override("INPUT_NOTICE_PAGES", 3)
+          notice_pages = _override("INPUT_NOTICE_PAGES", 5)
           if not 1 <= notice_pages <= 20:
               raise SystemExit("notice_pages must be between 1 and 20")
 

@@ -268,7 +268,7 @@ npm run dev
 직접 돌릴 때:
 
 ```bash
-uv run songsim-sync --year 2026 --semester 1 --notice-pages 3
+uv run songsim-sync --year 2026 --semester 1 --notice-pages 5
 ```
 
 ## 검증
@@ -276,9 +276,14 @@ uv run songsim-sync --year 2026 --semester 1 --notice-pages 3
 ```bash
 uv run pytest
 uv run ruff check .
+uv run songsim-eval-public sync-truth \
+  --database-url "" \
+  --output /tmp/songsim-public-api-truth.jsonl
 uv run songsim-eval-public run \
-  --truth data/qa/public_api_eval_truth_1000.jsonl \
+  --truth /tmp/songsim-public-api-truth.jsonl \
   --report /tmp/songsim-public-api-validation.md
 ```
+
+라이브 검증에서는 corpus ID와 현재 공식 source가 어긋나지 않도록 truth를 먼저 새로 만듭니다. 저장소의 `data/qa/public_api_eval_truth_1000.jsonl`은 회귀 비교용 기준 스냅샷입니다.
 
 공개 API와 MCP 검증 기록은 `docs/qa/` 아래의 live validation 문서와 release pack 문서에서 확인할 수 있습니다.

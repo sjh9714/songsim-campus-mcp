@@ -49,13 +49,13 @@ def test_settings_parse_explicit_course_sync_values(monkeypatch):
     assert settings.official_course_semester == 1
 
 
-def test_settings_default_notice_pages_is_three(monkeypatch):
+def test_settings_default_notice_pages_is_five(monkeypatch):
     monkeypatch.delenv("SONGSIM_OFFICIAL_NOTICE_PAGES", raising=False)
     clear_settings_cache()
 
     settings = Settings(_env_file=None)
 
-    assert settings.official_notice_pages == 3
+    assert settings.official_notice_pages == 5
 
 
 def test_settings_parse_restaurant_cache_ttls(monkeypatch):
@@ -173,6 +173,6 @@ def test_env_example_documents_blank_course_term_defaults():
     assert "SONGSIM_RESTAURANT_CACHE_STALE_TTL_MINUTES=1440" in text
     assert "SONGSIM_LIBRARY_SEAT_CACHE_TTL_MINUTES=2" in text
     assert "SONGSIM_LIBRARY_SEAT_CACHE_STALE_TTL_MINUTES=15" in text
-    assert "SONGSIM_OFFICIAL_NOTICE_PAGES=3" in text
+    assert "SONGSIM_OFFICIAL_NOTICE_PAGES=5" in text
     assert "SONGSIM_OFFICIAL_COURSE_YEAR=" in text
     assert "SONGSIM_OFFICIAL_COURSE_SEMESTER=" in text

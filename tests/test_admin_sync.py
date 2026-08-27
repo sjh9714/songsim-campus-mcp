@@ -372,7 +372,7 @@ def test_run_admin_sync_dispatches_target_specific_parameters(app_env, monkeypat
     assert seen["service_policy_guides"] == {"fetched_at": None}
     assert seen["newsroom_posts"] == {"fetched_at": None}
     assert seen["affiliated_notices"] == {"pages": 3, "fetched_at": None}
-    assert seen["campus_life_notices"] == {"pages": 1, "fetched_at": None}
+    assert seen["campus_life_notices"] == {"pages": 3, "fetched_at": None}
     assert seen["dormitory_guides"] == {"fetched_at": None}
     assert seen["phone_book_entries"] == {"fetched_at": None}
     assert seen["campus_life_support_guides"] == {"fetched_at": None}

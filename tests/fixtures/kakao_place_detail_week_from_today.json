@@ -1,0 +1,43 @@
+{
+  "open_hours": {
+    "headline": {
+      "code": "OPEN",
+      "display_text": "영업 중",
+      "display_text_info": "05:30 까지"
+    },
+    "week_from_today": {
+      "week_periods": [
+        {
+          "days": [
+            {
+              "day_of_the_week_desc": "목(8/27)",
+              "on_days": {
+                "start_end_time_desc": "14:30 ~ 05:30"
+              },
+              "is_highlight": true
+            },
+            {
+              "day_of_the_week_desc": "금(8/28)",
+              "on_days": {
+                "start_end_time_desc": "14:30 ~ 05:30"
+              },
+              "is_highlight": false
+            },
+            {
+              "day_of_the_week_desc": "토(8/29)",
+              "on_days": {
+                "start_end_time_desc": "12:00 ~ 24:00"
+              },
+              "is_highlight": false
+            },
+            {
+              "day_of_the_week_desc": "일(8/30)",
+              "off_days_desc": "정기휴무",
+              "is_highlight": false
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -577,6 +577,73 @@ def test_build_truth_rows_prefers_official_source_for_notices_even_with_database
     ]
 
 
+def test_build_truth_rows_prefers_official_source_for_courses_even_with_database(
+    app_env: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    row = EvalCorpusRow.model_validate(
+        {
+            "id": "CRS001",
+            "domain": "courses",
+            "style": "normal",
+            "user_utterance": "04483 과목 알려줘",
+            "api_request": {
+                "path": "/courses",
+                "params": {"query": "04483", "year": 2026, "semester": 1, "limit": 5},
+            },
+            "expected_mcp_flow": "tool_search_courses",
+            "truth_mode": "set_contains",
+            "pass_rule": {"summary_kind": "courses_top5"},
+            "watch_policy": "none",
+            "notes": "",
+        }
+    )
+    monkeypatch.setattr(
+        qa_eval,
+        "_payload_from_db",
+        lambda *_args, **_kwargs: pytest.fail("courses truth should use the official source"),
+    )
+    monkeypatch.setattr(
+        qa_eval,
+        "_payload_from_sources",
+        lambda *_args, **_kwargs: [
+            {
+                "code": "04483",
+                "title": "3D애니메이션1",
+                "professor": "신은하",
+                "year": 2026,
+                "semester": 1,
+                "period_start": 7,
+            }
+        ],
+    )
+
+    truth_rows = build_truth_rows(
+        [row],
+        database_url=app_env,
+        captured_at="2026-08-27T12:00:00+09:00",
+    )
+
+    assert truth_rows == [
+        EvalTruthRow(
+            id="CRS001",
+            normalized_expected=[
+                {
+                    "code": "04483",
+                    "title": "3D애니메이션1",
+                    "professor": "신은하",
+                    "year": 2026,
+                    "semester": 1,
+                    "period_start": 7,
+                }
+            ],
+            truth_source="official_source",
+            captured_at="2026-08-27T12:00:00+09:00",
+            stability="stable",
+        )
+    ]
+
+
 def test_build_truth_rows_marks_watch_only_without_expected() -> None:
     row = EvalCorpusRow.model_validate(
         {

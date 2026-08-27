@@ -135,8 +135,7 @@ def replace_places(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> None
     )
 
 
-def replace_courses(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> None:
-    conn.execute("TRUNCATE TABLE courses RESTART IDENTITY CASCADE")
+def _insert_courses(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> None:
     _executemany(
         conn,
         """
@@ -166,6 +165,27 @@ def replace_courses(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> Non
             for row in rows
         ],
     )
+
+
+def replace_courses(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> None:
+    conn.execute("TRUNCATE TABLE courses RESTART IDENTITY CASCADE")
+    _insert_courses(conn, rows)
+
+
+def replace_courses_for_term(
+    conn: psycopg.Connection,
+    *,
+    year: int,
+    semester: int,
+    rows: list[dict[str, Any]],
+) -> None:
+    if any(row["year"] != year or row["semester"] != semester for row in rows):
+        raise ValueError("course rows must match the target year and semester")
+    conn.execute(
+        "DELETE FROM courses WHERE year = %s AND semester = %s",
+        (year, semester),
+    )
+    _insert_courses(conn, rows)
 
 
 def replace_restaurants(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> None:
@@ -689,7 +709,13 @@ def list_notices(
         else:
             sql += " WHERE category = %s"
             params.append(category)
-    sql += " ORDER BY published_at DESC, id DESC LIMIT %s"
+    sql += """
+        ORDER BY
+            published_at DESC,
+            substring(source_url FROM '[?&]articleNo=([0-9]+)')::BIGINT DESC NULLS LAST,
+            id DESC
+        LIMIT %s
+    """
     params.append(limit)
     rows = conn.execute(sql, params).fetchall()
     return [_row_to_dict("notices", row) for row in rows]

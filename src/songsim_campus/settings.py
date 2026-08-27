@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     library_seat_cache_ttl_minutes: int = 2
     library_seat_cache_stale_ttl_minutes: int = 15
     official_campus_id: str = "1"
-    official_notice_pages: int = 3
+    official_notice_pages: int = 5
     official_course_year: int | None = None
     official_course_semester: int | None = None
     # 동기화에서 학교 페이지를 동시에 몇 개까지 요청할지.

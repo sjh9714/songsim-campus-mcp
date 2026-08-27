@@ -3513,6 +3513,10 @@ def list_affiliated_notices(
             "dorm_k_a_checkin_out, dorm_francis_general, dorm_francis_checkin_out."
         )
     normalized_query = query.strip() if query else None
+    if normalized_topic in {"dorm_k_a_checkin_out", "dorm_francis_checkin_out"}:
+        compact_query = re.sub(r"[\W_]+", "", normalized_query or "")
+        if compact_query in {"입퇴사", "입퇴사공지", "입퇴사안내"}:
+            normalized_query = None
     return [
         AffiliatedNotice.model_validate(
             _with_affiliated_notice_body_match_summary(item, query=normalized_query)
@@ -4623,7 +4627,14 @@ def _sync_run_params(
     if target in {"snapshot", "courses"} and semester is not None:
         params["semester"] = semester
     if (
-        target in {"snapshot", "notices", "affiliated_notices", "student_activity_notices"}
+        target
+        in {
+            "snapshot",
+            "notices",
+            "affiliated_notices",
+            "campus_life_notices",
+            "student_activity_notices",
+        }
         and notice_pages is not None
     ):
         params["notice_pages"] = notice_pages
@@ -4697,7 +4708,12 @@ def _run_admin_sync_target(
         }
     if target == "campus_life_notices":
         return {
-            "campus_life_notices": len(refresh_campus_life_notices_from_source(conn))
+            "campus_life_notices": len(
+                refresh_campus_life_notices_from_source(
+                    conn,
+                    pages=notice_pages or settings.official_notice_pages,
+                )
+            )
         }
     if target == "academic_calendar":
         return {"academic_calendar": len(refresh_academic_calendar_from_source(conn))}
@@ -5782,6 +5798,7 @@ def find_nearby_restaurants(
         current=current,
         open_now=open_now,
         kakao_place_detail_client=kakao_place_detail_client,
+        detail_client_factory=KakaoPlaceDetailClient,
         facility_hours=_facility_hours_index(conn),
         evaluate_open_now=_evaluate_open_now,
         now_fn=_now,
@@ -5932,6 +5949,15 @@ def refresh_campus_dining_menus_from_facilities_page(
             # 표의 날짜 칸에는 연도가 없다. 주 시작일에서 가져오고, 없으면 동기화 시각을 쓴다.
             menu_year = int((week_start or synced_at)[:4])
             menu_days = _extract_campus_dining_menu_days(pdf_bytes, year=menu_year)
+            if menu_days:
+                parsed_dates = sorted(
+                    str(day["date"])
+                    for day in menu_days
+                    if day.get("date")
+                )
+                if parsed_dates:
+                    week_start = week_start or parsed_dates[0]
+                    week_end = week_end or parsed_dates[-1]
             if _forbids_redistribution(menu_text):
                 # 이 자리에는 학교 주간 식단 대신 입점 업체 가격표가 걸리기도 한다.
                 # 그 문서에는 제3자 저작권 표기와 "무단 복제, 배포, 공개를 엄격히
@@ -5991,7 +6017,12 @@ def refresh_courses_from_subject_search(
         fetched_at=synced_at,
     )
 
-    repo.replace_courses(conn, rows)
+    repo.replace_courses_for_term(
+        conn,
+        year=resolved_year,
+        semester=resolved_semester,
+        rows=rows,
+    )
     return [
         Course.model_validate(item)
         for item in repo.search_courses(
@@ -6172,6 +6203,7 @@ def refresh_campus_life_notices_from_source(
     *,
     source: Any | None = None,
     sources: list[Any] | None = None,
+    pages: int = 1,
     fetched_at: str | None = None,
 ) -> list[CampusLifeNotice]:
     synced_at = fetched_at or _now_iso()
@@ -6200,67 +6232,79 @@ def refresh_campus_life_notices_from_source(
         return _collapse_whitespace(cleaned)
 
     for resolved_source in resolved_sources:
-        list_html = resolved_source.fetch_list(offset=0, limit=10)
-        for item in resolved_source.parse_list(list_html):
-            article_no = item.get("article_no") or item.get("id")
-            if not article_no:
-                continue
-            try:
-                detail_html = resolved_source.fetch_detail(article_no, offset=0, limit=10)
-                detail = resolved_source.parse_detail(
-                    detail_html,
-                    default_title=item.get("title", ""),
-                    default_category=item.get("board_category", ""),
-                    default_summary=item.get("summary", ""),
-                    default_published_at=item.get("published_at", ""),
-                    default_source_url=item.get("source_url"),
+        for page in range(max(1, pages)):
+            offset = page * 10
+            list_html = resolved_source.fetch_list(offset=offset, limit=10)
+            for item in resolved_source.parse_list(list_html):
+                article_no = item.get("article_no") or item.get("id")
+                if not article_no:
+                    continue
+                try:
+                    detail_html = resolved_source.fetch_detail(
+                        article_no,
+                        offset=offset,
+                        limit=10,
+                    )
+                    detail = resolved_source.parse_detail(
+                        detail_html,
+                        default_title=item.get("title", ""),
+                        default_category=item.get("board_category", ""),
+                        default_summary=item.get("summary", ""),
+                        default_published_at=item.get("published_at", ""),
+                        default_source_url=item.get("source_url"),
+                    )
+                except httpx.HTTPError:
+                    detail = {}
+                title = (detail.get("title") or item.get("title") or "").strip()
+                published_at = detail.get("published_at") or item.get("published_at")
+                if not title or not published_at:
+                    continue
+                topic = _normalize_optional_text(
+                    detail.get("topic")
+                    or item.get("topic")
+                    or getattr(resolved_source, "topic", None)
                 )
-            except httpx.HTTPError:
-                detail = {}
-            title = (detail.get("title") or item.get("title") or "").strip()
-            published_at = detail.get("published_at") or item.get("published_at")
-            if not title or not published_at:
-                continue
-            topic = _normalize_optional_text(
-                detail.get("topic") or item.get("topic") or getattr(resolved_source, "topic", None)
-            )
-            if topic is None:
-                topic = "outside_agencies"
-            if topic not in CAMPUS_LIFE_NOTICE_TOPICS:
-                raise InvalidRequestError("topic must be outside_agencies or events.")
-            topic_article_nos = seen_article_nos.setdefault(topic, set())
-            topic_source_urls = seen_source_urls.setdefault(topic, set())
-            topic_title_published = seen_title_published.setdefault(topic, set())
-            article_no_key = _normalized_campus_life_notice_text(article_no)
-            if article_no_key is not None:
-                if article_no_key in topic_article_nos:
-                    continue
-                topic_article_nos.add(article_no_key)
-            source_url = detail.get("source_url") or item.get("source_url")
-            source_url_key = _normalized_campus_life_notice_text(source_url)
-            if source_url_key is not None:
-                if source_url_key in topic_source_urls:
-                    continue
-                topic_source_urls.add(source_url_key)
-            normalized_title = _normalized_campus_life_notice_text(title)
-            normalized_published_at = _normalized_campus_life_notice_text(published_at)
-            if normalized_title is not None and normalized_published_at is not None:
-                dedupe_key = (normalized_title, normalized_published_at)
-                if dedupe_key in topic_title_published:
-                    continue
-                topic_title_published.add(dedupe_key)
-            rows.append(
-                {
-                    "topic": topic,
-                    "title": title,
-                    "published_at": published_at,
-                    "summary": detail.get("summary") or item.get("summary") or "",
-                    "source_url": source_url,
-                    "source_tag": detail.get("source_tag")
-                    or getattr(resolved_source, "source_tag", "cuk_campus_life_notices"),
-                    "last_synced_at": synced_at,
-                }
-            )
+                if topic is None:
+                    topic = "outside_agencies"
+                if topic not in CAMPUS_LIFE_NOTICE_TOPICS:
+                    raise InvalidRequestError("topic must be outside_agencies or events.")
+                topic_article_nos = seen_article_nos.setdefault(topic, set())
+                topic_source_urls = seen_source_urls.setdefault(topic, set())
+                topic_title_published = seen_title_published.setdefault(topic, set())
+                article_no_key = _normalized_campus_life_notice_text(article_no)
+                if article_no_key is not None:
+                    if article_no_key in topic_article_nos:
+                        continue
+                    topic_article_nos.add(article_no_key)
+                source_url = detail.get("source_url") or item.get("source_url")
+                source_url_key = _normalized_campus_life_notice_text(source_url)
+                if source_url_key is not None:
+                    if source_url_key in topic_source_urls:
+                        continue
+                    topic_source_urls.add(source_url_key)
+                normalized_title = _normalized_campus_life_notice_text(title)
+                normalized_published_at = _normalized_campus_life_notice_text(published_at)
+                if normalized_title is not None and normalized_published_at is not None:
+                    dedupe_key = (normalized_title, normalized_published_at)
+                    if dedupe_key in topic_title_published:
+                        continue
+                    topic_title_published.add(dedupe_key)
+                rows.append(
+                    {
+                        "topic": topic,
+                        "title": title,
+                        "published_at": published_at,
+                        "summary": detail.get("summary") or item.get("summary") or "",
+                        "source_url": source_url,
+                        "source_tag": detail.get("source_tag")
+                        or getattr(
+                            resolved_source,
+                            "source_tag",
+                            "cuk_campus_life_notices",
+                        ),
+                        "last_synced_at": synced_at,
+                    }
+                )
     repo.replace_campus_life_notices(conn, rows)
     return [
         CampusLifeNotice.model_validate(item)
@@ -6684,8 +6728,14 @@ def sync_official_snapshot(
             ),
         ),
         ("notices", lambda c: refresh_notices_from_notice_board(c, pages=resolved_notice_pages)),
-        ("affiliated_notices", lambda c: refresh_affiliated_notices_from_sources(c)),
-        ("campus_life_notices", lambda c: refresh_campus_life_notices_from_source(c)),
+        (
+            "affiliated_notices",
+            lambda c: refresh_affiliated_notices_from_sources(c, pages=resolved_notice_pages),
+        ),
+        (
+            "campus_life_notices",
+            lambda c: refresh_campus_life_notices_from_source(c, pages=resolved_notice_pages),
+        ),
         ("academic_calendar", lambda c: refresh_academic_calendar_from_source(c)),
         ("certificate_guides", lambda c: refresh_certificate_guides_from_certificate_page(c)),
         ("leave_of_absence_guides", lambda c: refresh_leave_of_absence_guides_from_source(c)),
