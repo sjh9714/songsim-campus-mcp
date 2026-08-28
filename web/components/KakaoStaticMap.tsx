@@ -24,7 +24,7 @@ declare global {
   }
 }
 
-type MapState = 'loading' | 'sdk-ready' | 'ready' | 'missing' | 'error';
+type MapState = 'loading' | 'ready' | 'missing' | 'error';
 
 const APP_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY?.trim();
 
@@ -44,17 +44,18 @@ export default function KakaoStaticMap({
   label: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [sdkReady, setSdkReady] = useState(false);
   const [state, setState] = useState<MapState>(APP_KEY ? 'loading' : 'missing');
 
   useEffect(() => {
-    if (state !== 'loading' && state !== 'sdk-ready') return;
+    if (state !== 'loading') return;
 
     const timeout = window.setTimeout(() => setState('error'), 8000);
     return () => window.clearTimeout(timeout);
-  }, [state]);
+  }, [sdkReady, state]);
 
   useEffect(() => {
-    if (state !== 'sdk-ready') return;
+    if (!sdkReady) return;
 
     const kakaoMaps = window.kakao?.maps;
     if (!kakaoMaps) {
@@ -63,15 +64,13 @@ export default function KakaoStaticMap({
     }
 
     let disposed = false;
-    let renderedContainer: HTMLDivElement | null = null;
     kakaoMaps.load(() => {
       if (disposed || !containerRef.current) return;
 
       try {
         const position = new kakaoMaps.LatLng(latitude, longitude);
-        renderedContainer = containerRef.current;
-        renderedContainer.replaceChildren();
-        new kakaoMaps.StaticMap(renderedContainer, {
+        containerRef.current.replaceChildren();
+        new kakaoMaps.StaticMap(containerRef.current, {
           center: position,
           level: 3,
           marker: { position, text: label },
@@ -84,20 +83,19 @@ export default function KakaoStaticMap({
 
     return () => {
       disposed = true;
-      renderedContainer?.replaceChildren();
     };
-  }, [label, latitude, longitude, state]);
+  }, [label, latitude, longitude, sdkReady]);
 
   const failed = state === 'missing' || state === 'error';
 
   return (
-    <div className="place-map" aria-busy={state === 'loading' || state === 'sdk-ready'}>
+    <div className="place-map" aria-busy={state === 'loading'}>
       {APP_KEY ? (
         <Script
           id="kakao-static-map-sdk"
           src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(APP_KEY)}&autoload=false`}
           strategy="afterInteractive"
-          onReady={() => setState('sdk-ready')}
+          onReady={() => setSdkReady(true)}
           onError={() => setState('error')}
         />
       ) : null}
