@@ -1,8 +1,10 @@
 import Link from 'next/link';
 
 import EmptyState from './EmptyState';
+import PlaceIdentity from './PlaceIdentity';
 import { getCourses, getPcSoftware, getPhoneBook, getPlaces } from '@/lib/api';
 import { truncate } from '@/lib/format';
+import { placeBuildingLabel, placeDetailHref } from '@/lib/places';
 
 // 검색이 빗나갔을 때 보여줄 출발점. 신입생이 첫 주에 가장 많이 찾는 것들이다.
 const COMMON_SEARCHES = ['보건실', '복사실', '학사지원팀', '중앙도서관', '학생회관'];
@@ -71,23 +73,35 @@ export default async function SearchResults({ query }: { query: string }) {
           <div className="card__head">
             <h2 className="card__title">장소</h2>
           </div>
-          <ul className="list">
-            {places.data.map((place) => (
-              <li key={place.id}>
-                <div className="row__title">{place.name}</div>
-                {place.matched_facility ? (
-                  <div className="row__sub">
-                    {place.matched_facility.name}
-                    {place.matched_facility.location_hint
-                      ? ` · ${place.matched_facility.location_hint}`
-                      : ''}
-                    {place.matched_facility.phone ? ` · ${place.matched_facility.phone}` : ''}
-                  </div>
-                ) : place.description ? (
-                  <div className="row__sub">{truncate(place.description, 80)}</div>
-                ) : null}
-              </li>
-            ))}
+          <ul className="list place-list">
+            {places.data.map((place) => {
+              const facility = place.matched_facility;
+              const location = facility
+                ? [facility.location_hint, placeBuildingLabel(place), facility.phone]
+                    .filter(Boolean)
+                    .join(' · ')
+                : null;
+
+              return (
+                <li key={place.id}>
+                  <Link
+                    className="place-link"
+                    href={placeDetailHref(place, query)}
+                    aria-label={`${facility?.name ?? place.canonical_name ?? place.name} 위치 보기`}
+                  >
+                    <span className="place-link__main">
+                      {facility ? (
+                        <span className="row__title">{facility.name}</span>
+                      ) : (
+                        <PlaceIdentity place={place} />
+                      )}
+                      {location ? <span className="row__sub">{location}</span> : null}
+                    </span>
+                    <span className="place-link__action">위치 보기</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </section>
       ) : null}

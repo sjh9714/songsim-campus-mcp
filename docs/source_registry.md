@@ -4,7 +4,7 @@
 
 | source_id | 종류 | 원본 | 우선순위 | 파서 상태 | 비고 |
 |---|---|---|---|---|---|
-| cuk_campus_map | 공식 | https://www.catholic.ac.kr/ko/about/campus-map.do | 높음 | implemented | `mode=getPlaceListByCondition` 공개 JSON을 정규화하여 장소 동기화 |
+| cuk_campus_map | 공식 | https://www.catholic.ac.kr/ko/about/campus-map.do | 높음 | implemented | `mode=getPlaceListByCondition` 공개 JSON을 정규화하여 장소 동기화. 학생용 웹의 장소 상세와 지도 마커도 이 공식 위·경도를 사용 |
 | cuk_subject_search | 공식 | https://www.catholic.ac.kr/ko/support/subject.do | 높음 | implemented | 개설과목조회 HTML 테이블 + 팝업 상세 파싱 |
 | cuk_classroom_rental_policy | 공식 | https://www.catholic.ac.kr/ko/campuslife/notice.do?articleNo=274409&mode=view | 중간 | manual policy | 2026-2학기 공식 대여 공지의 평일 09:00~22:00 기본 이용 시간을 학생용 웹 표시 제한에 사용합니다. 주말·공휴일·시험기간 제한과 실제 개방/점유는 별도이며, 실시간 공실 source로 취급하지 않습니다. |
 | cuk_campus_notices | 공식 | https://www.catholic.ac.kr/ko/campuslife/notice.do | 높음 | implemented | 목록 HTML + 상세 HTML 조합으로 설정된 페이지 수(기본 5페이지)의 최신 공지 동기화 |
@@ -41,6 +41,7 @@
 | cuk_wifi_guides | 공식 | https://www.catholic.ac.kr/ko/campuslife/wifi.do | 중간 | implemented | 무선랜서비스 HTML 표를 `wifi_guides` current snapshot으로 정규화 |
 | cuk_academic_calendar | 공식 | https://www.catholic.ac.kr/ko/support/calendar2024_list.do | 중간 | implemented | 공개 JSON feed(`mode=getCalendarData`)를 `academic_calendar` current snapshot으로 정규화 |
 | kakao_local | 외부 공개 API | https://developers.kakao.com/docs/latest/ko/local/common | 높음 | implemented | 학교 공식 1차 source가 아닌 학생 편의 기능입니다. API 키가 있으면 `/restaurants/nearby`, `/restaurants/search`, 개인화 식사 추천에서 lazy cache 기반 실시간 장소 검색을 사용하며, 공식 source coverage와 별도 범주로 표시합니다. |
+| kakao_maps_web | 외부 공개 API | https://apis.map.kakao.com/web/guide/ | 중간 | implemented | 학생용 웹에서 학교 공식 좌표를 정적 미니 지도로 렌더링하고 Kakao 지도·길찾기 URL로 연결합니다. 장소 좌표 자체는 Kakao에서 수집하지 않으며 `cuk_campus_map` 값을 사용하고, 브라우저 위치 권한도 요청하지 않습니다. |
 | kakao_place_detail | 외부 공개 웹 | https://place.map.kakao.com/ | 중간 | implemented | 학교 공식 1차 source가 아닌 학생 편의 기능입니다. Kakao place detail `panel3` 공개 흐름의 현재 `open_hours.week_from_today` 계약과 기존 `open_hours.all` 계약에서 영업시간을 best-effort로 가져와 `restaurant_hours_cache`에 lazy cache 저장 |
 
 ## 실시간 강의실 조사 메모

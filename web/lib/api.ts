@@ -108,6 +108,8 @@ async function getJson<T>(
     noStore?: boolean;
     /** 기본 제한시간을 덮어쓴다. 외부 실시간 조회를 하는 엔드포인트용. */
     timeoutMs?: number;
+    /** 존재하지 않는 단건 조회는 장애가 아니라 빈 결과로 구분한다. */
+    notFoundIsEmpty?: boolean;
   },
 ): Promise<Fetched<T>> {
   const url = buildUrl(path, options.params);
@@ -120,6 +122,15 @@ async function getJson<T>(
         ? { cache: 'no-store' as const }
         : { next: { revalidate: options.revalidate } }),
     });
+
+    if (response.status === 404 && options.notFoundIsEmpty) {
+      return {
+        data: options.fallback,
+        degraded: false,
+        servedFromSnapshot: false,
+        snapshotAt: null,
+      };
+    }
 
     if (!response.ok) {
       throw new Error(`${response.status} ${response.statusText}`);
@@ -231,6 +242,14 @@ export function getPlaces(options: { query?: string; category?: string; limit?: 
     revalidate: TTL.places,
     fallback: [],
     params: { query: options.query ?? '', category: options.category, limit: options.limit ?? 10 },
+  });
+}
+
+export function getPlace(identifier: string) {
+  return getJson<Place | null>(`/places/${encodeURIComponent(identifier)}`, {
+    revalidate: TTL.places,
+    fallback: null,
+    notFoundIsEmpty: true,
   });
 }
 

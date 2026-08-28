@@ -36,7 +36,18 @@ npx vercel link
 ```bash
 npx vercel env add SONGSIM_API_BASE production
 # 값: https://songsim-api-sg.onrender.com
+
+npx vercel env add NEXT_PUBLIC_KAKAO_MAP_JS_KEY production
+# 값: Kakao Developers > 플랫폼 키 > JavaScript 키
 ```
+
+Kakao Developers의 해당 JavaScript 키에는 다음 웹 도메인을 등록합니다.
+
+- 로컬 확인: `http://localhost:3000`
+- 운영: `https://songsim-web.vercel.app`
+
+JavaScript 키는 브라우저에 포함되는 공개 키이므로 REST API 키를 대신 넣지 않습니다. 허용
+도메인을 제한하고, 값을 바꾼 뒤에는 Next.js가 새 키를 빌드에 포함하도록 다시 배포합니다.
 
 선택 항목 (기본값으로 충분합니다)
 
@@ -45,6 +56,7 @@ npx vercel env add SONGSIM_API_BASE production
 | `SONGSIM_API_BASE` | `http://127.0.0.1:8000` | 백엔드 HTTP API 주소 |
 | `SONGSIM_API_TIMEOUT_MS` | `5000` | 일반 엔드포인트 제한시간 |
 | `SONGSIM_API_LIVE_TIMEOUT_MS` | `15000` | `/library-seats` 처럼 외부 실시간 조회를 하는 엔드포인트용 |
+| `NEXT_PUBLIC_KAKAO_MAP_JS_KEY` | 없음 | 장소 상세의 Kakao 미니 지도용 JavaScript 키. 없거나 로드에 실패해도 외부 지도·길찾기 링크는 유지 |
 
 ### 4. 배포
 
@@ -71,6 +83,7 @@ SONGSIM_STUDENT_WEB_URL=https://<배포된-주소>
    무한 로딩이나 에러 화면이 뜨면 안 됩니다.
 3. **실기기** — 저사양 안드로이드 + 느린 회선에서 첫 화면.
 4. **홈 화면에 추가** — 아이콘과 이름이 제대로 나오는지.
+5. **장소 위치** — `/find/kim-sou-hwan-hall`에서 미니 지도와 `카카오맵 길찾기`가 열리는지.
 
 ## 알아둘 것
 

@@ -260,6 +260,212 @@ a.row__value {
   gap: 10px;
 }
 
+/* --- 장소 위치 ------------------------------------------------------ */
+
+/* 검색용 별칭을 모두 늘어놓지 않고, 강의실 표기와 연결되는 건물 코드만 남긴다. */
+.place-code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  margin-left: 7px;
+  padding: 1px 6px;
+  color: var(--accent);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: 1px;
+}
+
+.place-list > li {
+  padding: 0;
+}
+
+.place-link {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 0;
+  border-radius: var(--radius);
+}
+
+.place-link__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.place-link__action {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.place-link:focus-visible,
+.place-action:focus-visible,
+.place-detail__back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.place-link:active,
+.place-action:active {
+  transform: translateY(1px);
+}
+
+.place-detail__back-row {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.place-detail__back {
+  margin-top: 0;
+}
+
+.place-detail__identity {
+  margin-top: 18px;
+}
+
+.place-detail__title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+}
+
+.place-detail__title-text {
+  display: block;
+}
+
+.place-detail__location {
+  margin: 6px 0 0;
+  color: var(--body);
+  font-size: 0.93rem;
+  font-weight: 600;
+}
+
+.place-detail__meta {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* 정적 이미지만 써서 작은 지도에서 손가락 스크롤을 가로채지 않는다. */
+.place-map {
+  position: relative;
+  min-height: 230px;
+  margin-top: 18px;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.place-map__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.place-map__state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  color: var(--muted);
+  background: var(--surface-2);
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+.place-map__state:not(.place-map__state--failed) {
+  overflow: hidden;
+}
+
+.place-map__state:not(.place-map__state--failed)::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 70%) 48%, transparent 66%);
+  transform: translateX(-100%);
+  animation: place-map-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes place-map-loading {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .place-map__state:not(.place-map__state--failed)::after {
+    animation: none;
+  }
+}
+
+.place-map--unavailable {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  padding: 26px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+.place-detail__note {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.place-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.place-action {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  font-size: 0.87rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  transition: transform 160ms ease;
+}
+
+.place-action--primary {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
 /* 방 이름을 누르면 학교가 제공하는 실제 좌석 배치도를 연다. */
 .room-map-link {
   display: inline-flex;
