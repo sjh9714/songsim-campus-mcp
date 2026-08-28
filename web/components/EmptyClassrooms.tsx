@@ -48,6 +48,7 @@ function availabilityNote(data: EstimatedEmptyClassroomResponse): string {
  */
 export default function EmptyClassrooms({ buildings }: { buildings: BuildingClassrooms[] }) {
   const [selected, setSelected] = useState(buildings[0]?.slug);
+  const [currentTime, setCurrentTime] = useState<string | null>(null);
 
   // 지난번에 봤던 건물로 한 번 되돌린다. 첫 렌더는 서버와 같은 값이어야 하므로
   // 마운트 후에 바꾼다. 실패하면 그냥 기본값으로 둔다.
@@ -58,10 +59,18 @@ export default function EmptyClassrooms({ buildings }: { buildings: BuildingClas
     setSelected(preferred);
   }, [buildings]);
 
+  // 이 화면은 ISR 캐시에 오래 남을 수 있으므로 API 응답의 evaluated_at으로
+  // 현재 이용 시간을 판정하면 안 된다. 첫 렌더는 서버 HTML과 맞춘 뒤,
+  // 브라우저가 실제 현재 시각을 넣고 분마다 경계를 다시 확인한다.
+  useEffect(() => {
+    const updateCurrentTime = () => setCurrentTime(new Date().toISOString());
+    updateCurrentTime();
+    const interval = window.setInterval(updateCurrentTime, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const current = buildings.find((building) => building.slug === selected) ?? buildings[0];
-  const withinUseWindow = current?.data
-    ? isWithinClassroomUseWindow(current.data.evaluated_at)
-    : true;
+  const withinUseWindow = currentTime ? isWithinClassroomUseWindow(currentTime) : true;
 
   return (
     <>
