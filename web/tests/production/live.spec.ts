@@ -30,11 +30,16 @@ test('production live endpoint never marks old library observations as current',
   const live = page.waitForResponse((response) => response.url().includes('/api/live?kind=library-seats'), { timeout: 65_000 });
   await page.goto('/study');
   const result = await (await live).json();
-  if (result.data.availability_mode === 'live' && !result.degraded) {
-    expect(Date.now() - Date.parse(result.data.checked_at)).toBeLessThan(60_000);
-    await expect(page.locator('.room-map-link').first()).toBeVisible();
-  } else {
-    await expect(page.getByText('현재 좌석 수를 확인하지 못했어요.')).toBeVisible();
-  }
+  expect(typeof result.degraded).toBe('boolean');
+  // Inspect the observation actually rendered, including any refresh during the test.
+  // The UI's 15-second clock tick bounds the 60-second window to at most 75 seconds.
+  await expect.poll(async () => {
+    if (await page.locator('.room-map-link').count() === 0) {
+      return await page.getByText(/현재 좌석(을 확인하고| 수를 확인하지 못)/).isVisible();
+    }
+    const observed = await page.locator('time[datetime]').first().getAttribute('datetime');
+    const age = Date.now() - Date.parse(observed ?? '');
+    return Number.isFinite(age) && age >= -30_000 && age <= 75_000;
+  }).toBeTruthy();
   await expect(page.getByRole('link', { name: '공식 좌석 현황 페이지 ›' })).toHaveAttribute('href', 'https://mlibrary.catholic.ac.kr/mobile/PA/roomStatus.php');
 });

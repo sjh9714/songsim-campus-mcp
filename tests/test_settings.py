@@ -80,6 +80,11 @@ def test_settings_parse_library_seat_cache_ttls(monkeypatch):
     assert settings.library_seat_cache_stale_ttl_minutes == 15
 
 
+def test_default_library_seat_cache_matches_one_minute_web_policy(monkeypatch):
+    monkeypatch.delenv("SONGSIM_LIBRARY_SEAT_CACHE_TTL_MINUTES", raising=False)
+    assert Settings(_env_file=None).library_seat_cache_ttl_minutes == 1
+
+
 def test_settings_parse_admin_enabled(monkeypatch):
     monkeypatch.setenv("SONGSIM_ADMIN_ENABLED", "true")
     clear_settings_cache()
@@ -171,7 +176,7 @@ def test_env_example_documents_blank_course_term_defaults():
     assert "SONGSIM_LIBRARY_SEAT_PREWARM_INTERVAL_MINUTES=5" in text
     assert "SONGSIM_RESTAURANT_CACHE_TTL_MINUTES=360" in text
     assert "SONGSIM_RESTAURANT_CACHE_STALE_TTL_MINUTES=1440" in text
-    assert "SONGSIM_LIBRARY_SEAT_CACHE_TTL_MINUTES=2" in text
+    assert "SONGSIM_LIBRARY_SEAT_CACHE_TTL_MINUTES=1" in text
     assert "SONGSIM_LIBRARY_SEAT_CACHE_STALE_TTL_MINUTES=15" in text
     assert "SONGSIM_OFFICIAL_NOTICE_PAGES=5" in text
     assert "SONGSIM_OFFICIAL_COURSE_YEAR=" in text

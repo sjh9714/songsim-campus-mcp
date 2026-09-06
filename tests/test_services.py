@@ -364,6 +364,15 @@ def test_get_library_seat_status_fetches_live_rows_and_filters_room_query(app_en
     assert response.rooms[0].map_url == "https://library.example/rooms/1/map"
 
 
+def test_library_seat_cache_older_than_one_minute_requires_refresh(app_env, monkeypatch):
+    monkeypatch.delenv("SONGSIM_LIBRARY_SEAT_CACHE_TTL_MINUTES", raising=False)
+    from songsim_campus.settings import Settings
+    monkeypatch.setattr(services_module, "get_settings", lambda: Settings(_env_file=None))
+    now = datetime.fromisoformat("2026-03-16T09:00:00+09:00")
+    assert services_module._library_seat_cache_status("2026-03-16T08:59:30+09:00", now) == "fresh"
+    assert services_module._library_seat_cache_status("2026-03-16T08:58:40+09:00", now) == "stale"
+
+
 def test_get_library_seat_status_falls_back_to_stale_cache_on_live_failure(app_env):
     init_db()
     with connection() as conn:

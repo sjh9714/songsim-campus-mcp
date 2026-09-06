@@ -69,7 +69,7 @@ export default function LibrarySeatsView({ initial, compact = false }: { initial
   // 셋이 겹쳐 같은 문장이 세 번 나오던 것을 정리한다. note 가 값을 더 설명할 때만 남긴다.
   const note = (
     <>
-      {seats.data.checked_at && now !== null ? `${formatAgo(seats.data.checked_at, now)} 확인` : null}
+      {seats.data.checked_at && now !== null ? <time dateTime={seats.data.checked_at}>{formatAgo(seats.data.checked_at, now)} 확인</time> : null}
       {seats.data.availability_mode === 'stale_cache'
         ? ' · 실시간 조회에 실패해 직전에 받아둔 값이에요.'
         : null}
