@@ -43,10 +43,13 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       # Each run builds against isolated QA data, never production credentials or live data.
       - run: npm run test:e2e
       - run: npm run test:e2e
+        env:
+          TEST_MAP_KEY: qa-sdk-failure-test
+      - run: npm run test:e2e -- --browser=webkit
         env:
           TEST_MAP_KEY: qa-sdk-failure-test
       - uses: actions/upload-artifact@v4

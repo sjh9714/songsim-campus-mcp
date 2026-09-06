@@ -114,9 +114,10 @@ test('phone digits stay together beside long departments at narrow widths', asyn
   }
 });
 
-test('a stalled Kakao loader or image request ends with useful external links', async ({ page }) => {
-  test.skip(!process.env.TEST_MAP_KEY, 'The key-missing run never loads an SDK.');
-  for (const stalled of ['loader', 'image']) {
+// Keep distinct failure mocks in independent browser contexts across engines.
+for (const stalled of ['loader', 'image']) {
+  test(`a stalled Kakao ${stalled} ends with useful external links`, async ({ page }) => {
+    test.skip(!process.env.TEST_MAP_KEY, 'The key-missing run never loads an SDK.');
     await page.route('https://dapi.kakao.com/**', (route) => route.fulfill({
       contentType: 'application/javascript',
       body: `window.kakao = { maps: { load: (callback) => { ${stalled === 'image' ? 'callback();' : ''} }, LatLng: class {}, StaticMap: class {
@@ -132,8 +133,8 @@ test('a stalled Kakao loader or image request ends with useful external links', 
     }, { intervals: [100] }).toBeTruthy();
     await expect(page.getByRole('link', { name: '카카오맵 길찾기', exact: true })).toBeVisible();
     await expect(page.locator('.place-map')).toHaveAttribute('aria-busy', 'false');
-  }
-});
+  });
+}
 
 test('home venue name and location have separate spacing', async ({ page }) => {
   await page.goto('/');
