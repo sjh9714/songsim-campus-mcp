@@ -64,6 +64,18 @@ export default function KakaoStaticMap({
     }
 
     let disposed = false;
+    const container = containerRef.current;
+    const checkImages = () => {
+      const images = Array.from(container?.querySelectorAll('img') ?? []);
+      if (images.length > 0 && images.every((image) => image.complete && image.naturalWidth > 0)) setState('ready');
+    };
+    const imageError = () => setState('error');
+    const observer = new MutationObserver(checkImages);
+    if (container) {
+      observer.observe(container, { childList: true, subtree: true });
+      container.addEventListener('load', checkImages, true);
+      container.addEventListener('error', imageError, true);
+    }
     kakaoMaps.load(() => {
       if (disposed || !containerRef.current) return;
 
@@ -75,7 +87,7 @@ export default function KakaoStaticMap({
           level: 3,
           marker: { position, text: label },
         });
-        setState('ready');
+        checkImages();
       } catch {
         setState('error');
       }
@@ -83,6 +95,9 @@ export default function KakaoStaticMap({
 
     return () => {
       disposed = true;
+      observer.disconnect();
+      container?.removeEventListener('load', checkImages, true);
+      container?.removeEventListener('error', imageError, true);
     };
   }, [label, latitude, longitude, sdkReady]);
 

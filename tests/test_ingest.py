@@ -278,6 +278,50 @@ def test_library_hours_parser_extracts_room_labels_and_schedules():
     ]
 
 
+def test_library_hours_rejects_session_error_instead_of_empty_success():
+    import pytest
+
+    with pytest.raises(ValueError, match="opening-hours"):
+        LibraryHoursSource("https://library.catholic.ac.kr/webcontent/info/45").parse(
+            "<html>Session expired</html>",
+            fetched_at="2026-09-06T00:00:00+09:00",
+        )
+
+
+def test_building_category_does_not_use_historical_description():
+    from songsim_campus.ingest.official_sources import _infer_place_category
+
+    assert _infer_place_category("미카엘관", "Michael Hall", "과거 대성당으로 사용") == "building"
+    assert _infer_place_category("김수환관", "Kim Sou Hwan Hall", "기숙사와 연결") == "building"
+    assert _infer_place_category("중앙도서관", "Central Library", "건물") == "library"
+
+
+def test_library_hours_bootstraps_public_session_once(monkeypatch):
+    import httpx
+
+    from songsim_campus.ingest import official_sources
+
+    paths = []
+    client_class = httpx.Client
+
+    def handle(request):
+        paths.append(request.url.path)
+        if request.url.path == "/":
+            return httpx.Response(200, text="Public landing", headers={"set-cookie": "session=ok"})
+        if request.url.path == "/error/session":
+            return httpx.Response(200, text="Session expired")
+        if "session=ok" not in request.headers.get("cookie", ""):
+            return httpx.Response(302, headers={"location": "/error/session"})
+        return httpx.Response(200, text=_fixture("library_hours.html"))
+
+    monkeypatch.setattr(official_sources.httpx, "Client", lambda **kwargs: client_class(
+        transport=httpx.MockTransport(handle), **kwargs,
+    ))
+    source = LibraryHoursSource("https://library.catholic.ac.kr/webcontent/info/45")
+    assert source.parse(source.fetch(), fetched_at="2026-09-06T00:00:00+09:00")[0]["opening_hours"]
+    assert paths == ["/webcontent/info/45", "/error/session", "/", "/webcontent/info/45"]
+
+
 SEAT_XML_URL = "https://mlibrary.catholic.ac.kr/mobile/PA/roomStatusListXML.php"
 
 

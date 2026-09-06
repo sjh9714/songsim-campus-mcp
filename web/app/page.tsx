@@ -1,16 +1,17 @@
 import Link from 'next/link';
+import { FRESHNESS_LIMIT } from '@/lib/live-state';
 import { Suspense } from 'react';
 
 import Card from '@/components/Card';
 import CardSkeleton from '@/components/CardSkeleton';
-import DayMenu from '@/components/DayMenu';
+import HomeDining from '@/components/HomeDining';
 import EmptyState from '@/components/EmptyState';
-import FreshnessBadge, { FRESHNESS_LIMIT } from '@/components/FreshnessBadge';
+import FreshnessBadge from '@/components/FreshnessBadge';
 import LibrarySeatsCard from '@/components/LibrarySeatsCard';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import { getDiningMenus, getNotices, requireFreshOrKeepLastPage } from '@/lib/api';
-import { formatAgo, formatDate, todayInSeoul, truncate } from '@/lib/format';
+import { formatDate, truncate } from '@/lib/format';
 
 export const revalidate = 60;
 
@@ -26,66 +27,11 @@ export default async function HomePage() {
   const [dining, notices] = await Promise.all([getDiningMenus(3), getNotices({ limit: 3 })]);
   requireFreshOrKeepLastPage(dining, '학식');
 
-  // 주간 표가 있는 식당을 먼저 고른다. 어떤 곳은 가격표 PDF 라 요일 구조가 없다.
-  const today = todayInSeoul();
-  const withDay = dining.data
-    .map((menu) => ({
-      menu,
-      // 주말에는 이번 주 표에 오늘이 없다. 그때는 다가오는 첫날을 보여준다.
-      // 학생이 궁금한 건 "그럼 내일은?" 이지 지난 주 표가 아니다.
-      day: menu.days.find((item) => item.date >= today) ?? null,
-    }))
-    .find((entry) => entry.day);
-  const topMenu = withDay?.menu ?? dining.data[0] ?? null;
-  const todayMenu = withDay?.day ?? null;
-  const topMenuLocation = topMenu?.location_text ?? topMenu?.place_name ?? null;
-
   return (
     <>
       <TopBar title="성심교정 도우미" subtitle="학교에서 헤매지 않게" />
 
-      {/* --- 학식 --- */}
-      <Card
-        // 주말이면 이번 주 표에 오늘이 없어 다음 날을 보여준다.
-        // 그때도 "오늘의 학식"이라고 적으면 날짜와 어긋나 거짓말이 된다.
-        title={todayMenu && todayMenu.date !== today ? '다음 학식' : '오늘의 학식'}
-        href="/dining"
-        note={
-          topMenu ? (
-            <FreshnessBadge syncedAt={topMenu.last_synced_at} maxAgeHours={FRESHNESS_LIMIT.dining} />
-          ) : null
-        }
-      >
-        {topMenu ? (
-          <>
-            <div className="row__title dining-venue">
-              <span>{topMenu.venue_name}</span>
-              {topMenuLocation ? (
-                <span
-                  className="dining-venue__location"
-                  aria-label={`위치 ${topMenuLocation}`}
-                >
-                  {topMenuLocation}
-                </span>
-              ) : null}
-            </div>
-            {todayMenu ? (
-              <>
-                <div className="row__sub">
-                  {todayMenu.date === today ? '오늘 · ' : ''}
-                  {formatDate(todayMenu.date)} ({todayMenu.weekday})
-                </div>
-                <DayMenu day={todayMenu} compact />
-              </>
-            ) : (
-              // 주간 표가 아닌 PDF 는 원문을 싣지 않는다. 제3자 저작물인 경우가 있다.
-              <EmptyState message="이번 주 메뉴가 아직 올라오지 않았어요." />
-            )}
-          </>
-        ) : (
-          <EmptyState degraded={dining.degraded} message="지금 올라온 학식 메뉴가 없어요." />
-        )}
-      </Card>
+      <HomeDining dining={dining} />
 
       {/* --- 도서관 좌석 (실시간 조회라 느리므로 나머지 화면과 분리해서 그린다) --- */}
       <Suspense fallback={<CardSkeleton title="도서관 좌석" />}>
@@ -117,7 +63,7 @@ export default async function HomePage() {
               <li key={notice.id}>
                 <a href={notice.source_url ?? '#'} target="_blank" rel="noreferrer">
                   <div className="row__title">{truncate(notice.title, 60)}</div>
-                  <div className="row__sub">{formatAgo(notice.published_at)}</div>
+                  <div className="row__sub">{formatDate(notice.published_at)}</div>
                 </a>
               </li>
             ))}

@@ -738,3 +738,8 @@ a.row__value {
   opacity: 0.5;
   cursor: default;
 }
+
+.phone-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.phone-links a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.live-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.live-controls .chip:disabled { opacity: 0.6; cursor: wait; }

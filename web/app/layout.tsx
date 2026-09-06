@@ -31,6 +31,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <strong>비공식 학생 프로젝트입니다.</strong> 가톨릭대학교가 만들거나 운영하는 서비스가
             아니며, 학교가 공개한 정보를 모아서 보여줍니다. 중요한 내용은 각 화면의 학교 원문
             링크에서 다시 확인해 주세요.
+            {' '}<a href="https://github.com/sjh9714/songsim-campus-mcp/issues/new" target="_blank" rel="noreferrer">오류 제보 (공개 GitHub 이슈)</a>
+            {' '}학번·연락처 등 개인정보는 적지 마세요.
           </footer>
         </div>
         <TabBar />

@@ -5,12 +5,20 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, model_validator
 
 
+class PhoneContact(BaseModel):
+    label: str
+    dial: str | None = None
+
+
 class MatchedFacility(BaseModel):
     name: str
     category: str | None = None
     phone: str | None = None
     location_hint: str | None = None
     opening_hours: str | None = None
+    phone_contacts: list[PhoneContact] = Field(default_factory=list)
+    source_url: str | None = None
+    last_synced_at: str | None = None
 
 
 class Place(BaseModel):
@@ -382,6 +390,7 @@ class PhoneBookEntry(BaseModel):
     department: str
     tasks: str
     phone: str
+    phone_contacts: list[PhoneContact] = Field(default_factory=list)
     source_url: str | None = None
     source_tag: str = "demo"
     last_synced_at: str
@@ -579,6 +588,7 @@ class CampusDiningMenu(BaseModel):
     place_slug: str | None = None
     place_name: str | None = None
     location_text: str | None = None
+    opening_hours: str | None = None
     week_label: str | None = None
     week_start: str | None = None
     week_end: str | None = None

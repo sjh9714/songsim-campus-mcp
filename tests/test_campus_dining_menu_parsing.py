@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from songsim_campus.services import (
     _extract_campus_dining_menu_days,
     _extract_campus_dining_menu_text,
+    _extract_campus_dining_menu_week_range,
+    _parse_campus_dining_menu_layout,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "campus_dining_weekly_menu.pdf"
@@ -80,3 +84,48 @@ def test_days_are_empty_when_the_pdf_is_not_a_weekly_table():
     writer.write(buffer)
 
     assert _extract_campus_dining_menu_days(buffer.getvalue(), year=2026) == []
+
+
+def test_semester_menu_keeps_breakfast_corners_and_real_dinner():
+    layout = FIXTURE.with_name("campus_dining_semester_layout.txt").read_text()
+    days = _parse_campus_dining_menu_layout(layout, year=2026)
+    monday = days[0]["meals"]
+    assert list(monday) == ["천원의 아침", "한식", "누들", "플러스코너", "석식"]
+    assert monday["천원의 아침"]["items"][0] == "아쿠아치킨까스"
+    assert monday["한식"]["items"][0] == "(탕)돼지고기김치찌개"
+    assert monday["누들"]["items"][0] == "우삼겹쌀국수"
+    assert monday["플러스코너"]["items"] == ["청양소스크림함박&감자튀김"]
+    assert monday["석식"]["items"][0] == "단호박카레라이스"
+    assert monday["석식"]["kcal"] == 824
+    assert "천원의 아침" not in days[-1]["meals"]
+
+
+def test_unknown_menu_sections_are_not_guessed_as_lunch_or_dinner():
+    layout = FIXTURE.with_name("campus_dining_semester_layout.txt").read_text()
+    for label in ("천원의아침", "한식", "누들", "플러스코너", "석식"):
+        layout = layout.replace(label, " " * len(label))
+    assert _parse_campus_dining_menu_layout(layout, year=2026) == []
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("2026.08.31 - 09.04", ("2026-08-31", "2026-09-04")),
+        ("2026.12.28 - 01.01", ("2026-12-28", "2027-01-01")),
+        ("2026.12.28 - 2027.01.01", ("2026-12-28", "2027-01-01")),
+        ("2026.09.07 - 09.11", ("2026-09-07", "2026-09-11")),
+        ("2026.09.07 - 09.01", (None, None)),
+        ("2026.02.30 - 03.04", (None, None)),
+    ],
+)
+def test_week_range_handles_month_and_year_boundaries(text, expected):
+    assert _extract_campus_dining_menu_week_range(text) == expected
+
+
+def test_menu_columns_handle_new_year_and_reject_invalid_dates():
+    layout = ("구분          12/31(목)          01/01(금)\n"
+              "중식          쌀밥                떡국\n"
+              "              800kcal            900kcal")
+    days = _parse_campus_dining_menu_layout(layout, year=2026)
+    assert [day["date"] for day in days] == ["2026-12-31", "2027-01-01"]
+    assert _parse_campus_dining_menu_layout(layout.replace("12/31", "12/32"), year=2026) == []

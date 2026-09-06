@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 import EmptyState from './EmptyState';
 import PlaceIdentity from './PlaceIdentity';
+import PhoneLinks from './PhoneLinks';
+import RefreshResults from './RefreshResults';
 import { getCourses, getPcSoftware, getPhoneBook, getPlaces } from '@/lib/api';
 import { truncate } from '@/lib/format';
 import { placeBuildingLabel, placeDetailHref } from '@/lib/places';
@@ -26,7 +28,7 @@ export default async function SearchResults({ query }: { query: string }) {
 
   const total =
     places.data.length + phones.data.length + courses.data.length + software.data.length;
-  const degraded = places.degraded && phones.degraded && courses.degraded && software.degraded;
+  const degraded = places.degraded || phones.degraded || courses.degraded || software.degraded;
 
   if (total === 0) {
     // 안내 두 줄만 남기면 화면이 텅 비어 막다른 길이 된다.
@@ -38,6 +40,7 @@ export default async function SearchResults({ query }: { query: string }) {
           message={`"${query}"에 해당하는 결과를 못 찾았어요.`}
           hint="건물, 부서, 과목 이름으로 찾을 수 있어요."
         />
+        {degraded ? <RefreshResults /> : null}
         <div className="section__title">이런 걸 많이 찾아요</div>
         <div className="chips">
           {COMMON_SEARCHES.map((keyword) => (
@@ -67,6 +70,8 @@ export default async function SearchResults({ query }: { query: string }) {
   return (
     <>
       <div className="section__title">결과 {total}건</div>
+      {degraded ? <p className="badge badge--warn" role="status">일부 정보를 받지 못해 검색 결과가 빠져 있을 수 있어요.</p> : null}
+      {degraded ? <RefreshResults /> : null}
 
       {places.data.length > 0 ? (
         <section className="card">
@@ -118,9 +123,7 @@ export default async function SearchResults({ query }: { query: string }) {
                   <span className="row__title">{entry.department}</span>
                   {entry.tasks ? <span className="row__sub">{truncate(entry.tasks, 60)}</span> : null}
                 </span>
-                <a className="row__value" href={`tel:${entry.phone.replace(/[^0-9+]/g, '')}`}>
-                  {entry.phone}
-                </a>
+                <PhoneLinks phone={entry.phone} contacts={entry.phone_contacts} />
               </li>
             ))}
           </ul>
@@ -136,6 +139,7 @@ export default async function SearchResults({ query }: { query: string }) {
             {courses.data.map((course) => (
               <li key={course.id}>
                 <div className="row__title">{course.title}</div>
+                {course.room && /^[A-Za-z]{1,3}\d{2,4}$/.test(course.room) ? <Link className="linkout" href={`/search?q=${encodeURIComponent(course.room)}`}>{course.room} 위치 찾기 ›</Link> : null}
                 <div className="row__sub">
                   {[
                     `${course.year}-${course.semester}`,

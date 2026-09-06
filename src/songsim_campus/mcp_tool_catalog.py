@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import Annotated, Any
 
 from pydantic import Field
@@ -111,7 +112,16 @@ def register_shared_tools(
     public_readonly: bool,
     tool_meta: Any,
 ) -> None:
-    @mcp.tool(
+    from mcp.types import ToolAnnotations
+
+    readonly_tool = partial(
+        mcp.tool,
+        annotations=ToolAnnotations(
+            readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True,
+        ),
+    )
+
+    @readonly_tool(
         description=(
             "high-level public journey tool: 오늘 할 일 질문에 먼저 사용합니다. "
             "최신 공지, 학생활동/대학생활 공지, 이번 달 학사일정을 한 번에 묶어 "
@@ -127,7 +137,7 @@ def register_shared_tools(
             Field(description="기준 날짜 YYYY-MM-DD. 없으면 현재 날짜를 사용합니다."),
         ] = None,
         limit: Annotated[int, Field(description="섹션별 최대 결과 수. 기본값은 10입니다.")] = 10,
-    ):
+    ) -> dict[str, Any]:
         from datetime import date
 
         with connection_factory() as conn:
@@ -147,7 +157,7 @@ def register_shared_tools(
                     return serialize_public_error(wrapped)
                 return {"error": str(wrapped)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             "high-level public journey tool: 어디/연락처 질문에 먼저 사용합니다. "
             "건물, 별칭, 편의시설, 교내 입점명 검색을 묶고 단일 후보가 보이면 "
@@ -167,7 +177,7 @@ def register_shared_tools(
             Field(description="선택적 의도 힌트. 예: 위치, 운영시간, 전화번호"),
         ] = None,
         limit: Annotated[int, Field(description="최대 후보 수. 기본값은 5입니다.")] = 5,
-    ):
+    ) -> dict[str, Any]:
         with connection_factory() as conn:
             try:
                 payload = find_campus_place(conn, query=query, intent=intent, limit=limit)
@@ -179,7 +189,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             "high-level public journey tool: 절차/제도 질문에 먼저 사용합니다. "
             "등록, 수업, 계절학기, 성적/졸업, 학적변동, 휴학, 증명, 장학, "
@@ -199,7 +209,7 @@ def register_shared_tools(
             Field(description="선택적 topic 힌트. 예: payment_and_return, excused_absence"),
         ] = None,
         limit: Annotated[int, Field(description="섹션별 최대 결과 수. 기본값은 10입니다.")] = 10,
-    ):
+    ) -> dict[str, Any]:
         with connection_factory() as conn:
             try:
                 payload = explain_academic_process(conn, query=query, topic=topic, limit=limit)
@@ -211,7 +221,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             "high-level public journey tool: 공부공간/자원 질문에 먼저 사용합니다. "
             "PC 소프트웨어, Wi-Fi, 도서관 좌석, 건물별 예상 빈 강의실을 "
@@ -235,7 +245,7 @@ def register_shared_tools(
             Field(description="공실 기준 시각 ISO 8601 문자열. 없으면 현재 시각입니다."),
         ] = None,
         limit: Annotated[int, Field(description="섹션별 최대 결과 수. 기본값은 10입니다.")] = 10,
-    ):
+    ) -> dict[str, Any]:
         from datetime import datetime
 
         with connection_factory() as conn:
@@ -264,7 +274,7 @@ def register_shared_tools(
                     return serialize_public_error(wrapped)
                 return {"error": str(wrapped)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             "high-level public journey tool: 특수 경로 질문에 먼저 사용합니다. "
             "기숙사, 생활지원, 학생활동, 교통, 교내 식당 안내를 공식 공개 "
@@ -284,7 +294,7 @@ def register_shared_tools(
             Field(description="선택적 topic 힌트. 예: career_counseling, fees"),
         ] = None,
         limit: Annotated[int, Field(description="섹션별 최대 결과 수. 기본값은 10입니다.")] = 10,
-    ):
+    ) -> dict[str, Any]:
         with connection_factory() as conn:
             try:
                 payload = campus_life_help(conn, query=query, topic=topic, limit=limit)
@@ -296,7 +306,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             "성심교정 학사일정을 읽을 때 사용합니다. academic_year, month, query로 "
             "개시일, 등록기간, 중간고사 같은 일정을 현재 스냅샷 기준으로 찾습니다."
@@ -332,7 +342,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             "학교 증명서 발급 안내를 읽을 때 사용합니다. "
             "재학증명서, 졸업증명서, 인터넷 증명발급, FAX 민원, 무인발급기 같은 "
@@ -351,7 +361,7 @@ def register_shared_tools(
                 return [serialize_public_certificate_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 휴학 안내를 읽을 때 사용합니다. 휴학 신청방법, 군휴학, 질병휴학, "
@@ -372,7 +382,7 @@ def register_shared_tools(
                 return [serialize_public_leave_of_absence_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 장학제도 안내를 읽을 때 사용합니다. 장학생 자격, 장학금 신청, 장학금 지급, "
@@ -393,7 +403,7 @@ def register_shared_tools(
                 return [serialize_public_scholarship_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 무선랜서비스 안내를 읽을 때 사용합니다. 건물별 SSID와 무선랜 접속 방법을 "
@@ -413,7 +423,7 @@ def register_shared_tools(
                 return [serialize_public_wifi_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학사지원팀 업무안내를 읽을 때 사용합니다. 휴복학, 학점교류, 성적, 졸업, "
@@ -434,7 +444,7 @@ def register_shared_tools(
                 return [serialize_public_academic_support_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 학적변동 안내를 읽을 때 사용합니다. 복학, 자퇴, 재입학 같은 "
@@ -463,7 +473,7 @@ def register_shared_tools(
                 return [serialize_public_academic_status_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 주요전화번호 / 부서 연락처를 찾을 때 사용합니다. 보건실, 학사지원팀, "
@@ -491,7 +501,7 @@ def register_shared_tools(
             entries = search_phone_book_entries(conn, query=query, limit=limit)
             return [item.model_dump() for item in entries]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "생활지원 안내를 읽을 때 사용합니다. 보건실, 유실물, 성심교정 주차요금, "
@@ -529,7 +539,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "PC실과 설치 소프트웨어를 검색할 때 사용합니다. SPSS, 포토샵, "
@@ -557,7 +567,7 @@ def register_shared_tools(
                 return [serialize_public_pc_software_entry(item) for item in entries]
             return [item.model_dump() for item in entries]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 기숙사 안내를 읽을 때 사용합니다. 스테파노관, 안드레아관, "
@@ -588,7 +598,7 @@ def register_shared_tools(
                 return [serialize_public_dormitory_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 등록 안내를 읽을 때 사용합니다. 등록금 고지서 조회, 등록금 납부 방법, "
@@ -619,7 +629,7 @@ def register_shared_tools(
                 return [serialize_public_registration_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 수업 안내를 읽을 때 사용합니다. 수강신청 변경기간, 재수강 기준, "
@@ -650,7 +660,7 @@ def register_shared_tools(
                 return [serialize_public_class_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 계절학기 안내를 읽을 때 사용합니다. 계절학기 신청대상, 학점 제한, "
@@ -674,7 +684,7 @@ def register_shared_tools(
                 return [serialize_public_seasonal_semester_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학교 성적·졸업 안내를 읽을 때 사용합니다. 성적평가 방법, 성적확인, "
@@ -704,7 +714,7 @@ def register_shared_tools(
                 return [serialize_public_academic_milestone_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학생활동 안내를 읽을 때 사용합니다. 학생회, 교지/언론, "
@@ -736,7 +746,7 @@ def register_shared_tools(
                 return [serialize_public_student_activity_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "공식 공지사항 중 학생활동 공지와 모집성 student activity notices "
@@ -783,7 +793,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "가대소개 주요 정적 안내 자료를 읽을 때 사용합니다. 규정, 요람, "
@@ -821,7 +831,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "서비스/정책 안내를 읽을 때 사용합니다. 입찰공고, 채용공고, "
@@ -857,7 +867,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "서비스/정책 공식 게시글을 검색할 때 사용합니다. 입찰공고와 채용공고 "
@@ -890,7 +900,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "공식 뉴스룸 게시물을 읽을 때 사용합니다. 포토뉴스와 보도자료의 "
@@ -930,7 +940,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "연구ㆍ산학 주요연구성과 게시글을 검색할 때 사용합니다. 학교 공식 "
@@ -963,7 +973,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "CUK홍보 자료 안내를 읽을 때 사용합니다. 공식브로슈어, 가대이야기, "
@@ -996,7 +1006,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "170주년 기념사업 안내를 읽을 때 사용합니다. 총장 축사글, 연혁, 슬로건, "
@@ -1031,7 +1041,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학생교류 안내를 읽을 때 사용합니다. 국내 학점교류 신청대상, "
@@ -1062,7 +1072,7 @@ def register_shared_tools(
                 return [serialize_public_student_exchange_guide(item) for item in guides]
             return [item.model_dump() for item in guides]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "해외협정대학 검색을 읽을 때 사용합니다. 국가/대륙/대학명으로 "
@@ -1090,7 +1100,7 @@ def register_shared_tools(
             partners = search_student_exchange_partners(conn, query=query, limit=limit)
             return [item.model_dump() for item in partners]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "사용자가 성심교정 건물명, 별칭, 시설명, "
@@ -1125,7 +1135,7 @@ def register_shared_tools(
                 return [serialize_public_place(item) for item in places]
             return [item.model_dump() for item in places]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "이미 장소 slug 또는 정확한 이름을 알고 있을 때 한 곳의 요약 정보를 가져옵니다. "
@@ -1153,7 +1163,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "과목명, 코드, 교수, 학기, 교시 조건으로 현재 공개된 "
@@ -1193,7 +1203,7 @@ def register_shared_tools(
                 return [serialize_public_course(item) for item in courses]
             return [item.model_dump() for item in courses]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             "교시 번호를 실제 수업 시간으로 바꾸고 싶을 때 고정 교시표를 반환합니다."
             if public_readonly
@@ -1204,7 +1214,7 @@ def register_shared_tools(
     def tool_get_class_periods():
         return [item.model_dump() for item in get_class_periods()]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "중앙도서관 열람실 남은 좌석을 best-effort 실시간으로 확인할 때 사용합니다. "
@@ -1231,7 +1241,7 @@ def register_shared_tools(
         with connection_factory() as conn:
             return get_library_seat_status(conn, query=query).model_dump(exclude_none=True)
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "교내 공식 학식 3곳의 이번 주 메뉴를 찾을 때 사용합니다. "
@@ -1262,7 +1272,7 @@ def register_shared_tools(
                 return [serialize_public_dining_menu(item) for item in menus]
             return [item.model_dump() for item in menus]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "강의동에서 지금 비어 있을 가능성이 높은 강의실을 "
@@ -1331,7 +1341,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "캠퍼스 출발지 기준으로 주변 식당을 찾을 때 사용합니다. "
@@ -1413,7 +1423,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "브랜드나 상호를 직접 검색할 때 사용합니다. "
@@ -1470,7 +1480,7 @@ def register_shared_tools(
                     return serialize_public_error(exc)
                 return {"error": str(exc)}
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "최신 공지를 최신순으로 가져오거나 카테고리로 좁힐 때 사용합니다. "
@@ -1502,7 +1512,7 @@ def register_shared_tools(
                 return [serialize_public_notice(item) for item in notices]
             return [item.model_dump() for item in notices]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "학과/기관 공지 통합 번들을 읽을 때 사용합니다. "
@@ -1540,7 +1550,7 @@ def register_shared_tools(
                 return [serialize_public_affiliated_notice(item) for item in notices]
             return [item.model_dump() for item in notices]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             (
                 "대학생활 공지 번들(campus life notices)을 읽을 때 사용합니다. "
@@ -1571,7 +1581,7 @@ def register_shared_tools(
                 return [serialize_public_campus_life_notice(item) for item in notices]
             return [item.model_dump() for item in notices]
 
-    @mcp.tool(
+    @readonly_tool(
         description=(
             "성심교정 지하철·버스 접근 안내를 찾을 때 사용합니다. "
             "정적 subway/bus 안내용이며, query에 지하철·1호선·역곡역·bus 같은 "

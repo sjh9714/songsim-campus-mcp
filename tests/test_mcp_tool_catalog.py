@@ -24,6 +24,15 @@ def test_register_shared_tools_public_mode_exposes_expected_tool_names_and_metad
 
     tool_names, payloads = asyncio.run(main())
 
+    for payload in payloads.values():
+        assert payload["annotations"]["readOnlyHint"] is True
+        assert payload["annotations"]["destructiveHint"] is False
+    for name in (
+        "tool_today_campus_updates", "tool_find_campus_place", "tool_explain_academic_process",
+        "tool_find_study_resource", "tool_campus_life_help",
+    ):
+        assert payloads[name]["outputSchema"]["type"] == "object"
+
     assert tool_names == {
         "tool_today_campus_updates",
         "tool_find_campus_place",

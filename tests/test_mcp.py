@@ -243,11 +243,12 @@ def test_mcp_public_journey_tools_return_service_backed_payloads(app_env, monkey
 
     today, place, academic, study, life, status = asyncio.run(main())
 
-    assert json.loads(today[0].text)["journey"] == "today_campus_updates"
-    assert json.loads(place[0].text)["journey"] == "find_campus_place"
-    assert json.loads(academic[0].text)["journey"] == "explain_academic_process"
-    assert json.loads(study[0].text)["journey"] == "find_study_resource"
-    assert json.loads(life[0].text)["journey"] == "campus_life_help"
+    for result, name in [(today, "today_campus_updates"), (place, "find_campus_place"),
+                         (academic, "explain_academic_process"), (study, "find_study_resource"),
+                         (life, "campus_life_help")]:
+        content, structured = result
+        assert json.loads(content[0].text) == structured
+        assert structured["journey"] == name
     status_payload = json.loads(status[0].content)
     assert "datasets" in status_payload
     assert "sync_runs" not in {item["name"] for item in status_payload["datasets"]}

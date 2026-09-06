@@ -64,7 +64,7 @@ export function todayInSeoul(now = new Date()): string {
 }
 
 /** 끼니 표시 순서. 학교 표의 이름을 그대로 쓰되 시간 순으로 정렬한다. */
-const MEAL_ORDER = ['조식', '중식', '석식'];
+const MEAL_ORDER = ['천원의 아침', '조식', '중식', '한식', '누들', '덮밥', '플러스코너', '석식'];
 
 export function sortMeals(meals: Record<string, unknown>): string[] {
   return Object.keys(meals).sort((a, b) => {

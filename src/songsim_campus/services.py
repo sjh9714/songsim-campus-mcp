@@ -179,6 +179,7 @@ from .schemas import (
     LibrarySeatStatus,
     LibrarySeatStatusResponse,
     MatchedCourse,
+    MatchedFacility,
     MatchedNotice,
     MealRecommendationResponse,
     NearbyRestaurant,
@@ -190,6 +191,7 @@ from .schemas import (
     PCSoftwareEntry,
     Period,
     PhoneBookEntry,
+    PhoneContact,
     Place,
     Profile,
     ProfileCourseRef,
@@ -1460,7 +1462,13 @@ def find_campus_place(
                 places,
                 limit=normalized_limit,
                 note=intent.strip() if intent else None,
-            )
+            ),
+            _public_section(
+                "contacts",
+                "연락처",
+                search_phone_book_entries(conn, query=normalized_query, limit=normalized_limit),
+                limit=normalized_limit,
+            ),
         ]
         if section is not None
     ]
@@ -2284,9 +2292,20 @@ def _rank_campus_dining_menu_candidate(
     return None
 
 
-_DINING_DATE_CELL = re.compile(r"(\d{2})/(\d{2})\((.)\)")
+_DINING_DATE_CELL = re.compile(r"(\d{1,2})/(\d{1,2})\(([월화수목금토일])\)")
 _DINING_KCAL_CELL = re.compile(r"^\d{2,4}\s*kcal$", re.IGNORECASE)
-_DINING_MEAL_LABELS = ("조식", "중식", "석식")
+_DINING_SECTION_LABELS = (
+    ("천원의아침", "천원의 아침"),
+    ("플러스코너", "플러스코너"),
+    ("조식", "조식"),
+    ("중식", "중식"),
+    ("석식", "석식"),
+    ("점심", "중식"),
+    ("저녁", "석식"),
+    ("한식", "한식"),
+    ("누들", "누들"),
+    ("덮밥", "덮밥"),
+)
 
 
 def _extract_campus_dining_menu_days(pdf_bytes: bytes, *, year: int) -> list[dict[str, Any]]:
@@ -2309,7 +2328,12 @@ def _extract_campus_dining_menu_days(pdf_bytes: bytes, *, year: int) -> list[dic
             # 학교가 올리는 PDF 는 형식이 제각각이다. 한 페이지를 못 읽는다고
             # 나머지까지 버리지 않고, 못 읽은 만큼만 조용히 건너뛴다.
             logger.warning("event=campus_dining_menu_page_unreadable")
-    lines = [line for line in "\n".join(pages).splitlines() if line.strip()]
+    return _parse_campus_dining_menu_layout("\n".join(pages), year=year)
+
+
+def _parse_campus_dining_menu_layout(layout: str, *, year: int) -> list[dict[str, Any]]:
+    """날짜 열과 원문 구분이 확인된 메뉴만 반환한다. 구간 순서로 끼니를 추측하지 않는다."""
+    lines = [line for line in layout.splitlines() if line.strip()]
 
     header = next((line for line in lines if len(_DINING_DATE_CELL.findall(line)) >= 2), None)
     if header is None:
@@ -2325,11 +2349,25 @@ def _extract_campus_dining_menu_days(pdf_bytes: bytes, *, year: int) -> list[dic
     bounds.append(len(max(lines, key=len)) + 1)
 
     days: list[dict[str, Any]] = []
+    previous_date: date | None = None
     for _, _, label in cells:
         month, day, weekday = _DINING_DATE_CELL.match(label).groups()  # type: ignore[union-attr]
+        if previous_date and previous_date.month == 12 and int(month) == 1:
+            year += 1
+        try:
+            parsed_date = date(year, int(month), int(day))
+        except ValueError:
+            return []
+        if previous_date and parsed_date <= previous_date:
+            return []
+        if "월화수목금토일"[parsed_date.weekday()] != weekday:
+            return []
+        if days and (parsed_date - date.fromisoformat(days[0]["date"])).days > 6:
+            return []
+        previous_date = parsed_date
         days.append(
             {
-                "date": f"{year:04d}-{int(month):02d}-{int(day):02d}",
+                "date": parsed_date.isoformat(),
                 "weekday": weekday,
                 "meals": {},
             }
@@ -2345,11 +2383,18 @@ def _extract_campus_dining_menu_days(pdf_bytes: bytes, *, year: int) -> list[dic
     for line in lines[lines.index(header) + 1 :]:
         if line.lstrip().startswith("*"):
             continue  # 각주는 표가 아니다
-        label_area = line[: bounds[0]]
-        for name in _DINING_MEAL_LABELS:
-            if name in label_area:
-                pending_label = name
+        label_area = re.sub(r"\s+", "", line[: bounds[0]])
+        name = next((label for token, label in _DINING_SECTION_LABELS if token in label_area), None)
         row = split_row(line)
+        # 칼로리 행이 없는 한 줄짜리 추가 코너도 별도 구분으로 남긴다.
+        if name == "플러스코너":
+            if pending:
+                sections.append((pending_label, pending))
+            sections.append((name, [row]))
+            pending, pending_label = [], None
+            continue
+        if name:
+            pending_label = name
         if not any(row):
             continue
         pending.append(row)
@@ -2359,9 +2404,9 @@ def _extract_campus_dining_menu_days(pdf_bytes: bytes, *, year: int) -> list[dic
     if pending:
         sections.append((pending_label, pending))
 
-    # 라벨 후보가 실제 구간 수보다 많을 수 있다(조식이 없는 식당). 짧은 쪽에 맞춘다.
-    for fallback, (name, rows) in zip(_DINING_MEAL_LABELS[1:], sections, strict=False):
-        meal = name or fallback
+    for meal, rows in sections:
+        if meal is None:
+            continue
         for column, day in enumerate(days):
             items: list[str] = []
             kcal: int | None = None
@@ -2416,13 +2461,17 @@ def _extract_campus_dining_menu_week_range(
         end_day = int(match.group(6))
     else:
         end_year = start_year
-        end_month = start_month
+        end_month = int(match.group(7))
         end_day = int(match.group(8))
+        if start_month == 12 and end_month == 1:
+            end_year += 1
 
     try:
         week_start = date(start_year, start_month, start_day).isoformat()
         week_end = date(end_year, end_month, end_day).isoformat()
     except ValueError:
+        return None, None
+    if not 0 <= (date.fromisoformat(week_end) - date.fromisoformat(week_start)).days <= 6:
         return None, None
     return week_start, week_end
 
@@ -3170,10 +3219,21 @@ def search_campus_dining_menus(
     limit: int = 10,
 ) -> list[CampusDiningMenu]:
     rows = repo.list_campus_dining_menus(conn, limit=max(limit, 10))
+    if not rows:
+        return []
+    facilities = place_search_runtime.list_campus_facilities_with_source_fallback(conn)
+    hours_by_name = {
+        _slugify_text(str(item.get("facility_name") or "")): item.get("hours_text")
+        for item in facilities
+    }
+    rows = [
+        {**row, "opening_hours": hours_by_name.get(_slugify_text(str(row.get("venue_name") or "")))}
+        for row in rows
+    ]
     if any(not row.get("location_text") for row in rows):
         locations_by_venue_slug = {
             _slugify_text(str(facility.get("facility_name") or "")): location_text
-            for facility in place_search_runtime.list_campus_facilities_with_source_fallback(conn)
+            for facility in facilities
             if (location_text := _normalize_optional_text(facility.get("location_text")))
         }
         rows = [
@@ -3181,9 +3241,7 @@ def search_campus_dining_menus(
                 **row,
                 "location_text": row.get("location_text")
                 or locations_by_venue_slug.get(str(row.get("venue_slug") or ""))
-                or locations_by_venue_slug.get(
-                    _slugify_text(str(row.get("venue_name") or ""))
-                ),
+                or locations_by_venue_slug.get(_slugify_text(str(row.get("venue_name") or ""))),
             }
             for row in rows
         ]
@@ -3211,12 +3269,70 @@ def search_places(
     category: str | None = None,
     limit: int = 10,
 ) -> list[Place]:
-    return place_search_runtime.search_places(
+    places = place_search_runtime.search_places(
         conn,
         query=query,
         category=category,
         limit=limit,
     )
+    _, compact = place_search_runtime._normalize_place_search_query(query)
+    if compact:
+        place_rows = repo.search_places(conn, "", limit=500)
+        for guide in repo.list_campus_life_support_guides(conn, limit=500):
+            title = str(guide.get("title") or "")
+            _, title_key = place_search_runtime._normalize_place_search_query(title)
+            if not title_key or compact != title_key:
+                continue
+            details = {}
+            for step in guide.get("steps", []):
+                match = re.match(r"^(위치|운영시간)\s*[:：]\s*(.+)$", step)
+                if match:
+                    details[match[1]] = match[2]
+            slug = _resolve_campus_facility_place_slug(
+                details.get("위치"),
+                place_rows=place_rows,
+            )
+            row = next((p for p in place_rows if p["slug"] == slug), None)
+            if row is None or (category and row["category"] != category):
+                continue
+            phones = search_phone_book_entries(conn, query=title, limit=1)
+            facility = MatchedFacility(
+                name=title,
+                category=guide.get("topic"),
+                location_hint=details.get("위치"),
+                opening_hours=details.get("운영시간"),
+                phone=phones[0].phone if phones else None,
+                phone_contacts=phones[0].phone_contacts if phones else [],
+                source_url=guide.get("source_url"),
+                last_synced_at=guide.get("last_synced_at"),
+            )
+            place = Place.model_validate(row).model_copy(update={"matched_facility": facility})
+            places = [place, *[p for p in places if p.slug != slug]]
+        if re.fullmatch(r"[a-z]{1,3}\d{2,4}", compact, re.IGNORECASE):
+            year, semester = _current_year_and_semester()
+            rooms = {
+                str(course["room"]).strip()
+                for course in repo.list_courses_with_rooms(conn, year=year, semester=semester)
+                if re.sub(r"\s+", "", str(course["room"])).casefold() == compact.casefold()
+            }
+            for room, place in _resolve_places_from_rooms(conn, rooms).items():
+                if category and place.category != category:
+                    continue
+                facility = MatchedFacility(
+                    name=room, category="classroom",
+                    location_hint=(
+                        f"{place.canonical_name or place.name} · {room} "
+                        "(공식 개설과목 강의실 표기)"
+                    ),
+                )
+                places = [place.model_copy(update={"matched_facility": facility}),
+                          *[p for p in places if p.slug != place.slug]]
+    for place in places:
+        if place.matched_facility and not place.matched_facility.phone_contacts:
+            place.matched_facility.phone_contacts = normalize_phone_contacts(
+                place.matched_facility.phone,
+            )
+    return places[:limit]
 
 
 def search_courses(
@@ -4464,6 +4580,32 @@ def refresh_student_exchange_partners_from_source(
     ]
 
 
+@lru_cache(maxsize=1)
+def _phone_dialing_rules() -> dict[str, str]:
+    return json.loads((DATA_DIR / "phone_dialing_rules.json").read_text(encoding="utf-8"))
+
+
+def normalize_phone_contacts(
+    raw: str | None,
+    *,
+    source_url: str | None = None,
+) -> list[PhoneContact]:
+    """Preserve each source label; dial only complete numbers or verified extensions."""
+    contacts = []
+    for label in re.split(r"\s*/\s*|\s*;\s*", raw or ""):
+        label = label.strip()
+        if not label:
+            continue
+        number = re.sub(r"\s*\([^)]*\)\s*", "", label).strip()
+        dial = None
+        if re.fullmatch(r"0\d{1,2}-\d{3,4}-\d{4}", number):
+            dial = number
+        elif re.fullmatch(r"\d{4}", number) and source_url in _phone_dialing_rules():
+            dial = f"{_phone_dialing_rules()[source_url]}-{number}"
+        contacts.append(PhoneContact(label=label, dial=dial))
+    return contacts
+
+
 def search_phone_book_entries(
     conn: DBConnection,
     *,
@@ -4472,10 +4614,18 @@ def search_phone_book_entries(
 ) -> list[PhoneBookEntry]:
     normalized_limit = max(1, min(limit, 50))
     entries = [
-        PhoneBookEntry.model_validate(item)
+        PhoneBookEntry.model_validate(
+            {
+                **item,
+                "phone_contacts": normalize_phone_contacts(
+                    item.get("phone"),
+                    source_url=item.get("source_url"),
+                ),
+            }
+        )
         for item in repo.list_phone_book_entries(conn, limit=500)
     ]
-    normalized_query = (query or "").strip()
+    normalized_query, _ = place_search_runtime._normalize_place_search_query(query)
     if not normalized_query:
         return entries[:normalized_limit]
 
@@ -5986,6 +6136,7 @@ def refresh_campus_dining_menus_from_facilities_page(
                 # 남긴다. 학생이 학교 원문으로 갈 길까지 막을 이유는 없다.
                 logger.info("event=campus_dining_menu_body_withheld source_url=%s", source_url)
                 menu_text = None
+                menu_days = []
         except Exception:
             logger.exception("event=campus_dining_menu_parse_failed source_url=%s", source_url)
             menu_text = None

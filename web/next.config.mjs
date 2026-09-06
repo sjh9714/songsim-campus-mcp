@@ -6,7 +6,7 @@ const nextConfig = {
   reactStrictMode: true,
   // 상위 디렉터리에 다른 lockfile이 있어도 web/ 을 워크스페이스 루트로 고정한다.
   outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
-  // 백엔드가 잠들어 있어도 빌드가 실패하지 않도록, 데이터는 전부 런타임에서만 가져온다.
+  // Static shells use ISR; time-sensitive labels and availability are rechecked in the browser.
   experimental: {
     staleTimes: {
       dynamic: 30,

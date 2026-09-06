@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import EmptyState from '@/components/EmptyState';
 import PlaceIdentity from '@/components/PlaceIdentity';
+import PhoneLinks from '@/components/PhoneLinks';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import { getPhoneBook, getPlaces, requireFreshOrKeepLastPage } from '@/lib/api';
@@ -34,7 +35,7 @@ function PlaceList({ places }: { places: Place[] }) {
 export default async function FindPage() {
   const [places, phones] = await Promise.all([
     getPlaces({ limit: 50 }),
-    getPhoneBook({ limit: 30 }),
+    getPhoneBook({ limit: 50 }),
   ]);
   requireFreshOrKeepLastPage(places, '캠퍼스 장소 목록');
 
@@ -83,9 +84,7 @@ export default async function FindPage() {
                   <span className="row__title">{entry.department}</span>
                   {entry.tasks ? <span className="row__sub">{entry.tasks}</span> : null}
                 </span>
-                <a className="row__value" href={`tel:${entry.phone.replace(/[^0-9+]/g, '')}`}>
-                  {entry.phone}
-                </a>
+                <PhoneLinks phone={entry.phone} contacts={entry.phone_contacts} />
               </li>
             ))}
           </ul>

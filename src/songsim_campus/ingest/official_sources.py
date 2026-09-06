@@ -230,7 +230,8 @@ def _normalize_place_slug(name: str, english_name: str, place_id: int) -> str:
 
 
 def _infer_place_category(name: str, english_name: str, description: str) -> str:
-    combined = " ".join([name, english_name, description]).lower()
+    # A building's history can mention a chapel/library without being that facility today.
+    combined = " ".join([name, english_name]).lower()
     if "도서관" in combined or "library" in combined:
         return "library"
     if "정문" in combined or "gate" in combined:
@@ -484,9 +485,17 @@ class LibraryHoursSource:
         self.url = url
 
     def fetch(self) -> str:
-        response = httpx.get(self.url, timeout=20)
-        response.raise_for_status()
-        return response.text
+        with httpx.Client(timeout=20, follow_redirects=True) as client:
+            response = client.get(self.url)
+            response.raise_for_status()
+            if "guideContent" not in response.text:
+                # Public library pages occasionally need a session cookie from the landing page.
+                # One bounded retry; a login/error page is never accepted as opening hours.
+                origin = str(httpx.URL(self.url).copy_with(path="/", query=None))
+                client.get(origin).raise_for_status()
+                response = client.get(self.url)
+                response.raise_for_status()
+            return response.text
 
     def parse(self, html: str, *, fetched_at: str) -> list[dict]:
         soup = BeautifulSoup(html, "html.parser")
@@ -525,6 +534,8 @@ class LibraryHoursSource:
                 if note and note not in {"-", ""}:
                     summary = f"{summary} | {note}"
                 opening_hours[name] = summary
+        if not opening_hours:
+            raise ValueError("Official library opening-hours table is missing.")
         return [
             {
                 "place_name": "중앙도서관",

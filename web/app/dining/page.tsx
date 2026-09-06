@@ -1,11 +1,12 @@
+import { FRESHNESS_LIMIT } from '@/lib/live-state';
 import EmptyState from '@/components/EmptyState';
-import FreshnessBadge, { FRESHNESS_LIMIT } from '@/components/FreshnessBadge';
+import FreshnessBadge from '@/components/FreshnessBadge';
 import NearbyRestaurants from '@/components/NearbyRestaurants';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import VenueDays from '@/components/VenueDays';
 import { getDiningMenus, getNearbyRestaurants, requireFreshOrKeepLastPage } from '@/lib/api';
-import { formatDate, todayInSeoul } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 
 // 메뉴 자체는 주 단위로만 바뀌지만(TTL.dining 1시간), "오늘" 표시는 날짜가 넘어가면
 // 틀린 말이 된다. 화면은 1분마다 다시 그리고 데이터는 캐시에서 가져다 쓴다.
@@ -23,7 +24,6 @@ export default async function DiningPage() {
   ]);
   // 주변 식당은 이 화면의 뼈대가 아니다. 못 받으면 그 카드만 비우고 학식은 내보낸다.
   requireFreshOrKeepLastPage(dining, '학식');
-  const today = todayInSeoul();
 
   return (
     <>
@@ -51,6 +51,7 @@ export default async function DiningPage() {
               </div>
               <FreshnessBadge syncedAt={menu.last_synced_at} maxAgeHours={FRESHNESS_LIMIT.dining} />
 
+              {menu.opening_hours ? <p className="row__sub">공식 운영 안내 · {menu.opening_hours}</p> : null}
               {menu.week_start && menu.week_end ? (
                 <div className="row__sub">
                   {formatDate(menu.week_start)} ~ {formatDate(menu.week_end)}
@@ -60,7 +61,7 @@ export default async function DiningPage() {
               ) : null}
 
               {menu.days.length > 0 ? (
-                <VenueDays days={menu.days} today={today} />
+                <VenueDays days={menu.days} />
               ) : menu.menu_text ? (
                 // 주간 표가 아닌 PDF 는 원문을 싣지 않는다. 카페 멘사는 입점 업체의
                 // 가격표인데, 문서 안에 "무단 복제, 배포, 공개를 엄격히 금지합니다" 와
@@ -70,7 +71,7 @@ export default async function DiningPage() {
                   hint="아래 학교 원문에서 확인해 주세요."
                 />
               ) : (
-                <EmptyState message="이번 주 메뉴가 아직 올라오지 않았어요." />
+                <EmptyState message="정리된 메뉴 정보가 없어요. 학교 원문에서 확인해 주세요." />
               )}
 
               {menu.source_url ? (

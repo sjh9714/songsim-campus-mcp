@@ -5004,6 +5004,9 @@ def test_refresh_campus_dining_menus_withholds_a_document_that_forbids_redistrib
     monkeypatch.setattr(
         services_module, "_extract_campus_dining_menu_text", lambda *a, **k: priced_list
     )
+    monkeypatch.setattr(services_module, "_extract_campus_dining_menu_days", lambda *a, **k: [
+        {"date": "2026-03-16", "weekday": "월", "meals": {"중식": {"items": ["재배포 제한 메뉴"]}}},
+    ])
 
     with connection() as conn:
         refresh_campus_dining_menus_from_facilities_page(
@@ -5016,6 +5019,7 @@ def test_refresh_campus_dining_menus_withholds_a_document_that_forbids_redistrib
     assert stored, "식당 목록 자체는 남아야 한다"
     for item in stored:
         assert item.menu_text is None
+        assert item.days == []
         # 학생이 학교 원문으로 갈 길은 막지 않는다.
         assert item.source_url
 

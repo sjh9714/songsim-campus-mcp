@@ -1,4 +1,7 @@
+'use client';
+
 import { formatAgo } from '@/lib/format';
+import { useNow } from '@/lib/use-now';
 
 /**
  * 데이터 자체가 언제 갱신됐는지 보여준다.
@@ -19,15 +22,16 @@ export default function FreshnessBadge({
   /** 이 시간을 넘으면 경고로 표시한다. */
   maxAgeHours: number;
 }) {
+  const now = useNow();
   if (!syncedAt) return null;
 
   const synced = new Date(syncedAt);
   if (Number.isNaN(synced.getTime())) return null;
 
-  const ago = formatAgo(syncedAt);
+  const ago = now === null ? null : formatAgo(syncedAt, now);
   if (!ago) return null;
 
-  const ageHours = (Date.now() - synced.getTime()) / 3_600_000;
+  const ageHours = (now! - synced.getTime()) / 3_600_000;
   const stale = ageHours > maxAgeHours;
 
   return (
@@ -36,13 +40,3 @@ export default function FreshnessBadge({
     </span>
   );
 }
-
-/** 데이터가 실제로 얼마나 자주 바뀌는지에 맞춘 임계치(시간). */
-export const FRESHNESS_LIMIT = {
-  /** 주간 메뉴표라 한 주가 지나면 지난주 것이다. */
-  dining: 24 * 7,
-  /** 공지는 매일 올라온다. 이틀 넘게 그대로면 수집이 멈춘 것으로 본다. */
-  notices: 48,
-  /** 건물과 전화번호는 거의 바뀌지 않는다. */
-  directory: 24 * 30,
-} as const;

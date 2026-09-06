@@ -1,8 +1,11 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import EmptyState from '@/components/EmptyState';
 import KakaoStaticMap from '@/components/KakaoStaticMap';
 import PlaceIdentity from '@/components/PlaceIdentity';
+import PhoneLinks from '@/components/PhoneLinks';
+import RefreshResults from '@/components/RefreshResults';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
 import { getPlace, getPlaces } from '@/lib/api';
@@ -33,6 +36,7 @@ export default async function PlaceDetailPage({
   const place = placeState.data;
 
   if (!place) {
+    if (!placeState.degraded) notFound();
     return (
       <>
         <TopBar title="위치 찾기" subtitle="캠퍼스 장소" />
@@ -45,6 +49,8 @@ export default async function PlaceDetailPage({
           <Link className="linkout" href="/find">
             찾기 목록으로
           </Link>
+          <RefreshResults />
+          <a className="linkout" href={OFFICIAL_CAMPUS_MAP_URL} target="_blank" rel="noreferrer">학교 전체 캠퍼스맵</a>
         </section>
       </>
     );
@@ -85,11 +91,13 @@ export default async function PlaceDetailPage({
             </h2>
           )}
           {locationLine ? <p className="place-detail__location">{locationLine}</p> : null}
-          {facility?.opening_hours || facility?.phone ? (
+          {facility?.opening_hours ? (
             <p className="place-detail__meta">
-              {[facility.opening_hours, facility.phone].filter(Boolean).join(' · ')}
+              {facility.opening_hours}
             </p>
           ) : null}
+          {facility?.phone ? <PhoneLinks phone={facility.phone} contacts={facility.phone_contacts} /> : null}
+          {facility?.source_url ? <a className="linkout" href={facility.source_url} target="_blank" rel="noreferrer">시설 위치·이용 안내 원문 ›</a> : null}
         </div>
 
         {placeHasCoordinates(place) ? (

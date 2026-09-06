@@ -1,11 +1,11 @@
 import { Suspense } from 'react';
 
 import CardSkeleton from '@/components/CardSkeleton';
-import EmptyClassrooms, { type BuildingClassrooms } from '@/components/EmptyClassrooms';
+import EmptyClassrooms from '@/components/EmptyClassrooms';
 import EmptyState from '@/components/EmptyState';
 import LibrarySeatsCard from '@/components/LibrarySeatsCard';
 import TopBar from '@/components/TopBar';
-import { getBuildings, getEmptyClassrooms, requireFreshOrKeepLastPage } from '@/lib/api';
+import { getBuildings, requireFreshOrKeepLastPage } from '@/lib/api';
 
 export const revalidate = 60;
 
@@ -13,33 +13,15 @@ export const revalidate = 60;
 // 백그라운드 재생성이 쓰는 것이고, 학생은 그동안 직전 화면을 받는다.
 export const maxDuration = 60;
 
-/** 건물을 한 번에 몇 개씩 조회할지. 백엔드가 감당할 수 있는 만큼만 보낸다. */
-const FETCH_CONCURRENCY = 5;
 
 export default async function StudyPage() {
   const buildings = await getBuildings();
   requireFreshOrKeepLastPage(buildings, '건물 목록');
 
-  // 건물 열 곳치를 미리 받아 둔다. searchParams 를 읽지 않으므로 이 화면은
-  // 프리렌더되고, 백엔드가 잠들어 있어도 학생은 직전 화면을 그대로 받는다.
-  //
-  // 열 곳을 한꺼번에 요청했더니 무료 플랜 백엔드가 밀려서 두 곳이 5초 제한에
-  // 걸렸다. 단독으로는 2초면 끝나는 요청이다. 그래서 몇 개씩 끊어서 보낸다.
-  const withClassrooms: BuildingClassrooms[] = [];
-  for (let index = 0; index < buildings.data.length; index += FETCH_CONCURRENCY) {
-    const batch = await Promise.all(
-      buildings.data.slice(index, index + FETCH_CONCURRENCY).map(async (place) => {
-        const classrooms = await getEmptyClassrooms(place.slug);
-        return {
-          slug: place.slug,
-          name: place.name,
-          data: classrooms.data,
-          degraded: classrooms.degraded,
-        };
-      }),
-    );
-    withClassrooms.push(...batch);
-  }
+  // Stable building navigation is cached; only the selected building is queried live.
+  const withClassrooms = buildings.data.map((place) => ({
+    slug: place.slug, name: place.name, data: null, degraded: false,
+  }));
 
   return (
     <>

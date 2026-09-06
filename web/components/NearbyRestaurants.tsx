@@ -25,7 +25,7 @@ export default function NearbyRestaurants({
       {restaurants.map((restaurant) => (
         <li key={restaurant.slug} className="row--split">
           <span>
-            <span className="row__title">{restaurant.name}</span>
+            <a className="row__title" href={`https://map.kakao.com/link/search/${encodeURIComponent(`가톨릭대학교 성심교정 ${restaurant.name}`)}`} target="_blank" rel="noreferrer">{restaurant.name} ↗</a>
             <span className="row__sub">{tagLabel(restaurant) ?? restaurant.description}</span>
           </span>
           <span className="row__sub">{walkLabel(restaurant)}</span>
@@ -53,7 +53,7 @@ function tagLabel(restaurant: NearbyRestaurant): string | null {
 /** 도보 시간이 없으면 거리라도 준다. 둘 다 없으면 아무 말도 하지 않는다. */
 function walkLabel(restaurant: NearbyRestaurant): string | null {
   if (restaurant.estimated_walk_minutes !== null) {
-    return `도보 ${restaurant.estimated_walk_minutes}분`;
+    return `도보 약 ${restaurant.estimated_walk_minutes}분 · 추정`;
   }
   if (restaurant.distance_meters !== null) {
     return `${restaurant.distance_meters}m`;

@@ -10,6 +10,7 @@ from songsim_campus.db import connection, init_db
 from songsim_campus.ingest.official_sources import PhoneBookSource
 from songsim_campus.mcp_server import build_mcp
 from songsim_campus.services import (
+    normalize_phone_contacts,
     refresh_phone_book_entries_from_source,
     search_phone_book_entries,
     sync_official_snapshot,
@@ -18,6 +19,21 @@ from songsim_campus.settings import clear_settings_cache
 
 FIXTURES_DIR = Path(__file__).with_name("fixtures")
 PHONE_BOOK_URL = "https://www.catholic.ac.kr/ko/about/phone_book.do"
+
+
+@pytest.mark.parametrize(
+    ("raw", "source", "expected"),
+    [
+        ("4126", PHONE_BOOK_URL, ["02-2164-4126"]),
+        ("4160 / 02-740-9749 (웹메일)", PHONE_BOOK_URL, ["02-2164-4160", "02-740-9749"]),
+        ("4126", "https://example.org", [None]),
+        ("02-2164-4126", None, ["02-2164-4126"]),
+        ("02-2164-4126~4128", None, [None]),
+    ],
+)
+def test_phone_contacts_are_separate_and_do_not_guess(raw, source, expected):
+    contacts = normalize_phone_contacts(raw, source_url=source)
+    assert [c.dial for c in contacts] == expected
 
 
 def _fixture(name: str) -> str:
@@ -196,8 +212,7 @@ def test_phone_book_http_and_mcp_surfaces(client, app_env, monkeypatch):
                     **_phone_book_row(
                         department="학생지원팀",
                         tasks=(
-                            "장학, 교내인턴십, 증명발급, 총학생회, 동아리, 장애학생지원센터, "
-                            "유실물"
+                            "장학, 교내인턴십, 증명발급, 총학생회, 동아리, 장애학생지원센터, 유실물"
                         ),
                         phone="4732",
                     ),
@@ -220,6 +235,10 @@ def test_phone_book_http_and_mcp_surfaces(client, app_env, monkeypatch):
             "source_url": PHONE_BOOK_URL,
             "source_tag": "cuk_phone_book",
             "last_synced_at": http_payload[0]["last_synced_at"],
+            "phone_contacts": [
+                {"label": "4160", "dial": "02-2164-4160"},
+                {"label": "02-740-9749 (웹메일)", "dial": "02-740-9749"},
+            ],
         }
     ]
 
@@ -248,10 +267,13 @@ def test_phone_book_http_and_mcp_surfaces(client, app_env, monkeypatch):
     assert "tool_search_phone_book" in tool_payloads
     assert "songsim://phone-book" in resource_uris
     assert "보건실" in tool_payloads["tool_search_phone_book"]["description"]
-    assert "트리니티" in (
-        tool_payloads["tool_search_phone_book"]["inputSchema"]["properties"]["query"][
-            "description"
-        ]
+    assert (
+        "트리니티"
+        in (
+            tool_payloads["tool_search_phone_book"]["inputSchema"]["properties"]["query"][
+                "description"
+            ]
+        )
     )
     assert tool_payload["department"] == "학생지원팀"
     assert [item["department"] for item in resource_payload] == [

@@ -11,6 +11,13 @@ Vercel의 ISR 캐시가 이걸 흡수합니다. 백엔드가 자고 있어도 �
 즉시 보고, 새 값은 백그라운드에서 채워집니다. `web/lib/api.ts`가 이 캐시 수명과 타임아웃,
 실패 처리를 전부 담당합니다.
 
+단, ISR은 오래된 응답을 한 번 먼저 줄 수 있어 **현재성의 보장 수단이 아닙니다**.
+‘오늘’·상대 시각은 브라우저의 한국 시각으로 계산하고, 좌석과 선택 건물의 강의실은
+`/api/live`의 no-store 요청으로 확인합니다. 60초를 넘긴 관측은 현재 숫자로 노출하지 않습니다
+(표시 재판정 간격 15초). 백엔드 깨우기는 최대 50초, 브라우저 요청은 최대 55초로 제한하고
+실패하면 새로고침과 원문 링크를 제공합니다. 백그라운드 탭에서는 정기 조회하지 않습니다.
+프로세스별 마지막 성공값도 최대 200개·엔드포인트 TTL까지만 보존합니다.
+
 ## 배포 절차
 
 ### 1. Vercel 로그인
@@ -29,7 +36,9 @@ npx vercel link
 ```
 
 - Framework는 Next.js로 자동 인식됩니다.
-- **Root Directory는 `web`** 입니다. 저장소 루트가 아닙니다.
+- Git 저장소 전체를 연결할 때 Root Directory는 `web`입니다.
+  현재 `web/`에서 CLI로 올리는 `songsim-web` 프로젝트의 Root Directory는 `.`입니다.
+  두 방식을 섞어 `web/web`을 찾게 하지 마세요.
 
 ### 3. 환경변수 설정
 
@@ -76,6 +85,13 @@ SONGSIM_STUDENT_WEB_URL=https://<배포된-주소>
 `README.md`의 학생용 주소 자리에도 같은 값을 적어 주세요.
 
 ## 배포 후 확인할 것
+
+`cd web`에서 `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e`를 실행합니다.
+E2E 명령은 외부 API 대신 `data/qa/web-fixture.json`으로 프로덕션 빌드 후 390px에서 검증합니다.
+`TEST_MAP_KEY=qa-sdk-failure-test npm run test:e2e`로 SDK 차단 경로도 검사합니다.
+실제 운영 검증은 `npx playwright test --config playwright.production.config.ts`입니다.
+GitHub의 `Check production student journeys`는 공식 동기화 종료 후 같은 검증을 실행합니다.
+실패 trace는 Actions artifact에서 확인하며, 200 응답뿐 아니라 식단 수집 시각·검색·지도·전화 링크를 검사합니다.
 
 1. **콜드 스타트** — Render 서비스를 15분 이상 놔둬서 잠들게 한 뒤 웹을 엽니다.
    화면이 즉시 떠야 합니다. 빈 화면이 오래 보이면 캐시 전략을 다시 봐야 합니다.

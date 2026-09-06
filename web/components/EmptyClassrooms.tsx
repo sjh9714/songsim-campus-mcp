@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLiveData } from '@/lib/use-live-data';
+import { isRecent, LIVE_MAX_AGE_MS } from '@/lib/live-state';
 
 import EmptyState from './EmptyState';
 import {
@@ -41,10 +43,8 @@ function availabilityNote(data: EstimatedEmptyClassroomResponse): string {
 /**
  * 빈 강의실 목록과 건물 선택.
  *
- * 건물 열 곳치를 서버에서 미리 받아 두고 전환은 여기서만 한다.
- * 예전에는 건물을 누를 때마다 /study?building= 로 이동했는데, 그러면 이 화면이
- * searchParams 를 읽는 동적 라우트가 되어 ISR 캐시가 붙지 않았다.
- * 백엔드가 잠들어 있으면 학생이 타임아웃을 그대로 기다려야 했다(실측 20초).
+ * 건물 목록은 캐시하고 선택한 한 건물만 새로 확인한다.
+ * 오래된 평가 시각이나 다음 수업 시작 시각을 넘긴 결과는 현재 공실로 표시하지 않는다.
  */
 export default function EmptyClassrooms({ buildings }: { buildings: BuildingClassrooms[] }) {
   const [selected, setSelected] = useState(buildings[0]?.slug);
@@ -61,16 +61,22 @@ export default function EmptyClassrooms({ buildings }: { buildings: BuildingClas
 
   // 이 화면은 ISR 캐시에 오래 남을 수 있으므로 API 응답의 evaluated_at으로
   // 현재 이용 시간을 판정하면 안 된다. 첫 렌더는 서버 HTML과 맞춘 뒤,
-  // 브라우저가 실제 현재 시각을 넣고 분마다 경계를 다시 확인한다.
+  // 브라우저가 실제 현재 시각을 넣고 15초마다 경계를 다시 확인한다.
   useEffect(() => {
     const updateCurrentTime = () => setCurrentTime(new Date().toISOString());
     updateCurrentTime();
-    const interval = window.setInterval(updateCurrentTime, 60_000);
+    const interval = window.setInterval(updateCurrentTime, 15_000);
     return () => window.clearInterval(interval);
   }, []);
 
-  const current = buildings.find((building) => building.slug === selected) ?? buildings[0];
+  const building = buildings.find((building) => building.slug === selected) ?? buildings[0];
+  const initial = useMemo(() => ({ data: building?.data ?? null, degraded: building?.degraded ?? false, servedFromSnapshot: false, snapshotAt: null }), [building]);
+  const live = useLiveData(`kind=classrooms&building=${encodeURIComponent(building?.slug ?? '')}`, initial);
+  const current = building ? { ...building, data: live.state.data, degraded: live.state.degraded } : null;
+  const now = currentTime ? Date.parse(currentTime) : null;
+  const recent = isRecent(current?.data?.evaluated_at, now, LIVE_MAX_AGE_MS) && !live.state.degraded;
   const withinUseWindow = currentTime ? isWithinClassroomUseWindow(currentTime) : true;
+  const visibleItems = current?.data?.items.filter((item) => !item.next_occupied_at || Date.parse(item.next_occupied_at) > (now ?? 0)) ?? [];
 
   return (
     <>
@@ -91,7 +97,10 @@ export default function EmptyClassrooms({ buildings }: { buildings: BuildingClas
         ))}
       </div>
 
-      {current?.data ? (
+      <div className="live-controls"><button className="chip" type="button" disabled={live.loading} onClick={live.refresh}>{live.loading ? '확인 중…' : '새로고침'}</button>
+        <span className="row__sub">실제 점유가 아닌 시간표 기준 예상입니다.</span></div>
+
+      {!recent || !currentTime ? <EmptyState message={live.loading || !currentTime ? '현재 시간표를 확인하고 있어요.' : '현재 시각 기준 시간표를 확인하지 못했어요.'} hint="이전 조회 결과를 현재 빈 강의실로 표시하지 않아요." /> : current?.data ? (
         !withinUseWindow ? (
           <div style={{ marginTop: 12 }}>
             <EmptyState
@@ -99,10 +108,10 @@ export default function EmptyClassrooms({ buildings }: { buildings: BuildingClas
               hint={`공식 대여 안내 기준 기본 이용 시간은 ${CLASSROOM_USE_WINDOW_LABEL}입니다. 학교 일정과 실제 개방 여부는 다를 수 있어요.`}
             />
           </div>
-        ) : current.data.items.length > 0 ? (
+        ) : visibleItems.length > 0 ? (
           <>
             <ul className="list" style={{ marginTop: 12 }}>
-              {current.data.items.map((item) => (
+              {visibleItems.map((item) => (
                 <li key={item.room} className="row--split">
                   <span>
                     <span className="row__title">{item.room}</span>

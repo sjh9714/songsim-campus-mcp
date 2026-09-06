@@ -137,13 +137,18 @@ async function getJson<T>(
     }
 
     const data = (await response.json()) as T;
+    if (Array.isArray(options.fallback) && !Array.isArray(data)) {
+      throw new Error('Expected a list response');
+    }
+    lastGood.delete(url);
     lastGood.set(url, { data, at: new Date().toISOString() });
+    if (lastGood.size > 200) lastGood.delete(lastGood.keys().next().value!);
     return { data, degraded: false, servedFromSnapshot: false, snapshotAt: null };
   } catch (error) {
     console.warn(`[songsim] ${url} 호출 실패:`, error instanceof Error ? error.message : error);
 
     const snapshot = lastGood.get(url);
-    if (snapshot) {
+    if (snapshot && Date.now() - Date.parse(snapshot.at) <= options.revalidate * 1000) {
       return {
         data: snapshot.data as T,
         degraded: true,
@@ -178,7 +183,7 @@ export function getLibrarySeats(options: { fresh?: boolean } = {}) {
   return getJson<LibrarySeatStatusResponse>('/library-seats', {
     revalidate: TTL.librarySeats,
     noStore: options.fresh,
-    timeoutMs: LIVE_TIMEOUT_MS,
+    timeoutMs: options.fresh ? 50_000 : LIVE_TIMEOUT_MS,
     fallback: {
       availability_mode: 'unavailable',
       checked_at: '',
@@ -204,9 +209,11 @@ export function getNearbyRestaurants(origin: string, limit = 5) {
   });
 }
 
-export function getEmptyClassrooms(building: string, limit = 10) {
+export function getEmptyClassrooms(building: string, limit = 10, options: { fresh?: boolean } = {}) {
   return getJson<EstimatedEmptyClassroomResponse | null>('/classrooms/empty', {
     revalidate: TTL.classrooms,
+    noStore: options.fresh,
+    timeoutMs: options.fresh ? 50_000 : TIMEOUT_MS,
     fallback: null,
     params: { building, limit },
   });

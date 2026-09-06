@@ -1,12 +1,20 @@
 // src/songsim_campus/schemas.py 를 그대로 미러한 타입.
 // 백엔드 스키마를 바꾸면 여기도 같이 바꿔야 한다.
 
+export interface PhoneContact {
+  label: string;
+  dial: string | null;
+}
+
 export interface MatchedFacility {
   name: string;
   category: string | null;
   phone: string | null;
   location_hint: string | null;
   opening_hours: string | null;
+  phone_contacts?: PhoneContact[];
+  source_url?: string | null;
+  last_synced_at?: string | null;
 }
 
 export interface Place {
@@ -99,6 +107,7 @@ export interface PhoneBookEntry {
   department: string;
   tasks: string;
   phone: string;
+  phone_contacts?: PhoneContact[];
   source_url: string | null;
   source_tag: string;
   last_synced_at: string;
@@ -134,6 +143,7 @@ export interface CampusDiningMenu {
   place_slug: string | null;
   place_name: string | null;
   location_text?: string | null;
+  opening_hours?: string | null;
   week_label: string | null;
   week_start: string | null;
   week_end: string | null;

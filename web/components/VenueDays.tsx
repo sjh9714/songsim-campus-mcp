@@ -3,7 +3,8 @@
 import { useState } from 'react';
 
 import DayMenu from './DayMenu';
-import { formatDate } from '@/lib/format';
+import { formatDate, todayInSeoul } from '@/lib/format';
+import { useNow } from '@/lib/use-now';
 import type { CampusDiningDay } from '@/lib/types';
 
 /**
@@ -14,10 +15,12 @@ import type { CampusDiningDay } from '@/lib/types';
  * 타임아웃을 그대로 기다렸다. 게다가 day 가 주소에 하나뿐이라 한 식당에서 요일을
  * 바꾸면 다른 식당까지 같이 바뀌었다. 식당마다 따로 들고 있는 게 맞다.
  */
-export default function VenueDays({ days, today }: { days: CampusDiningDay[]; today: string }) {
+export default function VenueDays({ days }: { days: CampusDiningDay[] }) {
+  const now = useNow();
+  const today = now === null ? null : todayInSeoul(new Date(now));
   // 주말이면 오늘이 주간 표에 없다. 그때는 다가오는 첫날을 보여준다.
-  const initial = days.find((item) => item.date >= today) ?? days[0];
-  const [date, setDate] = useState(initial.date);
+  const initial = (today ? days.find((item) => item.date >= today) : null) ?? days[days.length - 1];
+  const [date, setDate] = useState<string | null>(null);
   const selected = days.find((item) => item.date === date) ?? initial;
 
   return (
@@ -38,6 +41,7 @@ export default function VenueDays({ days, today }: { days: CampusDiningDay[]; to
       </div>
       <div className="row__sub" style={{ marginTop: 10 }}>
         {formatDate(selected.date)} ({selected.weekday})
+        {today && selected.date < today ? ' · 지난 메뉴' : ''}
       </div>
       <DayMenu day={selected} />
     </>
