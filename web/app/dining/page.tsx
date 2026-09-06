@@ -1,12 +1,9 @@
-import { FRESHNESS_LIMIT } from '@/lib/live-state';
+import DiningVenues from '@/components/DiningVenues';
 import EmptyState from '@/components/EmptyState';
-import FreshnessBadge from '@/components/FreshnessBadge';
 import NearbyRestaurants from '@/components/NearbyRestaurants';
 import StaleBadge from '@/components/StaleBadge';
 import TopBar from '@/components/TopBar';
-import VenueDays from '@/components/VenueDays';
 import { getDiningMenus, getNearbyRestaurants, requireFreshOrKeepLastPage } from '@/lib/api';
-import { formatDate } from '@/lib/format';
 
 // 메뉴 자체는 주 단위로만 바뀌지만(TTL.dining 1시간), "오늘" 표시는 날짜가 넘어가면
 // 틀린 말이 된다. 화면은 1분마다 다시 그리고 데이터는 캐시에서 가져다 쓴다.
@@ -34,54 +31,7 @@ export default async function DiningPage() {
           <EmptyState degraded={dining.degraded} message="올라온 메뉴가 없어요." />
         </section>
       ) : (
-        dining.data.map((menu) => {
-          const location = menu.location_text ?? menu.place_name;
-          return (
-            <section className="card" key={menu.venue_slug}>
-              <div className="card__head">
-                <h2 className="card__title dining-venue">
-                  <span>{menu.venue_name}</span>
-                  {location ? (
-                    <span className="dining-venue__location" aria-label={`위치 ${location}`}>
-                      {location}
-                    </span>
-                  ) : null}
-                </h2>
-                <StaleBadge state={dining} />
-              </div>
-              <FreshnessBadge syncedAt={menu.last_synced_at} maxAgeHours={FRESHNESS_LIMIT.dining} />
-
-              {menu.opening_hours ? <p className="row__sub">공식 운영 안내 · {menu.opening_hours}</p> : null}
-              {menu.week_start && menu.week_end ? (
-                <div className="row__sub">
-                  {formatDate(menu.week_start)} ~ {formatDate(menu.week_end)}
-                </div>
-              ) : menu.week_label ? (
-                <div className="row__sub">{menu.week_label}</div>
-              ) : null}
-
-              {menu.days.length > 0 ? (
-                <VenueDays days={menu.days} />
-              ) : menu.menu_text ? (
-                // 주간 표가 아닌 PDF 는 원문을 싣지 않는다. 카페 멘사는 입점 업체의
-                // 가격표인데, 문서 안에 "무단 복제, 배포, 공개를 엄격히 금지합니다" 와
-                // 제3자 저작권 표기가 들어 있다. 학교 공개 자료가 아니므로 링크만 건다.
-                <EmptyState
-                  message="주간 메뉴표 형태가 아니라 여기서는 정리해 드릴 수 없어요."
-                  hint="아래 학교 원문에서 확인해 주세요."
-                />
-              ) : (
-                <EmptyState message="정리된 메뉴 정보가 없어요. 학교 원문에서 확인해 주세요." />
-              )}
-
-              {menu.source_url ? (
-                <a className="linkout" href={menu.source_url} target="_blank" rel="noreferrer">
-                  학교 원문 보기 ›
-                </a>
-              ) : null}
-            </section>
-          );
-        })
+        <DiningVenues dining={dining} />
       )}
 
       <section className="card">

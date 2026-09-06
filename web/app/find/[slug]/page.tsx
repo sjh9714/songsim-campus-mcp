@@ -13,7 +13,7 @@ import {
   kakaoDirectionsHref,
   kakaoMapHref,
   OFFICIAL_CAMPUS_MAP_URL,
-  placeBuildingLabel,
+  placeLocationLabel,
   placeCanonicalName,
   placeHasCoordinates,
 } from '@/lib/places';
@@ -61,10 +61,7 @@ export default async function PlaceDetailPage({
   const destinationLabel = facility?.name ?? placeCanonicalName(place);
   const directionsHref = kakaoDirectionsHref(place, destinationLabel);
   const mapHref = kakaoMapHref(place, destinationLabel);
-  const buildingLabel = placeBuildingLabel(place);
-  const locationLine = facility?.location_hint
-    ? `${facility.location_hint} · ${buildingLabel}`
-    : null;
+  const locationLine = facility ? placeLocationLabel(place, facility.location_hint) : null;
   const coordinateNote =
     place.category === 'building' || facility
       ? '학교 공식 캠퍼스맵의 건물 위치 기준입니다. 건물 입구와 실내 위치는 다를 수 있어요.'
@@ -72,7 +69,7 @@ export default async function PlaceDetailPage({
 
   return (
     <>
-      <TopBar title="위치 찾기" subtitle={destinationLabel} query={query} />
+      <TopBar title="위치 찾기" query={query} />
 
       <section className="card place-detail">
         <div className="place-detail__back-row">
@@ -96,7 +93,7 @@ export default async function PlaceDetailPage({
               {facility.opening_hours}
             </p>
           ) : null}
-          {facility?.phone ? <PhoneLinks phone={facility.phone} contacts={facility.phone_contacts} /> : null}
+          {facility?.phone ? <PhoneLinks phone={facility.phone} contacts={facility.phone_contacts} variant="action" /> : null}
           {facility?.source_url ? <a className="linkout" href={facility.source_url} target="_blank" rel="noreferrer">시설 위치·이용 안내 원문 ›</a> : null}
         </div>
 

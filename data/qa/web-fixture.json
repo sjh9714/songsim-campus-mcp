@@ -2,7 +2,7 @@
   "_note": "Automated UI test data only. Not a current school snapshot.",
   "places": [
     {"id": 1, "slug": "kim-sou-hwan-hall", "name": "김수환관", "canonical_name": "김수환관", "category": "building", "aliases": ["K관"], "description": "", "latitude": 37.485, "longitude": 126.803, "opening_hours": {}, "matched_facility": null, "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00"},
-    {"id": 2, "slug": "virtus-hall", "name": "비르투스관", "canonical_name": "비르투스관", "category": "building", "aliases": [], "description": "", "latitude": 37.486, "longitude": 126.804, "opening_hours": {}, "matched_facility": null, "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00"},
+    {"id": 2, "slug": "virtus-hall", "name": "비르투스관", "canonical_name": "비르투스관", "category": "building", "aliases": ["V관"], "description": "", "latitude": 37.486, "longitude": 126.804, "opening_hours": {}, "matched_facility": null, "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00"},
     {"id": 3, "slug": "no-coordinates", "name": "좌표 없는 테스트 장소", "canonical_name": "좌표 없는 테스트 장소", "category": "facility", "aliases": [], "description": "", "latitude": null, "longitude": null, "opening_hours": {}, "matched_facility": null, "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00"}
   ],
   "facilities": [
@@ -11,12 +11,16 @@
   ],
   "phone-book": [
     {"id": 1, "department": "보건실", "tasks": "보건", "phone": "4126", "phone_contacts": [{"label": "4126", "dial": "02-2164-4126"}], "source_url": "https://www.catholic.ac.kr/ko/about/phone_book.do", "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00"},
-    {"id": 2, "department": "정보통신지원팀", "tasks": "트리니티", "phone": "4160 / 02-740-9749 (웹메일)", "phone_contacts": [{"label": "4160", "dial": "02-2164-4160"}, {"label": "02-740-9749 (웹메일)", "dial": "02-740-9749"}], "source_url": "https://www.catholic.ac.kr/ko/about/phone_book.do", "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00"}
+    {"id": 2, "department": "정보통신지원팀", "tasks": "트리니티", "phone": "4160 / 02-740-9749 (웹메일)", "phone_contacts": [{"label": "4160", "dial": "02-2164-4160"}, {"label": "02-740-9749 (웹메일)", "dial": "02-740-9749"}], "source_url": "https://www.catholic.ac.kr/ko/about/phone_book.do", "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00"},
+    {"id": 3, "department": "긴 부서명 테스트 학생생활상담소", "tasks": "개인 상담, 집단 상담과 심리 검사 예약, 진로 및 대학생활 상담", "phone": "4951", "phone_contacts": [{"label": "4951", "dial": "02-2164-4951"}], "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00"}
   ],
-  "dining-menus": [{"venue_slug": "qa-dining", "venue_name": "테스트 학생식당", "location_text": "학생미래인재관 2층", "opening_hours": "중식 11:30 ~ 14:00", "week_start": "2026-09-07", "week_end": "2026-09-11", "source_url": "https://www.catholic.ac.kr/ko/campuslife/restaurant.do", "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00", "days": [
+  "dining-menus": [{"venue_slug": "qa-dining", "venue_name": "부온 프란조 Buon Pranzo", "location_text": "학생미래인재관 2층", "opening_hours": "중식 11:30 ~ 14:00", "week_start": "2026-09-07", "week_end": "2026-09-11", "source_url": "https://www.catholic.ac.kr/ko/campuslife/restaurant.do", "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00", "days": [
     {"date": "2026-09-07", "weekday": "월", "meals": {"천원의 아침": {"items": ["아침 테스트 메뉴"], "kcal": 400}, "한식": {"items": ["월요일 테스트 메뉴"], "kcal": 600}, "누들": {"items": ["월요일 국수"], "kcal": 700}, "석식": {"items": ["월요일 저녁"], "kcal": 800}}},
     {"date": "2026-09-08", "weekday": "화", "meals": {"한식": {"items": ["화요일 테스트 메뉴"], "kcal": 610}}}
-  ]}],
+  ]},
+    {"venue_slug": "qa-mensa", "venue_name": "카페 멘사 Café Mensa", "location_text": "김수환관 1층", "opening_hours": "10:30 ~ 14:30", "week_label": "테스트 주간 안내", "source_url": "https://www.catholic.ac.kr/ko/campuslife/restaurant.do", "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00", "days": [], "menu_text": "제한된 메뉴 원문 테스트: 이 내용은 화면에 복제하면 안 됩니다."},
+    {"venue_slug": "qa-bona", "venue_name": "카페 보나 Café Bona", "location_text": "학생미래인재관 1층", "source_url": "https://www.catholic.ac.kr/ko/campuslife/restaurant.do", "source_tag": "qa_fixture", "last_synced_at": "2026-09-07T13:59:50+09:00", "days": []}
+  ],
   "library-seats": {"availability_mode": "live", "checked_at": "2026-09-07T13:59:50+09:00", "note": null, "source_url": "https://mlibrary.catholic.ac.kr/mobile/PA/roomStatusListXML.php", "rooms": [{"room_name": "제1자유열람실A", "remaining_seats": 42, "occupied_seats": 58, "total_seats": 100, "map_url": "https://mlibrary.catholic.ac.kr/mobile/PA/roomStatus.php"}]},
   "classrooms/empty": {"building": {"slug": "kim-sou-hwan-hall", "name": "김수환관"}, "evaluated_at": "2026-09-07T13:59:50+09:00", "year": 2026, "semester": 2, "availability_mode": "estimated", "observed_at": null, "estimate_note": "공식 시간표 기준", "items": [{"room": "K106", "available_now": true, "availability_mode": "estimated", "source_observed_at": null, "next_occupied_at": "2026-09-07T15:00:00+09:00", "next_course_summary": "테스트 수업"}]},
   "notices": [], "courses": [], "pc-software": [], "restaurants/nearby": []

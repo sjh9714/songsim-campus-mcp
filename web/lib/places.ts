@@ -26,6 +26,15 @@ export function placeBuildingLabel(place: Place): string {
   return code ? `${name}(${code})` : name;
 }
 
+/** Preserve the source's floor/room text while avoiding a second copy of its building name. */
+export function placeLocationLabel(place: Place, location?: string | null): string {
+  if (!location?.trim()) return placeBuildingLabel(place);
+  const hint = location.trim();
+  if (!hint.includes(placeCanonicalName(place))) return `${hint} · ${placeBuildingLabel(place)}`;
+  const code = placeBuildingCode(place);
+  return code && !hint.includes(code) ? `${hint} · ${code}` : hint;
+}
+
 export function placeDetailHref(place: Place, query?: string): string {
   const pathname = `/find/${encodeURIComponent(place.slug)}`;
   const normalizedQuery = query?.trim();

@@ -93,7 +93,7 @@ export default function LibrarySeatsView({ initial, compact = false }: { initial
           {withSeats.slice(0, 3).map((room) => (
             <li key={room.room_name} className="row--split">
               <RoomMapLink room={room} compact />
-              <span className="row__value">{room.remaining_seats}석</span>
+              <span className="row__value">{room.remaining_seats}석 남음</span>
             </li>
           ))}
         </ul>
@@ -104,7 +104,7 @@ export default function LibrarySeatsView({ initial, compact = false }: { initial
           <li key={room.room_name} className="row--split">
             <RoomMapLink room={room} />
             <span className="row__value">
-              {room.remaining_seats !== null ? `${room.remaining_seats}석` : '—'}
+              {room.remaining_seats !== null ? `${room.remaining_seats}석 남음` : '—'}
             </span>
           </li>
         ))}

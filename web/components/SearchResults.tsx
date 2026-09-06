@@ -6,7 +6,7 @@ import PhoneLinks from './PhoneLinks';
 import RefreshResults from './RefreshResults';
 import { getCourses, getPcSoftware, getPhoneBook, getPlaces } from '@/lib/api';
 import { truncate } from '@/lib/format';
-import { placeBuildingLabel, placeDetailHref } from '@/lib/places';
+import { placeLocationLabel, placeDetailHref } from '@/lib/places';
 
 // 검색이 빗나갔을 때 보여줄 출발점. 신입생이 첫 주에 가장 많이 찾는 것들이다.
 const COMMON_SEARCHES = ['보건실', '복사실', '학사지원팀', '중앙도서관', '학생회관'];
@@ -82,7 +82,7 @@ export default async function SearchResults({ query }: { query: string }) {
             {places.data.map((place) => {
               const facility = place.matched_facility;
               const location = facility
-                ? [facility.location_hint, placeBuildingLabel(place), facility.phone]
+                ? [placeLocationLabel(place, facility.location_hint), facility.phone]
                     .filter(Boolean)
                     .join(' · ')
                 : null;
@@ -118,7 +118,7 @@ export default async function SearchResults({ query }: { query: string }) {
           </div>
           <ul className="list">
             {phones.data.map((entry) => (
-              <li key={entry.id} className="row--split">
+              <li key={entry.id} className="row--split phone-row">
                 <span>
                   <span className="row__title">{entry.department}</span>
                   {entry.tasks ? <span className="row__sub">{truncate(entry.tasks, 60)}</span> : null}

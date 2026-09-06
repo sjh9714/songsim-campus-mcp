@@ -48,11 +48,11 @@ export default function KakaoStaticMap({
   const [state, setState] = useState<MapState>(APP_KEY ? 'loading' : 'missing');
 
   useEffect(() => {
-    if (state !== 'loading') return;
+    if (!APP_KEY || sdkReady) return;
 
     const timeout = window.setTimeout(() => setState('error'), 8000);
     return () => window.clearTimeout(timeout);
-  }, [sdkReady, state]);
+  }, [sdkReady]);
 
   useEffect(() => {
     if (!sdkReady) return;
@@ -63,41 +63,76 @@ export default function KakaoStaticMap({
       return;
     }
 
-    let disposed = false;
     const container = containerRef.current;
-    const checkImages = () => {
-      const images = Array.from(container?.querySelectorAll('img') ?? []);
-      if (images.length > 0 && images.every((image) => image.complete && image.naturalWidth > 0)) setState('ready');
+    if (!container) return;
+
+    let disposed = false;
+    let lastSize = '';
+    let imageTimeout: number | undefined;
+    let resizeTimeout: number | undefined;
+    const finish = (next: 'ready' | 'error') => {
+      if (disposed) return;
+      window.clearTimeout(imageTimeout);
+      setState(next);
     };
-    const imageError = () => setState('error');
-    const observer = new MutationObserver(checkImages);
-    if (container) {
-      observer.observe(container, { childList: true, subtree: true });
-      container.addEventListener('load', checkImages, true);
-      container.addEventListener('error', imageError, true);
-    }
-    kakaoMaps.load(() => {
-      if (disposed || !containerRef.current) return;
+    const checkImages = () => {
+      const images = Array.from(container.querySelectorAll('img'));
+      if (images.length > 0 && images.every((image) => image.complete && image.naturalWidth > 0)) finish('ready');
+    };
+    const imageError = () => finish('error');
+    const imageObserver = new MutationObserver(checkImages);
+    imageObserver.observe(container, { childList: true, subtree: true });
+    container.addEventListener('load', checkImages, true);
+    container.addEventListener('error', imageError, true);
+
+    const draw = () => {
+      if (disposed || !container.clientWidth || !container.clientHeight) return;
+      const size = `${container.clientWidth}x${container.clientHeight}`;
+      if (size === lastSize) return;
+      lastSize = size;
+      setState('loading');
+      window.clearTimeout(imageTimeout);
+      imageTimeout = window.setTimeout(() => finish('error'), 8000);
 
       try {
         const position = new kakaoMaps.LatLng(latitude, longitude);
-        containerRef.current.replaceChildren();
-        new kakaoMaps.StaticMap(containerRef.current, {
+        // StaticMap has no documented relayout API. Recreate the image at its actual
+        // container size instead of stretching an old image after mobile rotation.
+        container.replaceChildren();
+        new kakaoMaps.StaticMap(container, {
           center: position,
           level: 3,
           marker: { position, text: label },
         });
         checkImages();
       } catch {
-        setState('error');
+        finish('error');
       }
+    };
+    const resizeObserver = new ResizeObserver(() => {
+      window.clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(draw, 120);
     });
+    imageTimeout = window.setTimeout(() => finish('error'), 8000);
+    try {
+      kakaoMaps.load(() => {
+        if (disposed) return;
+        draw();
+        resizeObserver.observe(container);
+      });
+    } catch {
+      finish('error');
+    }
 
     return () => {
       disposed = true;
-      observer.disconnect();
-      container?.removeEventListener('load', checkImages, true);
-      container?.removeEventListener('error', imageError, true);
+      window.clearTimeout(imageTimeout);
+      window.clearTimeout(resizeTimeout);
+      resizeObserver.disconnect();
+      imageObserver.disconnect();
+      container.removeEventListener('load', checkImages, true);
+      container.removeEventListener('error', imageError, true);
+      container.replaceChildren();
     };
   }, [label, latitude, longitude, sdkReady]);
 

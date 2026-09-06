@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 const fixture = JSON.parse(await readFile(new URL('../../data/qa/web-fixture.json', import.meta.url), 'utf8'));
 createServer((request, response) => {
   const url = new URL(request.url, 'http://127.0.0.1:8019');
-  const path = url.pathname.slice(1);
+  const path = url.pathname.replace(/^\/fixture-\d+\//, '/').slice(1);
   const query = (url.searchParams.get('query') ?? '').replace(/\s+/g, '');
   let data = fixture[path] ?? [];
   let status = 200;

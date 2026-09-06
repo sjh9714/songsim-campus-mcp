@@ -80,25 +80,22 @@ export default function EmptyClassrooms({ buildings }: { buildings: BuildingClas
 
   return (
     <>
-      <div className="chips">
-        {buildings.map((building) => (
-          <button
-            key={building.slug}
-            type="button"
-            className="chip"
-            aria-pressed={building.slug === current?.slug}
-            onClick={() => {
-              setPreferredBuilding(building.slug);
-              setSelected(building.slug);
+      <div className="classroom-controls">
+        <label className="building-select">
+          <span>강의실 건물</span>
+          <select
+            value={current?.slug ?? ''}
+            onChange={(event) => {
+              setPreferredBuilding(event.target.value);
+              setSelected(event.target.value);
             }}
           >
-            {building.name}
-          </button>
-        ))}
+            {buildings.map((building) => <option key={building.slug} value={building.slug}>{building.name}</option>)}
+          </select>
+        </label>
+        <button className="chip" type="button" disabled={live.loading} onClick={live.refresh}>{live.loading ? '확인 중…' : '새로고침'}</button>
       </div>
-
-      <div className="live-controls"><button className="chip" type="button" disabled={live.loading} onClick={live.refresh}>{live.loading ? '확인 중…' : '새로고침'}</button>
-        <span className="row__sub">실제 점유가 아닌 시간표 기준 예상입니다.</span></div>
+      <p className="card__note">실제 점유가 아닌 시간표 기준 예상입니다.</p>
 
       {!recent || !currentTime ? <EmptyState message={live.loading || !currentTime ? '현재 시간표를 확인하고 있어요.' : '현재 시각 기준 시간표를 확인하지 못했어요.'} hint="이전 조회 결과를 현재 빈 강의실로 표시하지 않아요." /> : current?.data ? (
         !withinUseWindow ? (
@@ -141,7 +138,7 @@ export default function EmptyClassrooms({ buildings }: { buildings: BuildingClas
               <EmptyState
                 degraded={current.degraded}
                 message="지금 이 건물에 비어 있을 것으로 보이는 강의실이 없어요."
-                hint="다른 건물을 눌러보세요."
+                hint="다른 건물을 선택해보세요."
               />
             )}
           </div>

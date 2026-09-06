@@ -79,7 +79,7 @@ export default async function FindPage() {
         ) : (
           <ul className="list">
             {phones.data.map((entry) => (
-              <li key={entry.id} className="row--split">
+              <li key={entry.id} className="row--split phone-row">
                 <span>
                   <span className="row__title">{entry.department}</span>
                   {entry.tasks ? <span className="row__sub">{entry.tasks}</span> : null}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { formatAgo, todayInSeoul, sortMeals } from '../lib/format.ts';
 import { isRecent } from '../lib/live-state.ts';
 import { isWithinClassroomUseWindow } from '../lib/classrooms.ts';
-import { kakaoDirectionsHref, kakaoMapHref } from '../lib/places.ts';
+import { kakaoDirectionsHref, kakaoMapHref, placeLocationLabel } from '../lib/places.ts';
 
 test('KST midnight, weekend and rental boundaries', () => {
   assert.equal(todayInSeoul(new Date('2026-09-07T15:00:00Z')), '2026-09-08');
@@ -28,4 +28,13 @@ test('map URLs encode spaces and Korean; missing or invalid coordinates use sear
     assert.equal(kakaoDirectionsHref({ ...place, latitude }), null);
     assert.match(kakaoMapHref({ ...place, latitude }), /\/link\/search\//);
   }
+});
+
+test('facility location retains the official floor and code without repeating the building', () => {
+  const place = { name: '비르투스관', aliases: ['V관'] };
+  assert.equal(placeLocationLabel(place, '비르투스관 1층 104호'), '비르투스관 1층 104호 · V관');
+  assert.equal(placeLocationLabel(place, '비르투스관(V관) 1층'), '비르투스관(V관) 1층');
+  assert.equal(placeLocationLabel(place, '1층 104호'), '1층 104호 · 비르투스관(V관)');
+  assert.equal(placeLocationLabel(place, null), '비르투스관(V관)');
+  assert.equal(placeLocationLabel({ ...place, aliases: [] }, '비르투스관 1층'), '비르투스관 1층');
 });
